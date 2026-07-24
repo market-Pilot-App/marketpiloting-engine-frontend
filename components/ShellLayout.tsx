@@ -1,5 +1,7 @@
 "use client";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
 import Sidebar from "@/components/Sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 
@@ -7,9 +9,18 @@ const NO_SHELL = ["/login", "/subscribe"];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { client } = useAuth();
   const showShell = !NO_SHELL.some((p) => pathname.startsWith(p)) && !pathname.startsWith("/p/");
 
+  useEffect(() => {
+    if (showShell && !client) {
+      router.push("/login");
+    }
+  }, [showShell, client, router]);
+
   if (!showShell) return <>{children}</>;
+  if (!client) return null;
 
   return (
     <div className="flex min-h-screen bg-gray-950">
