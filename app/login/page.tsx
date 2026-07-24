@@ -16,7 +16,9 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || "Login failed — unknown error");
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -27,6 +29,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-gray-900 rounded-2xl p-8 shadow-xl">
         <h1 className="text-2xl font-bold text-white mb-2">Marketpiloting Engine</h1>
         <p className="text-gray-400 mb-8 text-sm">Sign in to your dashboard</p>
+        <p className="text-gray-600 mb-4 text-xs break-all">API: {process.env.NEXT_PUBLIC_API_URL || "NOT SET (localhost:8000)"}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
