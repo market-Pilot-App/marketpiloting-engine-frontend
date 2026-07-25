@@ -7,6 +7,7 @@ const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram"];
 
 function decode(text: string) {
   return text
+    .replace(/&amp;#39;/g, "'")
     .replace(/&#39;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&amp;/g, "&")
