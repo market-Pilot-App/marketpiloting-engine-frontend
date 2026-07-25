@@ -6,7 +6,9 @@ import { useAuth } from "@/lib/auth-context";
 const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram"];
 
 function decode(text: string) {
-  return text.replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  const txt = document.createElement("textarea");
+  txt.innerHTML = text;
+  return txt.value;
 }
 const ANGLES = ["product_launch", "tips", "testimonial", "sale", "behind_the_scenes", "news_hijack", "question", "motivation"];
 
