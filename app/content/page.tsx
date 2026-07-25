@@ -4,6 +4,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
 const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram"];
+
+function decode(text: string) {
+  return text.replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+}
 const ANGLES = ["product_launch", "tips", "testimonial", "sale", "behind_the_scenes", "news_hijack", "question", "motivation"];
 
 interface ContentItem {
@@ -226,7 +230,7 @@ export default function ContentPage() {
                 </button>
               </div>
               <p className="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed">
-                {item.text}
+                {decode(item.text)}
               </p>
               <p className="text-gray-600 text-xs mt-2">
                 {new Date(item.created_at).toLocaleString()}
