@@ -17,6 +17,7 @@ const NAV = [
   { href: "/leads", label: "Leads", icon: "👥" },
   { href: "/referrals", label: "Referrals", icon: "🔗" },
   { href: "/whatsapp", label: "WhatsApp", icon: "💬" },
+  { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 const ADMIN_NAV = [
