@@ -225,9 +225,12 @@ export default function ContentPage() {
                   delete
                 </button>
               </div>
-              <p className="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed">
-                {item.text}
-              </p>
+              <textarea
+                readOnly
+                value={item.text}
+                rows={4}
+                className="w-full bg-gray-800 text-gray-200 text-sm rounded-lg px-3 py-2 resize-none border border-gray-700 leading-relaxed"
+              />
               <p className="text-gray-600 text-xs mt-2">
                 {new Date(item.created_at).toLocaleString()}
               </p>
