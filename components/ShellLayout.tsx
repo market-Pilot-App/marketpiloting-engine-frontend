@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import Sidebar from "@/components/Sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 
-const NO_SHELL = ["/login", "/subscribe"];
+const NO_SHELL = ["/login", "/subscribe", "/register"];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
