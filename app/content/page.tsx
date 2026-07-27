@@ -11,6 +11,7 @@ interface ContentItem {
   platform: string;
   angle: string;
   text: string;
+  image_url: string | null;
   used: boolean;
   created_at: string;
 }
@@ -225,12 +226,23 @@ export default function ContentPage() {
                   delete
                 </button>
               </div>
-              <textarea
-                readOnly
-                value={item.text}
-                rows={4}
-                className="w-full bg-gray-800 text-gray-200 text-sm rounded-lg px-3 py-2 resize-none border border-gray-700 leading-relaxed"
-              />
+              <div className="flex gap-3 mt-1">
+                {item.image_url && (
+                  <a href={item.image_url} target="_blank" rel="noreferrer" className="shrink-0">
+                    <img
+                      src={item.image_url}
+                      alt="post image"
+                      className="w-24 h-24 object-cover rounded-lg border border-gray-700"
+                    />
+                  </a>
+                )}
+                <textarea
+                  readOnly
+                  value={item.text}
+                  rows={4}
+                  className="flex-1 bg-gray-800 text-gray-200 text-sm rounded-lg px-3 py-2 resize-none border border-gray-700 leading-relaxed"
+                />
+              </div>
               <p className="text-gray-600 text-xs mt-2">
                 {new Date(item.created_at).toLocaleString()}
               </p>
