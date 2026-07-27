@@ -20,6 +20,8 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
+const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
+
 const ADMIN_NAV = [
   { href: "/admin", label: "Admin Panel", icon: "⚙️" },
 ];
@@ -28,7 +30,12 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { client, isAdmin, logout } = useAuth();
 
-  const allNav = isAdmin ? [...NAV, ...ADMIN_NAV] : NAV;
+  const isVideoAllowed = ["growth", "agency", "admin"].includes(client?.plan || "");
+  const allNav = [
+    ...NAV,
+    ...(isVideoAllowed ? [VIDEO_NAV] : []),
+    ...(isAdmin ? ADMIN_NAV : []),
+  ];
 
   return (
     <aside className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
