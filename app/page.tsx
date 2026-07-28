@@ -55,7 +55,7 @@ function AgencyOverview() {
 
 export default function DashboardPage() {
   const { client, isAdmin } = useAuth();
-  const isAgency = client?.plan === "agency";
+  const isAgency = client?.plan === "agency" || isAdmin;
 
   const [posts, setPosts] = useState<QueuedPost[]>([]);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
