@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 interface QueuedPost {
   id: number;
@@ -22,10 +23,16 @@ const STATUS_STYLES: Record<string, string> = {
 
 const PLATFORM_EMOJI: Record<string, string> = {
   facebook: "📘", instagram: "📸", linkedin: "💼",
-  twitter: "🐦", telegram: "✈️",
+  twitter: "🐦", telegram: "✈️", youtube: "▶️", website: "🌐",
+};
+
+const PLAN_LIMITS: Record<string, number> = {
+  solo: 3, starter: 5, growth: 8, agency: 12, admin: 12,
 };
 
 export default function SchedulerPage() {
+  const { client } = useAuth();
+  const dailyLimit = PLAN_LIMITS[client?.plan || "starter"] ?? 5;
   const [posts, setPosts] = useState<QueuedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filling, setFilling] = useState(false);
@@ -76,7 +83,9 @@ export default function SchedulerPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Scheduler</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Post queue and history</p>
+          <p className="text-gray-400 text-sm mt-0.5">
+            Post queue and history · <span className="text-indigo-400 font-medium">{dailyLimit} posts/day</span> on your plan
+          </p>
         </div>
         <button
           onClick={fillNow}
