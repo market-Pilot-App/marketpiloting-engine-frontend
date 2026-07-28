@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 
@@ -9,7 +9,7 @@ const PLANS = [
   { id: "agency",  label: "Agency",  price: "₦750,000/mo", features: ["All Growth features", "Unlimited campaigns", "White-label", "Dedicated manager"] },
 ];
 
-export default function RegisterPage() {
+function RegisterContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -166,5 +166,13 @@ export default function RegisterPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <RegisterContent />
+    </Suspense>
   );
 }
