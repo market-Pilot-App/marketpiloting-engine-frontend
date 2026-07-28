@@ -10,17 +10,17 @@ const NO_SHELL = ["/login", "/subscribe", "/register"];
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { client } = useAuth();
+  const { client, loaded } = useAuth();
   const showShell = !NO_SHELL.some((p) => pathname.startsWith(p)) && !pathname.startsWith("/p/");
 
   useEffect(() => {
-    if (showShell && !client) {
+    if (loaded && showShell && !client) {
       router.push("/login");
     }
-  }, [showShell, client, router]);
+  }, [loaded, showShell, client, router]);
 
   if (!showShell) return <>{children}</>;
-  if (!client) return null;
+  if (!loaded || !client) return null; // still loading — don't flash login for shell pages only
 
   return (
     <div className="flex min-h-screen bg-gray-950">

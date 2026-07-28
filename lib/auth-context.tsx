@@ -13,6 +13,7 @@ interface AuthClient {
 
 interface AuthContextType {
   client: AuthClient | null;
+  loaded: boolean;
   isAdmin: boolean;
   isImpersonating: boolean;
   impersonatedName: string | null;
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [client, setClient] = useState<AuthClient | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
   const router = useRouter();
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem("mp_client");
     if (stored) setClient(JSON.parse(stored));
     setIsImpersonating(!!localStorage.getItem("mp_admin_token"));
+    setLoaded(true);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         client,
+        loaded,
         isAdmin: client?.plan === "admin",
         isImpersonating,
         impersonatedName,
