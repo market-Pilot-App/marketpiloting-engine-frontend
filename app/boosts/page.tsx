@@ -26,6 +26,7 @@ const STATUS_STYLES: Record<string, string> = {
 const PLATFORM_EMOJI: Record<string, string> = {
   facebook: "📘", instagram: "📸", linkedin: "💼",
   twitter: "🐦", telegram: "✈️", tiktok: "🎵",
+  youtube: "▶️", website: "🌐",
 };
 
 export default function BoostsPage() {

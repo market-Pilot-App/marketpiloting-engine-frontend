@@ -9,6 +9,7 @@ interface Connections {
   twitter: boolean;
   telegram: boolean;
   blog: boolean;
+  youtube: boolean;
 }
 
 interface PlatformForm {
@@ -25,6 +26,9 @@ interface PlatformForm {
   telegram_channel_id?: string;
   blog_api_url?: string;
   blog_api_key?: string;
+  youtube_client_id?: string;
+  youtube_client_secret?: string;
+  youtube_refresh_token?: string;
 }
 
 const PLATFORMS = [
@@ -90,6 +94,17 @@ const PLATFORMS = [
       { name: "blog_api_key", label: "API Key / App Password", placeholder: "xxxx xxxx xxxx...", secret: true },
     ],
   },
+  {
+    key: "youtube",
+    label: "YouTube",
+    icon: "▶️",
+    hint: "Connect your YouTube channel via OAuth. Get credentials from console.cloud.google.com → YouTube Data API v3. You need Client ID, Client Secret, and a Refresh Token.",
+    fields: [
+      { name: "youtube_client_id", label: "Client ID", placeholder: "123456789-abc.apps.googleusercontent.com" },
+      { name: "youtube_client_secret", label: "Client Secret", placeholder: "GOCSPX-...", secret: true },
+      { name: "youtube_refresh_token", label: "Refresh Token", placeholder: "1//0g...", secret: true },
+    ],
+  },
 ];
 
 export default function SettingsPage() {
@@ -122,6 +137,15 @@ export default function SettingsPage() {
             api_secret: form.twitter_api_secret,
             access_token: form.twitter_access_token,
             access_secret: form.twitter_access_secret,
+          },
+        };
+      }
+      if (platform === "youtube") {
+        body = {
+          youtube_credentials: {
+            client_id: form.youtube_client_id,
+            client_secret: form.youtube_client_secret,
+            refresh_token: form.youtube_refresh_token,
           },
         };
       }

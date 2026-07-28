@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { API_URL } from "@/lib/api";
 
-const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram"];
+const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram", "youtube"];
 
 type PostResult = {
   platform: string;
