@@ -10,6 +10,7 @@ interface Connections {
   telegram: boolean;
   blog: boolean;
   youtube: boolean;
+  website: boolean;
 }
 
 interface PlatformForm {
@@ -29,6 +30,7 @@ interface PlatformForm {
   youtube_client_id?: string;
   youtube_client_secret?: string;
   youtube_refresh_token?: string;
+  website_url?: string;
 }
 
 const PLATFORMS = [
@@ -103,6 +105,15 @@ const PLATFORMS = [
       { name: "youtube_client_id", label: "Client ID", placeholder: "123456789-abc.apps.googleusercontent.com" },
       { name: "youtube_client_secret", label: "Client Secret", placeholder: "GOCSPX-...", secret: true },
       { name: "youtube_refresh_token", label: "Refresh Token", placeholder: "1//0g...", secret: true },
+    ],
+  },
+  {
+    key: "website",
+    label: "Website Traffic Boost",
+    icon: "🌐",
+    hint: "Enter your website URL to enable automated traffic boost. We send real visitors to your site after every post cycle.",
+    fields: [
+      { name: "website_url", label: "Website URL", placeholder: "https://yourbusiness.com" },
     ],
   },
 ];
