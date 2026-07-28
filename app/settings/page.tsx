@@ -33,6 +33,19 @@ interface PlatformForm {
   website_url?: string;
 }
 
+const PLAN_RANK: Record<string, number> = { solo: 1, starter: 2, growth: 3, agency: 4, admin: 4 };
+
+const PLATFORM_MIN_PLAN: Record<string, string> = {
+  facebook: "solo",
+  instagram: "starter",
+  linkedin: "growth",
+  twitter: "growth",
+  telegram: "starter",
+  blog: "starter",
+  youtube: "growth",
+  website: "growth",
+};
+
 const PLATFORMS = [
   {
     key: "facebook",
@@ -119,6 +132,7 @@ const PLATFORMS = [
 ];
 
 export default function SettingsPage() {
+  const [plan, setPlan] = useState("solo");
   const [connections, setConnections] = useState<Connections | null>(null);
   const [forms, setForms] = useState<Record<string, PlatformForm>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -127,8 +141,13 @@ export default function SettingsPage() {
   const [show, setShow] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    const stored = localStorage.getItem("mp_client");
+    if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
   }, []);
+
+  const canUsePlatform = (key: string) =>
+    (PLAN_RANK[plan] ?? 1) >= (PLAN_RANK[PLATFORM_MIN_PLAN[key] ?? "solo"] ?? 1);
 
   const setField = (platform: string, field: string, value: string) => {
     setForms((f) => ({ ...f, [platform]: { ...f[platform], [field]: value } }));
@@ -185,29 +204,33 @@ export default function SettingsPage() {
         {PLATFORMS.map((p) => {
           const connected = connections?.[p.key as keyof Connections];
           const isOpen = show[p.key];
+          const locked = !canUsePlatform(p.key);
+          const minPlan = PLATFORM_MIN_PLAN[p.key];
           return (
-            <div key={p.key} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div key={p.key} className={`bg-gray-900 border rounded-xl overflow-hidden ${locked ? "border-gray-700 opacity-60" : "border-gray-800"}`}>
               {/* Header */}
               <div
-                className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-800 transition"
-                onClick={() => setShow((s) => ({ ...s, [p.key]: !s[p.key] }))}
+                className={`flex items-center justify-between px-5 py-4 transition ${locked ? "cursor-not-allowed" : "cursor-pointer hover:bg-gray-800"}`}
+                onClick={() => !locked && setShow((s) => ({ ...s, [p.key]: !s[p.key] }))}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{p.icon}</span>
                   <span className="font-medium text-white">{p.label}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  {connected ? (
+                  {locked ? (
+                    <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">🔒 {minPlan}+ plan</span>
+                  ) : connected ? (
                     <span className="text-xs bg-green-900 text-green-400 px-2 py-0.5 rounded-full">✅ Connected</span>
                   ) : (
                     <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">⚠️ Not connected</span>
                   )}
-                  <span className="text-gray-500 text-xs">{isOpen ? "▲" : "▼"}</span>
+                  {!locked && <span className="text-gray-500 text-xs">{isOpen ? "▲" : "▼"}</span>}
                 </div>
               </div>
 
               {/* Expandable form */}
-              {isOpen && (
+              {!locked && isOpen && (
                 <div className="px-5 pb-5 border-t border-gray-800">
                   <p className="text-xs text-gray-400 mt-4 mb-4 leading-relaxed">{p.hint}</p>
                   <div className="space-y-3">

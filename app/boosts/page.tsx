@@ -99,6 +99,12 @@ export default function BoostsPage() {
           {budget.boost_credit_usd > 0 && (
             <p className="text-emerald-400 text-xs mt-1">💳 Boost credit: ${budget.boost_credit_usd.toFixed(2)} available</p>
           )}
+          {budget.remaining <= 0 && budget.boost_credit_usd <= 0 && (
+            <div className="mt-3 flex items-center gap-3 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded-lg">
+              <span className="text-yellow-400 text-sm">🔒 Monthly boost budget exhausted</span>
+              <a href="/subscribe" className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs font-medium text-white">Upgrade Plan</a>
+            </div>
+          )}
         </div>
       )}
 
