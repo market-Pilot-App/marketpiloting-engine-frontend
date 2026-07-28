@@ -4,9 +4,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 
 const PLANS = [
-  { id: "starter", label: "Starter", price: "₦150,000/mo", features: ["5 platforms", "AI content", "Auto-posting", "Basic analytics"] },
-  { id: "growth",  label: "Growth",  price: "₦300,000/mo", features: ["All Starter features", "Video posting", "Brand DNA AI", "Priority support"], popular: true },
-  { id: "agency",  label: "Agency",  price: "₦750,000/mo", features: ["All Growth features", "Unlimited campaigns", "White-label", "Dedicated manager"] },
+  { id: "solo",    label: "Solo",    price: "₦29,999/mo",  yearlyPrice: "₦20,999/mo", features: ["2 platforms", "3 posts/day", "AI content", "Basic boost", "1 blog/week"] },
+  { id: "starter", label: "Starter", price: "₦75,000/mo",  yearlyPrice: "₦52,500/mo", features: ["3 platforms", "5 posts/day", "AI content", "Auto boost", "2 blogs/week"] },
+  { id: "growth",  label: "Growth",  price: "₦150,000/mo", yearlyPrice: "₦105,000/mo", features: ["6 platforms", "8 posts/day", "Video posting", "Full boost", "3 blogs/week"], popular: true },
+  { id: "agency",  label: "Agency",  price: "₦450,000/mo", yearlyPrice: "₦315,000/mo", features: ["11 brands", "12 posts/day", "Unlimited video", "Max boost", "Daily blog"] },
 ];
 
 function RegisterContent() {
@@ -15,6 +16,7 @@ function RegisterContent() {
 
   const [step, setStep] = useState<"plan" | "details" | "processing">("plan");
   const [plan, setPlan] = useState(searchParams.get("plan") || "growth");
+  const [billing, setBilling] = useState(searchParams.get("billing") || "monthly");
   const [form, setForm] = useState({ name: "", email: "", password: "", business_name: "", niche: "", website_url: "", target_audience: "", tone: "professional" });
   const [error, setError] = useState("");
 
@@ -27,7 +29,7 @@ function RegisterContent() {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, plan }),
+        body: JSON.stringify({ ...form, plan, billing }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");
@@ -62,8 +64,21 @@ function RegisterContent() {
         {/* Step 1 — Plan Selection */}
         {step === "plan" && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-white text-center mb-6">Choose your plan</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h2 className="text-xl font-semibold text-white text-center mb-4">Choose your plan</h2>
+            {/* Billing toggle */}
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <span className={`text-sm font-medium ${billing === "monthly" ? "text-white" : "text-gray-500"}`}>Monthly</span>
+              <button
+                onClick={() => setBilling(billing === "monthly" ? "yearly" : "monthly")}
+                className={`relative w-12 h-6 rounded-full transition-colors ${billing === "yearly" ? "bg-indigo-600" : "bg-gray-700"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${billing === "yearly" ? "translate-x-6" : "translate-x-0.5"}`} />
+              </button>
+              <span className={`text-sm font-medium ${billing === "yearly" ? "text-white" : "text-gray-500"}`}>
+                Yearly <span className="text-green-400 text-xs font-bold">Save 30%</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {PLANS.map((p) => (
                 <div
                   key={p.id}
@@ -78,7 +93,10 @@ function RegisterContent() {
                     </span>
                   )}
                   <p className="text-white font-bold text-lg">{p.label}</p>
-                  <p className="text-indigo-400 font-semibold mt-1">{p.price}</p>
+                  <p className="text-indigo-400 font-semibold mt-1">
+                    {billing === "yearly" ? p.yearlyPrice : p.price}
+                    {billing === "yearly" && <span className="text-green-400 text-xs ml-1">billed yearly</span>}
+                  </p>
                   <ul className="mt-3 space-y-1">
                     {p.features.map((f) => (
                       <li key={f} className="text-gray-400 text-sm flex items-center gap-2">
