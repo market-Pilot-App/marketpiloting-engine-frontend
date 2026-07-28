@@ -14,10 +14,13 @@ interface ClientRow {
     active: boolean;
     managed_by_admin: boolean;
     report_email: string | null;
+    subscription_status: string | null;
+    subscription_expires_at: string | null;
   };
   campaign_id: number | null;
   posts_today: number;
   boost_spend_mtd: number;
+  boost_credit_usd: number;
   leads_7d: number;
 }
 
@@ -35,6 +38,15 @@ const PLAN_COLORS: Record<string, string> = {
   agency: "bg-purple-100 text-purple-700",
 };
 
+function expiryBadge(expiresAt: string | null): string {
+  if (!expiresAt) return "—";
+  const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
+  if (days <= 0) return "🔴 Expired";
+  if (days <= 7) return `🔴 ${days}d`;
+  if (days <= 14) return `🟡 ${days}d`;
+  return `✅ ${days}d`;
+}
+
 export default function AdminPage() {
   const { isAdmin, startImpersonation } = useAuth();
   const router = useRouter();
@@ -43,7 +55,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"clients" | "audit">("clients");
   const [loading, setLoading] = useState(true);
   const [editBudget, setEditBudget] = useState<Record<number, string>>({});
+  const [editBoost, setEditBoost] = useState<Record<number, string>>({});
   const [reportStatus, setReportStatus] = useState<Record<number, string>>({});
+  const [renewStatus, setRenewStatus] = useState<Record<number, string>>({});
   const [search, setSearch] = useState("");
 
   const fetchClients = useCallback(async () => {
@@ -69,10 +83,7 @@ export default function AdminPage() {
   const sendReport = async (clientId: number) => {
     setReportStatus((s) => ({ ...s, [clientId]: "sending" }));
     const data = await api.post(`/admin/reports/send/${clientId}`, {});
-    setReportStatus((s) => ({
-      ...s,
-      [clientId]: data.sent ? "sent" : "error",
-    }));
+    setReportStatus((s) => ({ ...s, [clientId]: data.sent ? "sent" : "error" }));
     setTimeout(() => setReportStatus((s) => ({ ...s, [clientId]: "" })), 3000);
   };
 
@@ -85,8 +96,29 @@ export default function AdminPage() {
   const saveBudget = async (clientId: number) => {
     const val = parseFloat(editBudget[clientId]);
     if (isNaN(val)) return;
-    await api.patch(`/admin/clients/${clientId}`, { boost_monthly_budget: val });
+    await api.patch(`/admin/clients/${clientId}/budget`, { boost_monthly_budget: val });
     setEditBudget((b) => ({ ...b, [clientId]: "" }));
+    fetchClients();
+  };
+
+  const saveBoostCredit = async (clientId: number) => {
+    const val = parseFloat(editBoost[clientId]);
+    if (isNaN(val) || val <= 0) return;
+    await api.patch(`/admin/clients/${clientId}/budget`, { boost_credit_usd: val });
+    setEditBoost((b) => ({ ...b, [clientId]: "" }));
+    fetchClients();
+  };
+
+  const renewSubscription = async (clientId: number) => {
+    setRenewStatus((s) => ({ ...s, [clientId]: "renewing" }));
+    const newExpiry = new Date();
+    newExpiry.setDate(newExpiry.getDate() + 30);
+    await api.patch(`/admin/clients/${clientId}`, {
+      subscription_status: "active",
+      subscription_expires_at: newExpiry.toISOString(),
+    });
+    setRenewStatus((s) => ({ ...s, [clientId]: "done" }));
+    setTimeout(() => setRenewStatus((s) => ({ ...s, [clientId]: "" })), 2000);
     fetchClients();
   };
 
@@ -170,16 +202,17 @@ export default function AdminPage() {
                   <tr>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Client</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Plan</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Subscription</th>
                     <th className="text-center px-4 py-3 text-gray-500 font-medium">Managed</th>
                     <th className="text-right px-4 py-3 text-gray-500 font-medium">Posts Today</th>
                     <th className="text-right px-4 py-3 text-gray-500 font-medium">Boost MTD</th>
                     <th className="text-right px-4 py-3 text-gray-500 font-medium">Leads 7d</th>
-                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Budget</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Budget / Credits</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map(({ client, posts_today, boost_spend_mtd, leads_7d }) => (
+                  {filtered.map(({ client, posts_today, boost_spend_mtd, boost_credit_usd, leads_7d }) => (
                     <tr
                       key={client.id}
                       className={`hover:bg-gray-50 transition-colors ${!client.active ? "opacity-50" : ""}`}
@@ -196,6 +229,10 @@ export default function AdminPage() {
                           {client.plan}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-medium">{expiryBadge(client.subscription_expires_at)}</p>
+                        <p className="text-xs text-gray-400 capitalize">{client.subscription_status ?? "—"}</p>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {client.managed_by_admin ? "✅" : "—"}
                       </td>
@@ -203,23 +240,39 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right font-medium text-gray-800">${boost_spend_mtd.toFixed(2)}</td>
                       <td className="px-4 py-3 text-right font-medium text-gray-800">{leads_7d}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
+                        {/* Budget top-up */}
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs text-gray-400 w-12">Budget</span>
                           <input
                             type="number"
                             min={0}
                             placeholder="$"
                             value={editBudget[client.id] ?? ""}
-                            onChange={(e) =>
-                              setEditBudget((b) => ({ ...b, [client.id]: e.target.value }))
-                            }
+                            onChange={(e) => setEditBudget((b) => ({ ...b, [client.id]: e.target.value }))}
                             className="w-16 border border-gray-200 rounded px-2 py-1 text-xs"
                           />
                           {editBudget[client.id] && (
-                            <button
-                              onClick={() => saveBudget(client.id)}
-                              className="text-xs text-indigo-600 hover:underline"
-                            >
+                            <button onClick={() => saveBudget(client.id)} className="text-xs text-indigo-600 hover:underline">
                               Save
+                            </button>
+                          )}
+                        </div>
+                        {/* Boost credit top-up */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400 w-12">
+                            Boost <span className="text-gray-300">(${(boost_credit_usd ?? 0).toFixed(2)})</span>
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="+$"
+                            value={editBoost[client.id] ?? ""}
+                            onChange={(e) => setEditBoost((b) => ({ ...b, [client.id]: e.target.value }))}
+                            className="w-16 border border-gray-200 rounded px-2 py-1 text-xs"
+                          />
+                          {editBoost[client.id] && (
+                            <button onClick={() => saveBoostCredit(client.id)} className="text-xs text-green-600 hover:underline">
+                              Add
                             </button>
                           )}
                         </div>
@@ -231,6 +284,13 @@ export default function AdminPage() {
                             className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg transition"
                           >
                             Manage
+                          </button>
+                          <button
+                            onClick={() => renewSubscription(client.id)}
+                            disabled={renewStatus[client.id] === "renewing"}
+                            className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50"
+                          >
+                            {renewStatus[client.id] === "renewing" ? "…" : renewStatus[client.id] === "done" ? "✓ Renewed" : "Renew"}
                           </button>
                           <button
                             onClick={() => sendReport(client.id)}

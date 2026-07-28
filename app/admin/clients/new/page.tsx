@@ -14,6 +14,7 @@ export default function NewClientPage() {
 
   const [form, setForm] = useState({
     name: "", email: "", password: "", plan: "starter", report_email: "",
+    subscription_status: "active", subscription_expires_at: "",
     campaign_name: "", niche: "", website_url: "", target_audience: "",
     tone: "", boost_monthly_budget: 5,
     platforms: [] as string[],
@@ -53,6 +54,8 @@ export default function NewClientPage() {
           .map((s) => s.trim())
           .filter(Boolean),
         boost_monthly_budget: form.boost_monthly_budget,
+        subscription_status: form.subscription_status,
+        subscription_expires_at: form.subscription_expires_at || null,
       };
 
       if (manualDNA) {
@@ -133,6 +136,27 @@ export default function NewClientPage() {
               "email",
               "owner@business.com"
             )}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Subscription Status</label>
+              <select
+                value={form.subscription_status}
+                onChange={(e) => setForm((f) => ({ ...f, subscription_status: e.target.value }))}
+                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2.5 border border-gray-700 focus:outline-none focus:border-indigo-500 text-sm"
+              >
+                <option value="active">active</option>
+                <option value="expired">expired</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Subscription Expires At (optional)</label>
+              <input
+                type="date"
+                value={form.subscription_expires_at}
+                onChange={(e) => setForm((f) => ({ ...f, subscription_expires_at: e.target.value }))}
+                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2.5 border border-gray-700 focus:outline-none focus:border-indigo-500 text-sm"
+              />
+            </div>
           </div>
         </section>
 

@@ -14,7 +14,7 @@ interface BoostOrder {
   ordered_at: string;
 }
 
-interface Budget { spent: number; budget: number; remaining: number; }
+interface Budget { spent: number; budget: number; remaining: number; boost_credit_usd: number; }
 
 const STATUS_STYLES: Record<string, string> = {
   pending_admin: "bg-yellow-900 text-yellow-300",
@@ -95,6 +95,9 @@ export default function BoostsPage() {
             />
           </div>
           <p className="text-gray-400 text-xs mt-2">${budget.remaining.toFixed(2)} remaining this month</p>
+          {budget.boost_credit_usd > 0 && (
+            <p className="text-emerald-400 text-xs mt-1">💳 Boost credit: ${budget.boost_credit_usd.toFixed(2)} available</p>
+          )}
         </div>
       )}
 

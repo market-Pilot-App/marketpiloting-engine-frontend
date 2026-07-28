@@ -13,7 +13,7 @@ interface LandingPageData {
   updated_at: string;
 }
 
-const PUBLIC_BASE = "https://marketpiloting.online/p";
+const PUBLIC_BASE = "https://dashboard.marketpiloting.online/p";
 
 export default function LandingPageDashboard() {
   const [page, setPage] = useState<LandingPageData | null>(null);
