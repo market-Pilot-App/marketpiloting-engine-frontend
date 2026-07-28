@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "📊" },
@@ -9,28 +11,34 @@ const NAV = [
   { href: "/content", label: "Content", icon: "✍️" },
   { href: "/opportunities", label: "AI Inbox", icon: "💡" },
   { href: "/scheduler", label: "Scheduler", icon: "📅" },
-  { href: "/calendar", label: "Calendar", icon: "🗓️" },
   { href: "/boosts", label: "Boosts", icon: "🚀" },
   { href: "/blog", label: "Blog", icon: "📝" },
   { href: "/landing-page", label: "Landing Page", icon: "🌐" },
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/leads", label: "Leads", icon: "👥" },
-  { href: "/referrals", label: "Referrals", icon: "🔗" },
-  { href: "/whatsapp", label: "WhatsApp", icon: "💬" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
+const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
-const ADMIN_NAV = [
-  { href: "/admin", label: "Admin Panel", icon: "⚙️" },
-];
+interface CampaignSummary { id: number; name: string; niche: string; }
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { client, isAdmin, logout } = useAuth();
-
+  const { client, isAdmin, logout, switchBrand } = useAuth();
+  const isAgency = client?.plan === "agency" || isAdmin;
   const isVideoAllowed = ["growth", "agency", "admin"].includes(client?.plan || "");
+
+  const [brands, setBrands] = useState<CampaignSummary[]>([]);
+  const [brandOpen, setBrandOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAgency) {
+      api.get<CampaignSummary[]>("/campaigns/").then(setBrands).catch(() => {});
+    }
+  }, [isAgency]);
+
   const allNav = [
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
@@ -46,6 +54,39 @@ export default function Sidebar() {
           {client?.plan}
         </span>
       </div>
+
+      {/* Brand switcher — Agency only */}
+      {isAgency && brands.length > 0 && (
+        <div className="px-3 py-3 border-b border-gray-800">
+          <button
+            onClick={() => setBrandOpen(!brandOpen)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800 text-sm text-gray-300 hover:text-white transition"
+          >
+            <span className="truncate">🏢 Switch Brand</span>
+            <span>{brandOpen ? "▲" : "▼"}</span>
+          </button>
+          {brandOpen && (
+            <div className="mt-1 space-y-0.5">
+              {brands.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => { switchBrand(b.id, b.name); setBrandOpen(false); }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition truncate"
+                >
+                  {b.name}
+                  <span className="text-gray-600 text-xs ml-1">· {b.niche}</span>
+                </button>
+              ))}
+              <Link
+                href="/campaigns/new"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-indigo-400 hover:bg-gray-800 transition"
+              >
+                + Add Brand
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
         {allNav.map(({ href, label, icon }) => {

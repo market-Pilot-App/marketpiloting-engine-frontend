@@ -7,26 +7,73 @@ import Link from "next/link";
 interface QueuedPost { id: number; platform: string; status: string; scheduled_time: string; }
 interface Campaign { boost_spent_this_month: number; boost_monthly_budget: number; }
 interface BrandDNA { consistency_score: number; business_name: string; }
+interface CampaignSummary { id: number; name: string; niche: string; platforms: string[]; active: boolean; }
+
+const PLATFORM_EMOJI: Record<string, string> = {
+  facebook: "📘", instagram: "📸", linkedin: "💼", twitter: "🐦", telegram: "✈️",
+};
+
+function AgencyOverview() {
+  const { switchBrand } = useAuth();
+  const [brands, setBrands] = useState<CampaignSummary[]>([]);
+
+  useEffect(() => {
+    api.get<CampaignSummary[]>("/campaigns/").then(setBrands).catch(() => {});
+  }, []);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-1">All Brands</h1>
+      <p className="text-gray-400 text-sm mb-8">Select a brand to manage its marketing engine.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {brands.map((b) => (
+          <button
+            key={b.id}
+            onClick={() => switchBrand(b.id, b.name)}
+            className="bg-gray-900 border border-gray-800 hover:border-indigo-600 rounded-xl p-5 text-left transition group"
+          >
+            <p className="text-white font-semibold group-hover:text-indigo-400 transition mb-1">{b.name}</p>
+            <p className="text-gray-500 text-xs mb-3 capitalize">{b.niche}</p>
+            <div className="flex gap-1 flex-wrap">
+              {b.platforms.map((p) => (
+                <span key={p} className="text-base" title={p}>{PLATFORM_EMOJI[p] || "📄"}</span>
+              ))}
+            </div>
+          </button>
+        ))}
+        <Link
+          href="/campaigns/new"
+          className="bg-gray-900 border border-dashed border-gray-700 hover:border-indigo-600 rounded-xl p-5 flex flex-col items-center justify-center text-center transition group"
+        >
+          <p className="text-3xl mb-2">+</p>
+          <p className="text-gray-400 text-sm group-hover:text-white transition">Add New Brand</p>
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { client, isAdmin } = useAuth();
+  const isAgency = client?.plan === "agency";
+
   const [posts, setPosts] = useState<QueuedPost[]>([]);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
 
   useEffect(() => {
+    if (isAgency && !client?.campaign_id) return; // agency overview — no single campaign
     api.get<QueuedPost[]>("/scheduler/queue?limit=5").then(setPosts).catch(() => {});
     api.get<Campaign>("/campaigns/me").then(setCampaign).catch(() => {});
     api.get<BrandDNA>("/brand-dna/").then(setDna).catch(() => {});
-  }, []);
+  }, [isAgency, client?.campaign_id]);
+
+  // Agency with no campaign selected → show brand overview
+  if (isAgency && !client?.campaign_id) return <AgencyOverview />;
 
   const todayPosts = posts.filter(
     (p) => new Date(p.scheduled_time).toDateString() === new Date().toDateString()
   ).length;
-
-  const PLATFORM_EMOJI: Record<string, string> = {
-    facebook: "📘", instagram: "📸", linkedin: "💼", twitter: "🐦", telegram: "✈️",
-  };
 
   return (
     <div>

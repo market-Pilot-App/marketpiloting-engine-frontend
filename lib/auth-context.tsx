@@ -9,6 +9,7 @@ interface AuthClient {
   plan: string;
   name: string;
   access_token: string;
+  campaign_name?: string;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   logout: () => void;
   startImpersonation: (clientId: number) => Promise<void>;
   endImpersonation: () => void;
+  switchBrand: (campaignId: number, campaignName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -95,6 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/admin");
   };
 
+  const switchBrand = async (campaignId: number, campaignName: string) => {
+    const data = await api.post<AuthClient>(`/campaigns/${campaignId}/switch`);
+    localStorage.setItem("mp_token", data.access_token);
+    localStorage.setItem("mp_client", JSON.stringify(data));
+    setClient(data);
+    router.push("/");
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -107,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         startImpersonation,
         endImpersonation,
+        switchBrand,
       }}
     >
       {children}
