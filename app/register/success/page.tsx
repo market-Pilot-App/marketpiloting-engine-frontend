@@ -1,8 +1,8 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, Suspense } from "react";
 import Link from "next/link";
 
-export default function RegisterSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "your email";
 
@@ -29,5 +29,13 @@ export default function RegisterSuccessPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function RegisterSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <SuccessContent />
+    </Suspense>
   );
 }
