@@ -7,8 +7,9 @@ import ShellLayout from "@/components/ShellLayout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Marketpiloting Engine",
+  title: "Marketpiloting — Autonomous Marketing Engine",
   description: "Autonomous marketing on autopilot",
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

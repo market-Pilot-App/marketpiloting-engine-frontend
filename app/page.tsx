@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import Link from "next/link";
@@ -12,6 +12,40 @@ interface CampaignSummary { id: number; name: string; niche: string; platforms: 
 const PLATFORM_EMOJI: Record<string, string> = {
   facebook: "📘", instagram: "📸", linkedin: "💼", twitter: "🐦", telegram: "✈️",
 };
+
+function VideoIntro({ onDone }: { onDone: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [fading, setFading] = useState(false);
+
+  const finish = () => {
+    setFading(true);
+    setTimeout(onDone, 600);
+  };
+
+  useEffect(() => {
+    // Fallback: force finish after 7s in case video fails to load
+    const t = setTimeout(finish, 7000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 bg-gray-950 flex items-center justify-center transition-opacity duration-[600ms] ${
+        fading ? "opacity-0 pointer-events-none" : "opacity-100"
+      }`}
+    >
+      <video
+        ref={videoRef}
+        src="/logo-intro.mp4"
+        autoPlay
+        muted
+        playsInline
+        onEnded={finish}
+        className="max-w-sm w-full"
+      />
+    </div>
+  );
+}
 
 function AgencyOverview() {
   const { switchBrand } = useAuth();
@@ -60,6 +94,19 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<QueuedPost[]>([]);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    // Show video only once per browser session
+    if (!sessionStorage.getItem("mp_intro_seen")) {
+      setShowIntro(true);
+    }
+  }, []);
+
+  const handleIntroDone = () => {
+    sessionStorage.setItem("mp_intro_seen", "1");
+    setShowIntro(false);
+  };
 
   useEffect(() => {
     if (isAgency && !client?.campaign_id) return; // agency overview — no single campaign
@@ -67,6 +114,8 @@ export default function DashboardPage() {
     api.get<Campaign>("/campaigns/me").then(setCampaign).catch(() => {});
     api.get<BrandDNA>("/brand-dna/").then(setDna).catch(() => {});
   }, [isAgency, client?.campaign_id]);
+
+  if (showIntro) return <VideoIntro onDone={handleIntroDone} />;
 
   // Agency with no campaign selected → show brand overview
   if (isAgency && !client?.campaign_id) return <AgencyOverview />;

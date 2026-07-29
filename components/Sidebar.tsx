@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
@@ -48,8 +49,15 @@ export default function Sidebar() {
   return (
     <aside className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
       <div className="px-5 py-5 border-b border-gray-800">
-        <p className="text-white font-bold text-lg">Marketpiloting</p>
-        <p className="text-gray-400 text-xs mt-0.5 truncate">{client?.name}</p>
+        <Image
+          src="/logo.png"
+          alt="Marketpiloting"
+          width={160}
+          height={40}
+          className="object-contain mb-2"
+          priority
+        />
+        <p className="text-gray-400 text-xs truncate">{client?.name}</p>
         <span className="inline-block mt-1 text-xs bg-indigo-900 text-indigo-300 px-2 py-0.5 rounded-full capitalize">
           {client?.plan}
         </span>
