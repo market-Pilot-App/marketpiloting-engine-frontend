@@ -48,17 +48,20 @@ export default function Sidebar() {
 
   return (
     <aside className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
-      <div className="px-5 py-5 border-b border-gray-800">
-        <Image
-          src="/logo.png"
-          alt="Marketpiloting"
-          width={160}
-          height={40}
-          className="object-contain mb-2"
-          priority
-        />
-        <p className="text-gray-400 text-xs truncate">{client?.name}</p>
-        <span className="inline-block mt-1 text-xs bg-indigo-900 text-indigo-300 px-2 py-0.5 rounded-full capitalize">
+      <div className="px-4 py-5 border-b border-gray-800">
+        <div className="bg-white rounded-xl px-3 py-2.5 mb-3 flex items-center justify-center shadow-md">
+          <div className="relative w-full h-12">
+            <Image
+              src="/logo.png"
+              alt="Marketpiloting"
+              fill
+              className="object-contain object-center"
+              priority
+            />
+          </div>
+        </div>
+        <p className="text-gray-300 text-sm font-medium truncate">{client?.name}</p>
+        <span className="inline-block mt-1.5 text-xs font-semibold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
           {client?.plan}
         </span>
       </div>
