@@ -25,7 +25,12 @@ const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
 interface CampaignSummary { id: number; name: string; niche: string; }
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { client, isAdmin, logout, switchBrand } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
@@ -40,17 +45,21 @@ export default function Sidebar() {
     }
   }, [isAgency]);
 
+  // Close sidebar on route change (mobile)
+  useEffect(() => { onClose(); }, [pathname]);
+
   const allNav = [
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
     ...(isAdmin ? ADMIN_NAV : []),
   ];
 
-  return (
-    <aside className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
+  const sidebarContent = (
+    <aside className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
+      {/* Logo */}
       <div className="px-4 py-5 border-b border-gray-800">
-        <div className="bg-white rounded-xl px-2 py-3 mb-3 flex items-center justify-center shadow-lg">
-          <div className="relative w-full h-20">
+        <div className="bg-white rounded-2xl px-3 py-4 mb-3 flex items-center justify-center shadow-xl">
+          <div className="relative w-full h-28">
             <Image
               src="/logo.png"
               alt="Marketpiloting"
@@ -60,8 +69,8 @@ export default function Sidebar() {
             />
           </div>
         </div>
-        <p className="text-gray-300 text-sm font-medium truncate">{client?.name}</p>
-        <span className="inline-block mt-1.5 text-xs font-semibold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
+        <p className="text-white text-sm font-semibold truncate">{client?.name}</p>
+        <span className="inline-block mt-1.5 text-xs font-bold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
           {client?.plan}
         </span>
       </div>
@@ -99,6 +108,7 @@ export default function Sidebar() {
         </div>
       )}
 
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
         {allNav.map(({ href, label, icon }) => {
           const active = pathname === href;
@@ -106,13 +116,13 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
                 active
-                  ? "bg-indigo-600 text-white font-semibold"
+                  ? "bg-indigo-600 text-white"
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               }`}
             >
-              <span>{icon}</span>
+              <span className="text-base">{icon}</span>
               {label}
             </Link>
           );
@@ -128,5 +138,27 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop — always visible */}
+      <div className="hidden lg:flex">{sidebarContent}</div>
+
+      {/* Mobile — slide-in drawer */}
+      {mobileOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+            onClick={onClose}
+          />
+          {/* Drawer */}
+          <div className="fixed inset-y-0 left-0 z-50 lg:hidden flex">
+            {sidebarContent}
+          </div>
+        </>
+      )}
+    </>
   );
 }
