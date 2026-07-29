@@ -95,6 +95,7 @@ export default function DashboardPage() {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [showIntro, setShowIntro] = useState(false);
+  const [autoReplySent, setAutoReplySent] = useState<number | null>(null);
 
   useEffect(() => {
     // Show video only once per browser session
@@ -113,6 +114,7 @@ export default function DashboardPage() {
     api.get<QueuedPost[]>("/scheduler/queue?limit=5").then(setPosts).catch(() => {});
     api.get<Campaign>("/campaigns/me").then(setCampaign).catch(() => {});
     api.get<BrandDNA>("/brand-dna/").then(setDna).catch(() => {});
+    api.get<{auto_sent: number}>("/auto-reply/analytics").then((d) => setAutoReplySent(d.auto_sent)).catch(() => {});
   }, [isAgency, client?.campaign_id]);
 
   if (showIntro) return <VideoIntro onDone={handleIntroDone} />;
@@ -158,9 +160,9 @@ export default function DashboardPage() {
           <p className="text-gray-400 text-sm mt-1">Brand DNA Score</p>
         </div>
         <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-2xl mb-2">📅</p>
-          <p className="text-2xl font-bold text-white">{posts.filter(p => p.status === "queued").length}</p>
-          <p className="text-gray-400 text-sm mt-1">Queued Posts</p>
+          <p className="text-2xl mb-2">💬</p>
+          <p className="text-2xl font-bold text-white">{autoReplySent ?? "—"}</p>
+          <p className="text-gray-400 text-sm mt-1">Auto-Replies Sent</p>
         </div>
       </div>
 

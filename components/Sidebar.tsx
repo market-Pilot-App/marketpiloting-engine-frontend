@@ -18,6 +18,7 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/leads", label: "Leads", icon: "👥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/auto-reply", label: "Auto-Reply", icon: "💬" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };

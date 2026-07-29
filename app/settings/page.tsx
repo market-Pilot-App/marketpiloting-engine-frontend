@@ -13,6 +13,13 @@ interface Connections {
   website: boolean;
 }
 
+interface AutoReplySettings {
+  auto_reply_enabled: boolean;
+  auto_reply_platforms: string[];
+  confidence_threshold: number;
+  escalation_keywords: string[];
+}
+
 interface PlatformForm {
   fb_access_token?: string;
   fb_page_id?: string;
@@ -140,11 +147,54 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [show, setShow] = useState<Record<string, boolean>>({});
 
+  // Auto-reply state
+  const [arSettings, setArSettings] = useState<AutoReplySettings>({
+    auto_reply_enabled: false,
+    auto_reply_platforms: [],
+    confidence_threshold: 0.75,
+    escalation_keywords: [],
+  });
+  const [arSaving, setArSaving] = useState(false);
+  const [arSaved, setArSaved] = useState(false);
+  const [kwInput, setKwInput] = useState("");
+  const canAutoReply = ["starter", "growth", "agency", "admin"].includes(plan);
+
   useEffect(() => {
     const stored = localStorage.getItem("mp_client");
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
+    api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
   }, []);
+
+  const saveAutoReply = async () => {
+    setArSaving(true);
+    try {
+      await api.patch("/auto-reply/settings", arSettings);
+      setArSaved(true);
+      setTimeout(() => setArSaved(false), 3000);
+    } catch {}
+    finally { setArSaving(false); }
+  };
+
+  const toggleArPlatform = (p: string) => {
+    setArSettings((s) => ({
+      ...s,
+      auto_reply_platforms: s.auto_reply_platforms.includes(p)
+        ? s.auto_reply_platforms.filter((x) => x !== p)
+        : [...s.auto_reply_platforms, p],
+    }));
+  };
+
+  const addKeyword = () => {
+    const kw = kwInput.trim().toLowerCase();
+    if (!kw || arSettings.escalation_keywords.includes(kw)) return;
+    setArSettings((s) => ({ ...s, escalation_keywords: [...s.escalation_keywords, kw] }));
+    setKwInput("");
+  };
+
+  const removeKeyword = (kw: string) => {
+    setArSettings((s) => ({ ...s, escalation_keywords: s.escalation_keywords.filter((k) => k !== kw) }));
+  };
 
   const canUsePlatform = (key: string) =>
     (PLAN_RANK[plan] ?? 1) >= (PLAN_RANK[PLATFORM_MIN_PLAN[key] ?? "solo"] ?? 1);
@@ -260,6 +310,108 @@ export default function SettingsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* ── Auto-Reply Settings ── */}
+      <div className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">Auto-Reply Settings</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Configure AI-powered automatic replies to incoming messages in your brand voice.
+        </p>
+
+        {!canAutoReply ? (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-center">
+            <p className="text-gray-400 text-sm">🔒 Auto-reply is available on Starter plan and above.</p>
+          </div>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
+            {/* Enable toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium text-sm">Enable Auto-Reply</p>
+                <p className="text-gray-500 text-xs mt-0.5">AI will automatically reply to incoming messages</p>
+              </div>
+              <button onClick={() => setArSettings((s) => ({ ...s, auto_reply_enabled: !s.auto_reply_enabled }))}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  arSettings.auto_reply_enabled ? "bg-indigo-600" : "bg-gray-700"
+                }`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  arSettings.auto_reply_enabled ? "translate-x-6" : "translate-x-0.5"
+                }`} />
+              </button>
+            </div>
+
+            {/* Platforms */}
+            <div>
+              <p className="text-white font-medium text-sm mb-2">Active Platforms</p>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { key: "telegram", label: "✈️ Telegram", available: true },
+                  { key: "facebook", label: "📘 Facebook", available: false },
+                  { key: "instagram", label: "📸 Instagram", available: false },
+                ].map((p) => (
+                  <button key={p.key}
+                    onClick={() => p.available && toggleArPlatform(p.key)}
+                    disabled={!p.available}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                      !p.available
+                        ? "border-gray-700 text-gray-600 cursor-not-allowed"
+                        : arSettings.auto_reply_platforms.includes(p.key)
+                        ? "border-indigo-500 bg-indigo-900 text-indigo-300"
+                        : "border-gray-700 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    {p.label}
+                    {!p.available && <span className="ml-1 text-xs text-gray-600">Pending Meta</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Confidence threshold */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-white font-medium text-sm">Auto-Send Confidence Threshold</p>
+                <span className="text-indigo-400 text-sm font-bold">{Math.round(arSettings.confidence_threshold * 100)}%</span>
+              </div>
+              <p className="text-gray-500 text-xs mb-2">Replies above this score send automatically. Below it goes to your inbox for approval.</p>
+              <input type="range" min={0.5} max={1.0} step={0.05}
+                value={arSettings.confidence_threshold}
+                onChange={(e) => setArSettings((s) => ({ ...s, confidence_threshold: parseFloat(e.target.value) }))}
+                className="w-full accent-indigo-500" />
+              <div className="flex justify-between text-xs text-gray-600 mt-1">
+                <span>50% (more auto-sends)</span>
+                <span>100% (always manual)</span>
+              </div>
+            </div>
+
+            {/* Escalation keywords */}
+            <div>
+              <p className="text-white font-medium text-sm mb-1">Escalation Keywords</p>
+              <p className="text-gray-500 text-xs mb-2">Messages containing these words always go to your inbox — never auto-replied.</p>
+              <div className="flex gap-2 mb-2">
+                <input value={kwInput} onChange={(e) => setKwInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addKeyword()}
+                  placeholder="e.g. refund, cancel, complaint"
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                <button onClick={addKeyword}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition">Add</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {arSettings.escalation_keywords.map((kw) => (
+                  <span key={kw} className="flex items-center gap-1.5 bg-red-950 text-red-300 border border-red-800 px-3 py-1 rounded-full text-xs font-medium">
+                    {kw}
+                    <button onClick={() => removeKeyword(kw)} className="text-red-500 hover:text-red-300">×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={saveAutoReply} disabled={arSaving}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition">
+              {arSaving ? "Saving..." : arSaved ? "✓ Saved" : "Save Auto-Reply Settings"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
