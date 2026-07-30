@@ -1,84 +1,75 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { useRef } from "react";
 
-interface QueuedPost { id: number; platform: string; status: string; scheduled_time: string; }
-interface Campaign { boost_spent_this_month: number; boost_monthly_budget: number; }
-interface BrandDNA { consistency_score: number; business_name: string; }
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface DashStats {
+  total_posts_today: number;
+  total_boosts_today: number;
+  spend_today: number;
+  queued_posts: number;
+  active_campaigns: number;
+}
+interface Overview {
+  total_posts: number;
+  total_blogs: number;
+  total_referral_clicks: number;
+  telegram_members: number;
+  platform_counts: Record<string, number>;
+  chart: { date: string; posts: number }[];
+}
+interface AnglePerf { angle: string; clicks: number; posts: number; ctr: number; }
+interface RecentPost { id: number; platform: string; status: string; posted_at: string; post_url: string; }
+interface TrendData { all_topics: string[]; relevant: string[]; }
+interface ReferralStats { total_clicks: number; top_links: { code: string; angle: string; clicks: number }[]; }
 interface CampaignSummary { id: number; name: string; niche: string; platforms: string[]; active: boolean; }
+interface BrandDNA { consistency_score: number; business_name: string; }
 
-const PLATFORM_EMOJI: Record<string, string> = {
-  facebook: "📘", instagram: "📸", linkedin: "💼", twitter: "🐦", telegram: "✈️",
+const PLATFORM_ICONS: Record<string, string> = {
+  facebook: "📘", linkedin: "💼", instagram: "📸", twitter: "🐦", telegram: "✈️", tiktok: "🎵",
 };
+
+// ── Video Intro ───────────────────────────────────────────────────────────────
 
 function VideoIntro({ onDone }: { onDone: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fading, setFading] = useState(false);
-
-  const finish = () => {
-    setFading(true);
-    setTimeout(onDone, 600);
-  };
-
-  useEffect(() => {
-    // Fallback: force finish after 7s in case video fails to load
-    const t = setTimeout(finish, 7000);
-    return () => clearTimeout(t);
-  }, []);
-
+  const finish = () => { setFading(true); setTimeout(onDone, 600); };
+  useEffect(() => { const t = setTimeout(finish, 7000); return () => clearTimeout(t); }, []);
   return (
-    <div
-      className={`fixed inset-0 z-50 bg-gray-950 flex items-center justify-center transition-opacity duration-[600ms] ${
-        fading ? "opacity-0 pointer-events-none" : "opacity-100"
-      }`}
-    >
-      <video
-        ref={videoRef}
-        src="/logo-intro.mp4"
-        autoPlay
-        muted
-        playsInline
-        onEnded={finish}
-        className="max-w-sm w-full"
-      />
+    <div className={`fixed inset-0 z-50 bg-gray-950 flex items-center justify-center transition-opacity duration-[600ms] ${fading ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+      <video ref={videoRef} src="/logo-intro.mp4" autoPlay muted playsInline onEnded={finish} className="max-w-sm w-full" />
     </div>
   );
 }
 
+// ── Agency Overview ───────────────────────────────────────────────────────────
+
 function AgencyOverview() {
   const { switchBrand } = useAuth();
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
-
-  useEffect(() => {
-    api.get<CampaignSummary[]>("/campaigns/").then(setBrands).catch(() => {});
-  }, []);
-
+  useEffect(() => { api.get<CampaignSummary[]>("/campaigns/").then(setBrands).catch(() => {}); }, []);
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">All Brands</h1>
       <p className="text-gray-400 text-sm mb-8">Select a brand to manage its marketing engine.</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {brands.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => switchBrand(b.id, b.name)}
-            className="bg-gray-900 border border-gray-800 hover:border-indigo-600 rounded-xl p-5 text-left transition group"
-          >
+          <button key={b.id} onClick={() => switchBrand(b.id, b.name)}
+            className="bg-gray-900 border border-gray-800 hover:border-indigo-600 rounded-xl p-5 text-left transition group">
             <p className="text-white font-semibold group-hover:text-indigo-400 transition mb-1">{b.name}</p>
             <p className="text-gray-500 text-xs mb-3 capitalize">{b.niche}</p>
             <div className="flex gap-1 flex-wrap">
-              {b.platforms.map((p) => (
-                <span key={p} className="text-base" title={p}>{PLATFORM_EMOJI[p] || "📄"}</span>
-              ))}
+              {b.platforms.map((p) => <span key={p} className="text-base">{PLATFORM_ICONS[p] || "📄"}</span>)}
             </div>
           </button>
         ))}
-        <Link
-          href="/campaigns/new"
-          className="bg-gray-900 border border-dashed border-gray-700 hover:border-indigo-600 rounded-xl p-5 flex flex-col items-center justify-center text-center transition group"
-        >
+        <Link href="/campaigns/new"
+          className="bg-gray-900 border border-dashed border-gray-700 hover:border-indigo-600 rounded-xl p-5 flex flex-col items-center justify-center text-center transition group">
           <p className="text-3xl mb-2">+</p>
           <p className="text-gray-400 text-sm group-hover:text-white transition">Add New Brand</p>
         </Link>
@@ -87,131 +78,343 @@ function AgencyOverview() {
   );
 }
 
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { client, isAdmin } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
 
-  const [posts, setPosts] = useState<QueuedPost[]>([]);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [dna, setDna] = useState<BrandDNA | null>(null);
   const [showIntro, setShowIntro] = useState(false);
-  const [autoReplySent, setAutoReplySent] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const [stats, setStats] = useState<DashStats | null>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [anglePerf, setAnglePerf] = useState<AnglePerf[]>([]);
+  const [recent, setRecent] = useState<RecentPost[]>([]);
+  const [trends, setTrends] = useState<TrendData | null>(null);
+  const [referrals, setReferrals] = useState<ReferralStats | null>(null);
+  const [dna, setDna] = useState<BrandDNA | null>(null);
 
   useEffect(() => {
-    // Show video only once per browser session
-    if (!sessionStorage.getItem("mp_intro_seen")) {
-      setShowIntro(true);
-    }
+    if (!sessionStorage.getItem("mp_intro_seen")) setShowIntro(true);
   }, []);
 
-  const handleIntroDone = () => {
-    sessionStorage.setItem("mp_intro_seen", "1");
-    setShowIntro(false);
-  };
-
   useEffect(() => {
-    if (isAgency && !client?.campaign_id) return; // agency overview — no single campaign
-    api.get<QueuedPost[]>("/scheduler/queue?limit=5").then(setPosts).catch(() => {});
-    api.get<Campaign>("/campaigns/me").then(setCampaign).catch(() => {});
-    api.get<BrandDNA>("/brand-dna/").then(setDna).catch(() => {});
-    api.get<{auto_sent: number}>("/auto-reply/analytics").then((d) => setAutoReplySent(d.auto_sent)).catch(() => {});
+    if (isAgency && !client?.campaign_id) return;
+    Promise.all([
+      api.get("/analytics/dashboard"),
+      api.get("/analytics/overview"),
+      api.get("/analytics/angle-performance"),
+      api.get("/analytics/history?days=1"),
+      api.get("/jobs/trends"),
+      api.get("/referrals/stats"),
+      api.get("/brand-dna/"),
+    ]).then(([s, o, ap, r, t, ref, d]) => {
+      setStats(s);
+      setOverview(o);
+      setAnglePerf((ap as any).angles || []);
+      setRecent((r as RecentPost[]).slice(0, 10));
+      setTrends(t as TrendData);
+      setReferrals(ref as ReferralStats);
+      setDna(d as BrandDNA);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
-  if (showIntro) return <VideoIntro onDone={handleIntroDone} />;
+  const runAction = async (label: string, endpoint: string, msg: string) => {
+    setActionLoading(label);
+    try { await api.post(endpoint); alert(msg); }
+    catch { alert("Error — check backend logs"); }
+    finally { setActionLoading(null); }
+  };
 
-  // Agency with no campaign selected → show brand overview
+  if (showIntro) return <VideoIntro onDone={() => { sessionStorage.setItem("mp_intro_seen", "1"); setShowIntro(false); }} />;
   if (isAgency && !client?.campaign_id) return <AgencyOverview />;
 
-  const todayPosts = posts.filter(
-    (p) => new Date(p.scheduled_time).toDateString() === new Date().toDateString()
-  ).length;
+  const statCards = stats ? [
+    { label: "Posts Today",          value: stats.total_posts_today,                    icon: "📝" },
+    { label: "Boosts Today",         value: stats.total_boosts_today,                   icon: "🚀" },
+    { label: "Spend Today",          value: `$${stats.spend_today.toFixed(2)}`,          icon: "💰" },
+    { label: "Queued Posts",         value: stats.queued_posts,                          icon: "📅" },
+    { label: "Total Posts",          value: overview?.total_posts ?? "—",               icon: "📊" },
+    { label: "Blogs Published",      value: overview?.total_blogs ?? "—",               icon: "✍️" },
+    { label: "Referral Clicks",      value: overview?.total_referral_clicks ?? "—",     icon: "🔗" },
+    { label: "Telegram Members",     value: overview?.telegram_members ?? "—",          icon: "✈️" },
+    { label: "Brand DNA Score",      value: dna ? `${dna.consistency_score}/100` : "—", icon: "🧬" },
+  ] : [];
+
+  const quickActions = [
+    { label: "✨ Generate Content",       href: "/content" },
+    { label: "✍️ Write Blog Post",        href: "/blog" },
+    { label: "💡 AI Opportunities",       href: "/opportunities" },
+    { label: "📅 Scheduler",             href: "/scheduler" },
+  ];
+
+  const cronActions = [
+    { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",        msg: "Posts triggered!" },
+    { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
+    { label: "🔥 Newsjack Now",           endpoint: "/jobs/newsjack",              msg: "Newsjack generated!" },
+    { label: "📝 Auto Blog",             endpoint: "/jobs/auto-blog",             msg: "Blog post generated!" },
+    { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report", msg: "Report sent!" },
+    { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",         msg: "Schedule filled!" },
+  ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">
-        {dna ? dna.business_name : (client?.name || "Dashboard")}
-      </h1>
-      <p className="text-gray-400 text-sm mb-8">
-        {isAdmin ? "Super Admin — all campaigns visible" : "Your autonomous marketing engine is running"}
-      </p>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-2xl mb-2">✍️</p>
-          <p className="text-2xl font-bold text-white">{todayPosts}</p>
-          <p className="text-gray-400 text-sm mt-1">Posts Today</p>
-        </div>
-        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-2xl mb-2">🚀</p>
-          <p className="text-2xl font-bold text-white">
-            ${campaign ? campaign.boost_spent_this_month.toFixed(2) : "—"}
-          </p>
-          <p className="text-gray-400 text-sm mt-1">
-            Boost Spend
-            {campaign && <span className="text-gray-600"> / ${campaign.boost_monthly_budget}</span>}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{dna?.business_name || client?.name || "Dashboard"}</h1>
+          <p className="text-gray-400 text-sm mt-0.5">
+            {isAdmin ? "Super Admin — all campaigns visible" : "Your autonomous marketing engine is running"}
           </p>
         </div>
-        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-2xl mb-2">🧬</p>
-          <p className="text-2xl font-bold text-white">
-            {dna ? `${dna.consistency_score}` : "—"}
-            {dna && <span className="text-gray-500 text-lg">/100</span>}
-          </p>
-          <p className="text-gray-400 text-sm mt-1">Brand DNA Score</p>
-        </div>
-        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-2xl mb-2">💬</p>
-          <p className="text-2xl font-bold text-white">{autoReplySent ?? "—"}</p>
-          <p className="text-gray-400 text-sm mt-1">Auto-Replies Sent</p>
-        </div>
+        <span className="text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full">● Autopilot Active</span>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">Recent Queue</h2>
-          <Link href="/scheduler" className="text-indigo-400 text-sm hover:underline">View all →</Link>
-        </div>
-        {posts.length === 0 ? (
-          <p className="text-gray-500 text-sm">No posts scheduled yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {posts.map((post) => (
-              <div key={post.id} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                <div className="flex items-center gap-3">
-                  <span>{PLATFORM_EMOJI[post.platform] || "📄"}</span>
-                  <span className="text-white text-sm capitalize">{post.platform}</span>
-                  <span className="text-gray-500 text-xs">{new Date(post.scheduled_time).toLocaleString()}</span>
+      {loading ? (
+        <p className="text-gray-400 text-sm">Loading...</p>
+      ) : (
+        <>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {statCards.map((c) => (
+              <div key={c.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gray-400 text-xs">{c.label}</span>
+                  <span className="text-lg">{c.icon}</span>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  post.status === "posted" ? "bg-green-900 text-green-400" :
-                  post.status === "failed" ? "bg-red-900 text-red-400" :
-                  "bg-yellow-900 text-yellow-300"
-                }`}>
-                  {post.status}
-                </span>
+                <p className="text-xl font-bold text-white">{c.value}</p>
               </div>
             ))}
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { href: "/content", label: "Generate Content", icon: "✨" },
-          { href: "/brand-dna", label: "View Brand DNA", icon: "🧬" },
-          { href: "/landing-page", label: "Landing Page", icon: "🌐" },
-          { href: "/opportunities", label: "AI Inbox", icon: "💡" },
-        ].map(({ href, label, icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="bg-gray-900 border border-gray-800 hover:border-indigo-600 rounded-xl p-4 text-center transition group"
-          >
-            <p className="text-2xl mb-2">{icon}</p>
-            <p className="text-gray-300 text-sm group-hover:text-white transition">{label}</p>
-          </Link>
-        ))}
-      </div>
+          {/* Platform Activity + Telegram */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <h3 className="font-semibold mb-4">Platform Activity</h3>
+              <div className="space-y-2">
+                {["facebook", "instagram", "linkedin", "twitter", "telegram", "tiktok"].map((p) => {
+                  const todayCount = recent.filter((r) => r.platform === p).length;
+                  const allTime = overview?.platform_counts?.[p] ?? 0;
+                  return (
+                    <div key={p} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-300 capitalize flex items-center gap-2">
+                        {PLATFORM_ICONS[p]} {p}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{allTime} total</span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${todayCount > 0 ? "bg-green-600/20 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                          {todayCount} today
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <h3 className="font-semibold mb-4">✈️ Telegram Channel</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Members</span>
+                  <span className="text-white font-bold text-lg">{overview?.telegram_members?.toLocaleString() ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Status</span>
+                  <span className="text-green-400">● Live</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Brand DNA</span>
+                  <span className="text-indigo-400">{dna ? `${dna.consistency_score}/100` : "—"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7-Day Chart */}
+          {overview?.chart && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">📈 Posts — Last 7 Days</h3>
+                <span className="text-xs text-gray-500">{overview.total_posts} total all time</span>
+              </div>
+              <div className="flex items-end gap-2 h-24">
+                {overview.chart.map((day) => {
+                  const max = Math.max(...overview.chart.map((d) => d.posts), 1);
+                  const height = Math.max((day.posts / max) * 100, 4);
+                  return (
+                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-xs text-gray-400">{day.posts}</span>
+                      <div className="w-full bg-indigo-500 rounded-t" style={{ height: `${height}%` }} />
+                      <span className="text-xs text-gray-500">{day.date}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Trending Now */}
+          {trends && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">🔥 Trending Now</h3>
+                <span className="text-xs text-gray-500">Google Trends · Live</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide">Relevant to Your Brand</p>
+                  <div className="space-y-1">
+                    {trends.relevant.length > 0 ? trends.relevant.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2">
+                        <span className="text-orange-400 text-xs font-bold">#{i + 1}</span>
+                        <span className="text-sm text-white capitalize">{t}</span>
+                        <span className="ml-auto text-xs text-orange-400">● Relevant</span>
+                      </div>
+                    )) : <p className="text-gray-500 text-sm">No relevant topics right now</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide">All Trending</p>
+                  <div className="space-y-1">
+                    {trends.all_topics.slice(0, 5).map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
+                        <span className="text-gray-500 text-xs">#{i + 1}</span>
+                        <span className="text-sm text-gray-300 capitalize">{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Angle Performance */}
+          {anglePerf.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">🎯 Angle Performance</h3>
+                <span className="text-xs text-gray-500">clicks ÷ posts = CTR</span>
+              </div>
+              <div className="space-y-2">
+                {anglePerf.slice(0, 8).map((a, i) => {
+                  const maxClicks = Math.max(...anglePerf.map((x) => x.clicks), 1);
+                  const barWidth = Math.max((a.clicks / maxClicks) * 100, 2);
+                  return (
+                    <div key={a.angle} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-4">{i + 1}</span>
+                      <span className="text-sm text-gray-300 capitalize w-36 flex-shrink-0 truncate">
+                        {a.angle.replace(/_/g, " ")}
+                      </span>
+                      <div className="flex-1 bg-gray-800 rounded-full h-2">
+                        <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${barWidth}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-400 w-16 text-right">{a.clicks} clicks</span>
+                      <span className="text-xs text-gray-600 w-14 text-right">{a.posts} posts</span>
+                      <span className={`text-xs w-14 text-right font-mono ${a.ctr > 0.1 ? "text-green-400" : a.ctr > 0 ? "text-yellow-400" : "text-gray-600"}`}>
+                        {a.ctr > 0 ? `${(a.ctr * 100).toFixed(1)}%` : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Referral Links */}
+          {referrals && referrals.top_links.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">🔗 Referral Performance</h3>
+                <span className="text-sm text-gray-400">Total: <span className="text-white font-bold">{referrals.total_clicks}</span> clicks</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-500 uppercase border-b border-gray-800">
+                      <th className="text-left pb-2">Code</th>
+                      <th className="text-left pb-2">Angle</th>
+                      <th className="text-left pb-2">Clicks</th>
+                      <th className="text-left pb-2">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {referrals.top_links.map((l) => (
+                      <tr key={l.code} className="text-gray-300">
+                        <td className="py-2 font-mono text-blue-400">{l.code}</td>
+                        <td className="py-2 capitalize">{l.angle?.replace("_", " ")}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-0.5 rounded text-xs ${l.clicks > 0 ? "bg-green-600/20 text-green-400" : "bg-gray-800 text-gray-500"}`}>
+                            {l.clicks}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          <a href={`${process.env.NEXT_PUBLIC_API_URL}/r/${l.code}`} target="_blank"
+                            className="text-blue-400 hover:underline">Open →</a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+            <h3 className="font-semibold mb-4">Quick Actions</h3>
+            <div className="flex flex-wrap gap-2">
+              {quickActions.map((a) => (
+                <Link key={a.label} href={a.href}
+                  className="px-3 py-2 bg-indigo-700 hover:bg-indigo-600 rounded-lg text-xs text-white transition">
+                  {a.label}
+                </Link>
+              ))}
+              {cronActions.map((a) => (
+                <button key={a.label}
+                  onClick={() => runAction(a.label, a.endpoint, a.msg)}
+                  disabled={actionLoading === a.label}
+                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-xs text-white transition">
+                  {actionLoading === a.label ? "Running..." : a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Today's Activity */}
+          {recent.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">📋 Today's Activity</h3>
+                <Link href="/scheduler" className="text-indigo-400 text-xs hover:underline">View all →</Link>
+              </div>
+              <div className="space-y-2">
+                {recent.map((post) => (
+                  <div key={post.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span>{PLATFORM_ICONS[post.platform] || "📱"}</span>
+                      <span className="text-sm capitalize">{post.platform}</span>
+                      <span className="text-xs text-gray-500">
+                        {post.posted_at ? new Date(post.posted_at).toLocaleTimeString() : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded ${post.status === "posted" ? "bg-green-600/20 text-green-400" : "bg-red-600/20 text-red-400"}`}>
+                        {post.status}
+                      </span>
+                      {post.post_url && (
+                        <a href={post.post_url} target="_blank" className="text-xs text-blue-400 hover:underline">View</a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
