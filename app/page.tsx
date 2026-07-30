@@ -155,6 +155,7 @@ export default function DashboardPage() {
     { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
     { label: "🔥 Newsjack Now",           endpoint: "/jobs/newsjack",              msg: "Newsjack generated!" },
     { label: "📝 Auto Blog",             endpoint: "/jobs/auto-blog",             msg: "Blog post generated!" },
+    { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news", msg: "News posts generated!" },
     { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report", msg: "Report sent!" },
     { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",         msg: "Schedule filled!" },
   ];
@@ -261,7 +262,15 @@ export default function DashboardPage() {
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">🔥 Trending Now</h3>
-                <span className="text-xs text-gray-500">Google Trends · Live</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Google Trends · Live</span>
+                  <button
+                    onClick={() => runAction("🔥 Newsjack Now", "/jobs/newsjack", "Newsjack generated!")}
+                    disabled={actionLoading === "🔥 Newsjack Now"}
+                    className="px-3 py-1 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                    {actionLoading === "🔥 Newsjack Now" ? "Running..." : "🔥 Newsjack Now"}
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
