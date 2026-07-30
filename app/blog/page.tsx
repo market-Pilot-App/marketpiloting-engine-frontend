@@ -52,6 +52,20 @@ export default function BlogPage() {
     }
   };
 
+  const generateFromNews = async () => {
+    setGenerating(true);
+    setError("");
+    try {
+      const post = await api.post<BlogPost>("/blog/generate-from-news");
+      setPosts((prev) => [post, ...prev]);
+      setSelected(post);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "News generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const publish = async (id: number) => {
     setPublishing(true);
     try {
@@ -90,9 +104,16 @@ export default function BlogPage() {
           <button
             onClick={generate}
             disabled={generating}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2 rounded-lg text-sm transition"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2 rounded-lg text-sm transition mb-2"
           >
             {generating ? "Writing with Brand DNA..." : "✨ Generate Article"}
+          </button>
+          <button
+            onClick={generateFromNews}
+            disabled={generating}
+            className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-semibold py-2 rounded-lg text-sm transition"
+          >
+            {generating ? "Fetching trends..." : "📰 Write from Trending News"}
           </button>
         </div>
 
@@ -113,6 +134,9 @@ export default function BlogPage() {
               >
                 <p className="text-white text-sm font-medium line-clamp-2">{post.title}</p>
                 <div className="flex items-center gap-2 mt-1">
+                  {post.tags?.includes("trending") && (
+                    <span className="text-xs bg-orange-900/50 text-orange-400 px-1.5 py-0.5 rounded-full">🔥 trending</span>
+                  )}
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                     post.status === "published"
                       ? "bg-green-900 text-green-400"
