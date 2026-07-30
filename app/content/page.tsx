@@ -1,253 +1,278 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
 
-const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram"];
-const ANGLES = ["product_launch", "tips", "testimonial", "sale", "behind_the_scenes", "news_hijack", "question", "motivation"];
+const PLATFORM_CONFIG: Record<string, { emoji: string; limit: number }> = {
+  facebook:  { emoji: "📘", limit: 500 },
+  instagram: { emoji: "📸", limit: 300 },
+  linkedin:  { emoji: "💼", limit: 700 },
+  twitter:   { emoji: "🐦", limit: 280 },
+  telegram:  { emoji: "✈️", limit: 1000 },
+  tiktok:    { emoji: "🎵", limit: 300 },
+};
+
+const PLAN_PLATFORMS: Record<string, string[]> = {
+  solo:    ["facebook", "instagram"],
+  starter: ["facebook", "instagram", "telegram"],
+  growth:  ["facebook", "instagram", "linkedin", "twitter", "telegram", "tiktok"],
+  agency:  ["facebook", "instagram", "linkedin", "twitter", "telegram", "tiktok"],
+  admin:   ["facebook", "instagram", "linkedin", "twitter", "telegram", "tiktok"],
+};
+
+const PLAN_DAILY_LIMIT: Record<string, number | null> = {
+  solo: 5, starter: 15, growth: null, agency: null, admin: null,
+};
+
+const ANGLE_SUGGESTIONS = [
+  "💰 Earn Money", "🚀 Product Launch", "💡 Tips & Tricks", "⭐ Testimonial",
+  "🔥 Flash Sale", "🎬 Behind the Scenes", "📰 News Hijack", "❓ Question",
+  "🤝 Community", "🎓 Education", "🎯 Promotion", "💪 Motivation",
+];
+
+const LANGUAGES = [
+  { value: "en", label: "🇬🇧 English" },
+  { value: "fr", label: "🇫🇷 French" },
+  { value: "yo", label: "Yoruba" },
+  { value: "ha", label: "Hausa" },
+  { value: "ig", label: "Igbo" },
+];
 
 interface ContentItem {
   id: number;
   platform: string;
   angle: string;
+  language: string;
   text: string;
   image_url: string | null;
   used: boolean;
   created_at: string;
 }
 
-export default function ContentPage() {
-  const { client } = useAuth();
-  const [library, setLibrary] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState("");
+type PostStatus = "idle" | "posting" | "posted" | "failed";
 
-  const [platform, setPlatform] = useState("instagram");
-  const [angle, setAngle] = useState("tips");
+export default function ContentStudio() {
+  const [plan, setPlan] = useState("solo");
+  const [subscriptionStatus, setSubscriptionStatus] = useState("active");
+
+  const [platform, setPlatform] = useState("facebook");
+  const [angle, setAngle] = useState("");
   const [language, setLanguage] = useState("en");
+  const [count, setCount] = useState(3);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
 
-  const [bulkMode, setBulkMode] = useState(false);
-  const [bulkPlatforms, setBulkPlatforms] = useState<string[]>(["instagram", "facebook"]);
-  const [bulkAngles, setBulkAngles] = useState<string[]>(["tips", "product_launch"]);
+  const [results, setResults] = useState<ContentItem[]>([]);
+  const [editText, setEditText] = useState<Record<number, string>>({});
+  const [postStatus, setPostStatus] = useState<Record<number, PostStatus>>({});
+  const [postError, setPostError] = useState<Record<number, string>>({});
 
-  const fetchLibrary = async () => {
-    setLoading(true);
-    try {
-      const data = await api.get<ContentItem[]>("/content/?limit=30");
-      setLibrary(data);
-    } finally {
-      setLoading(false);
+  const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
+  const dailyLimit = PLAN_DAILY_LIMIT[plan];
+  const maxCount = dailyLimit ? Math.min(10, dailyLimit) : 10;
+  const charLimit = PLATFORM_CONFIG[platform]?.limit ?? 500;
+  const isInactive = subscriptionStatus && !["active", "trial"].includes(subscriptionStatus) && plan !== "admin";
+
+  useEffect(() => {
+    const stored = localStorage.getItem("mp_client");
+    if (stored) {
+      const c = JSON.parse(stored);
+      setPlan(c.plan ?? "solo");
+      setSubscriptionStatus(c.subscription_status ?? "active");
     }
-  };
+    // Default platform to first available for this plan
+    const platforms = PLAN_PLATFORMS[JSON.parse(localStorage.getItem("mp_client") || "{}").plan ?? "solo"] ?? ["facebook"];
+    setPlatform(platforms[0]);
+  }, []);
 
-  useEffect(() => { fetchLibrary(); }, []);
+  const getText = (item: ContentItem) =>
+    editText[item.id] !== undefined ? editText[item.id] : item.text;
 
   const generate = async () => {
+    if (!angle.trim()) { setGenError("Please enter a topic or angle."); return; }
     setGenerating(true);
-    setError("");
+    setGenError("");
+    setResults([]);
+    setPostStatus({});
+    setEditText({});
     try {
-      if (bulkMode) {
-        await api.post("/content/generate/bulk", {
-          platforms: bulkPlatforms,
-          angles: bulkAngles,
-          language,
-        });
-      } else {
-        await api.post("/content/generate", { platform, angle, language });
-      }
-      await fetchLibrary();
+      const data = await api.post<ContentItem[]>("/content/generate", {
+        platform, angle: angle.trim(), language, count,
+      });
+      setResults(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Generation failed");
+      setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
     }
   };
 
-  const deleteContent = async (id: number) => {
-    await api.del(`/content/${id}`);
-    setLibrary((prev) => prev.filter((c) => c.id !== id));
+  const postTo = async (item: ContentItem, targetPlatform: string | null) => {
+    const key = item.id;
+    setPostStatus((s) => ({ ...s, [key]: "posting" }));
+    setPostError((s) => ({ ...s, [key]: "" }));
+    try {
+      const url = targetPlatform
+        ? `/content/post-now/${item.id}?platform=${targetPlatform}`
+        : `/content/post-now/${item.id}`;
+      const res = await api.post<{ results: Record<string, { status: string; error?: string }> }>(url);
+      const allFailed = Object.values(res.results).every((r) => r.status === "failed");
+      if (allFailed) {
+        const firstError = Object.values(res.results)[0]?.error ?? "Post failed";
+        setPostStatus((s) => ({ ...s, [key]: "failed" }));
+        setPostError((s) => ({ ...s, [key]: firstError }));
+      } else {
+        setPostStatus((s) => ({ ...s, [key]: "posted" }));
+        setResults((prev) => prev.map((r) => r.id === item.id ? { ...r, used: true } : r));
+      }
+    } catch (err: unknown) {
+      setPostStatus((s) => ({ ...s, [key]: "failed" }));
+      setPostError((s) => ({ ...s, [key]: err instanceof Error ? err.message : "Post failed" }));
+    }
   };
 
-  const toggleBulkItem = (list: string[], item: string, setter: (v: string[]) => void) => {
-    setter(list.includes(item) ? list.filter((x) => x !== item) : [...list, item]);
-  };
-
-  const platformEmoji: Record<string, string> = {
-    facebook: "📘", instagram: "📸", linkedin: "💼",
-    twitter: "🐦", telegram: "✈️", tiktok: "🎵",
-  };
+  if (isInactive) {
+    return (
+      <div className="max-w-xl mx-auto mt-20 text-center">
+        <p className="text-4xl mb-4">🔒</p>
+        <h2 className="text-xl font-bold text-white mb-2">Subscription Inactive</h2>
+        <p className="text-gray-400 text-sm">Renew your subscription to use Content Studio.</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">AI Content Studio</h1>
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold mb-1">Content Studio</h1>
+      <p className="text-gray-400 text-sm mb-6">
+        Generate AI posts in your brand voice and publish instantly.
+        {dailyLimit && <span className="ml-1 text-indigo-400">{dailyLimit} generations/day on {plan} plan.</span>}
+      </p>
 
-      {/* Generator */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">Generate Posts</h2>
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={bulkMode}
-              onChange={(e) => setBulkMode(e.target.checked)}
-              className="accent-indigo-500"
-            />
-            Bulk mode
-          </label>
+      {/* Generator controls */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 space-y-4">
+        {/* Platform */}
+        <div>
+          <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wide">Platform</label>
+          <div className="flex flex-wrap gap-2">
+            {availablePlatforms.map((p) => (
+              <button key={p} onClick={() => setPlatform(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                  platform === p
+                    ? "border-indigo-500 bg-indigo-900 text-indigo-300"
+                    : "border-gray-700 text-gray-400 hover:border-gray-600"
+                }`}>
+                {PLATFORM_CONFIG[p]?.emoji} {p}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {!bulkMode ? (
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Platform</label>
-              <select
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                className="bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-              >
-                {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Angle</label>
-              <select
-                value={angle}
-                onChange={(e) => setAngle(e.target.value)}
-                className="bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-              >
-                {ANGLES.map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Language</label>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-              >
-                <option value="en">English</option>
-                <option value="yo">Yoruba</option>
-                <option value="ha">Hausa</option>
-                <option value="ig">Igbo</option>
-                <option value="fr">French</option>
-              </select>
-            </div>
+        {/* Angle — free text + suggestions */}
+        <div>
+          <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wide">Topic / Angle</label>
+          <input
+            value={angle}
+            onChange={(e) => setAngle(e.target.value)}
+            placeholder="e.g. How our product saves time, Black Friday deal, Customer success story..."
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 mb-2"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {ANGLE_SUGGESTIONS.map((s) => (
+              <button key={s} onClick={() => setAngle(s.replace(/^[^\s]+ /, ""))}
+                className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 text-xs rounded-full transition">
+                {s}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">Platforms</label>
-              <div className="flex flex-wrap gap-2">
-                {PLATFORMS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => toggleBulkItem(bulkPlatforms, p, setBulkPlatforms)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                      bulkPlatforms.includes(p)
-                        ? "bg-indigo-600 border-indigo-500 text-white"
-                        : "bg-gray-800 border-gray-700 text-gray-400"
-                    }`}
-                  >
-                    {platformEmoji[p]} {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">Angles</label>
-              <div className="flex flex-wrap gap-2">
-                {ANGLES.map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => toggleBulkItem(bulkAngles, a, setBulkAngles)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                      bulkAngles.includes(a)
-                        ? "bg-indigo-600 border-indigo-500 text-white"
-                        : "bg-gray-800 border-gray-700 text-gray-400"
-                    }`}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs text-gray-500">
-              Will generate {bulkPlatforms.length * bulkAngles.length} posts (max 12)
-            </p>
+        </div>
+
+        {/* Language + Count */}
+        <div className="flex gap-4 flex-wrap">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Language</label>
+            <select value={language} onChange={(e) => setLanguage(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+              {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
           </div>
-        )}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Count</label>
+            <input type="number" value={count} min={1} max={maxCount}
+              onChange={(e) => setCount(Math.min(maxCount, Math.max(1, Number(e.target.value))))}
+              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+        </div>
 
-        {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+        {genError && <p className="text-red-400 text-sm">{genError}</p>}
 
-        <button
-          onClick={generate}
-          disabled={generating}
-          className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition"
-        >
-          {generating ? "Generating with Brand DNA..." : "✨ Generate"}
+        <button onClick={generate} disabled={generating}
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
+          {generating ? "Generating..." : "✨ Generate Content"}
         </button>
+        {results.length > 0 && !generating && (
+          <span className="text-xs text-gray-500 ml-3">{results.length} post{results.length > 1 ? "s" : ""} generated</span>
+        )}
       </div>
 
-      {/* Library */}
-      <h2 className="font-semibold text-white mb-3">Content Library</h2>
-      {loading ? (
-        <p className="text-gray-400 text-sm">Loading...</p>
-      ) : library.length === 0 ? (
-        <p className="text-gray-500 text-sm">No content yet. Generate your first post above.</p>
-      ) : (
-        <div className="grid gap-4">
-          {library.map((item) => (
-            <div
-              key={item.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-4"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{platformEmoji[item.platform] || "📄"}</span>
-                  <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded capitalize">
-                    {item.platform}
-                  </span>
-                  <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">
-                    {item.angle}
-                  </span>
-                  {item.used && (
-                    <span className="text-xs bg-green-900 text-green-400 px-2 py-0.5 rounded">
-                      posted
-                    </span>
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-4">
+          {results.map((item) => {
+            const text = getText(item);
+            const over = text.length > charLimit;
+            const status = postStatus[item.id] ?? "idle";
+            return (
+              <div key={item.id} className={`bg-gray-900 border rounded-xl overflow-hidden transition ${
+                status === "posted" ? "border-green-700" : status === "failed" ? "border-red-700" : "border-gray-800"
+              }`}>
+                <div className="flex gap-4 p-4">
+                  {item.image_url && (
+                    <img src={item.image_url} alt="" className="w-24 h-24 object-cover rounded-lg shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <textarea
+                      value={text}
+                      onChange={(e) => setEditText((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      rows={4}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 resize-none focus:outline-none focus:border-indigo-500"
+                    />
+                    <div className="flex items-center justify-between mt-1">
+                      <span className={`text-xs ${over ? "text-red-400" : "text-gray-500"}`}>
+                        {text.length} / {charLimit} chars{over ? " — over limit" : ""}
+                      </span>
+                      <span className="text-xs text-gray-600">{item.angle} · {item.language}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 px-4 pb-4 flex-wrap">
+                  <button
+                    onClick={() => postTo(item, platform)}
+                    disabled={status === "posting" || status === "posted"}
+                    className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                    {status === "posting" ? "Posting..." : status === "posted" ? "✓ Posted" : `Post to ${PLATFORM_CONFIG[platform]?.emoji} ${platform}`}
+                  </button>
+                  <button
+                    onClick={() => postTo(item, null)}
+                    disabled={status === "posting" || status === "posted"}
+                    className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                    Post to All
+                  </button>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(text)}
+                    className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition">
+                    Copy
+                  </button>
+                  {status === "failed" && (
+                    <span className="text-xs text-red-400">{postError[item.id] || "Failed"}</span>
+                  )}
+                  {status === "posted" && (
+                    <span className="text-xs text-green-400">✓ Live</span>
                   )}
                 </div>
-                <button
-                  onClick={() => deleteContent(item.id)}
-                  className="text-gray-600 hover:text-red-400 text-xs transition"
-                >
-                  delete
-                </button>
               </div>
-              <div className="flex gap-3 mt-1">
-                {item.image_url && (
-                  <a href={item.image_url} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img
-                      src={item.image_url}
-                      alt="post image"
-                      className="w-24 h-24 object-cover rounded-lg border border-gray-700"
-                    />
-                  </a>
-                )}
-                <textarea
-                  readOnly
-                  value={item.text}
-                  rows={4}
-                  className="flex-1 bg-gray-800 text-gray-200 text-sm rounded-lg px-3 py-2 resize-none border border-gray-700 leading-relaxed"
-                />
-              </div>
-              <p className="text-gray-600 text-xs mt-2">
-                {new Date(item.created_at).toLocaleString()}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
