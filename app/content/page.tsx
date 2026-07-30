@@ -60,6 +60,7 @@ export default function ContentStudio() {
   const [count, setCount] = useState(3);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
+  const [newsMode, setNewsMode] = useState(false);
 
   const [results, setResults] = useState<ContentItem[]>([]);
   const [editText, setEditText] = useState<Record<number, string>>({});
@@ -88,17 +89,24 @@ export default function ContentStudio() {
     editText[item.id] !== undefined ? editText[item.id] : item.text;
 
   const generate = async () => {
-    if (!angle.trim()) { setGenError("Please enter a topic or angle."); return; }
+    if (!newsMode && !angle.trim()) { setGenError("Please enter a topic or angle."); return; }
     setGenerating(true);
     setGenError("");
     setResults([]);
     setPostStatus({});
     setEditText({});
     try {
-      const data = await api.post<ContentItem[]>("/content/generate", {
-        platform, angle: angle.trim(), language, count,
-      });
-      setResults(data);
+      if (newsMode) {
+        const data = await api.post<ContentItem[]>("/content/generate-from-news", {
+          platform, language,
+        });
+        setResults(data);
+      } else {
+        const data = await api.post<ContentItem[]>("/content/generate", {
+          platform, angle: angle.trim(), language, count,
+        });
+        setResults(data);
+      }
     } catch (err: unknown) {
       setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
@@ -169,21 +177,41 @@ export default function ContentStudio() {
 
         {/* Angle — free text + suggestions */}
         <div>
-          <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wide">Topic / Angle</label>
-          <input
-            value={angle}
-            onChange={(e) => setAngle(e.target.value)}
-            placeholder="e.g. How our product saves time, Black Friday deal, Customer success story..."
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 mb-2"
-          />
-          <div className="flex flex-wrap gap-1.5">
-            {ANGLE_SUGGESTIONS.map((s) => (
-              <button key={s} onClick={() => setAngle(s.replace(/^[^\s]+ /, ""))}
-                className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 text-xs rounded-full transition">
-                {s}
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs text-gray-400 uppercase tracking-wide">Topic / Angle</label>
+            <button
+              onClick={() => { setNewsMode((v) => !v); setAngle(""); setGenError(""); }}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition ${
+                newsMode
+                  ? "border-orange-500 bg-orange-900/40 text-orange-400"
+                  : "border-gray-700 text-gray-500 hover:border-gray-500"
+              }`}
+            >
+              🔥 {newsMode ? "Trending News ON" : "From Trending News"}
+            </button>
           </div>
+          {newsMode ? (
+            <div className="bg-orange-900/20 border border-orange-800/40 rounded-lg px-4 py-3 text-sm text-orange-300">
+              Will fetch your top trending keyword and rewrite it as a brand post with CTA.
+            </div>
+          ) : (
+            <>
+              <input
+                value={angle}
+                onChange={(e) => setAngle(e.target.value)}
+                placeholder="e.g. How our product saves time, Black Friday deal, Customer success story..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 mb-2"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {ANGLE_SUGGESTIONS.map((s) => (
+                  <button key={s} onClick={() => setAngle(s.replace(/^[^\s]+ /, ""))}
+                    className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 text-xs rounded-full transition">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Language + Count */}
@@ -195,19 +223,23 @@ export default function ContentStudio() {
               {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Count</label>
-            <input type="number" value={count} min={1} max={maxCount}
-              onChange={(e) => setCount(Math.min(maxCount, Math.max(1, Number(e.target.value))))}
-              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-          </div>
+          {!newsMode && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Count</label>
+              <input type="number" value={count} min={1} max={maxCount}
+                onChange={(e) => setCount(Math.min(maxCount, Math.max(1, Number(e.target.value))))}
+                className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+            </div>
+          )}
         </div>
 
         {genError && <p className="text-red-400 text-sm">{genError}</p>}
 
         <button onClick={generate} disabled={generating}
           className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition">
-          {generating ? "Generating..." : "✨ Generate Content"}
+          {generating
+            ? (newsMode ? "Fetching trends..." : "Generating...")
+            : (newsMode ? "🔥 Generate from Trending News" : "✨ Generate Content")}
         </button>
         {results.length > 0 && !generating && (
           <span className="text-xs text-gray-500 ml-3">{results.length} post{results.length > 1 ? "s" : ""} generated</span>
