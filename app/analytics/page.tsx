@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
   const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
 
-  const fetch = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const d = await api.get(`/analytics/summary?days=${days}`);
@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
     }
   }, [days]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
@@ -94,8 +94,7 @@ export default function AnalyticsPage() {
   const downloadReport = async () => {
     try {
       const token = localStorage.getItem("mp_token");
-      const apiUrl = API_URL;
-      const res = await fetch(`${apiUrl}/analytics/report/download`, {
+      const res = await window.fetch(`${API_URL}/analytics/report/download`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`Download failed: ${res.status}`);
@@ -115,7 +114,7 @@ export default function AnalyticsPage() {
     setAggregating(true);
     await api.post("/analytics/aggregate", {});
     setAggregating(false);
-    fetch();
+    loadData();
   };
 
   const platforms = data ? Object.entries(data.by_platform) : [];
