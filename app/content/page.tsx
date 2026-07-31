@@ -66,6 +66,8 @@ export default function ContentStudio() {
   const [editText, setEditText] = useState<Record<number, string>>({});
   const [postStatus, setPostStatus] = useState<Record<number, PostStatus>>({});
   const [postError, setPostError] = useState<Record<number, string>>({});
+  const [repurposePlatform, setRepurposePlatform] = useState<Record<number, string>>({});
+  const [repurposing, setRepurposing] = useState<Record<number, boolean>>({});
 
   const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
   const dailyLimit = PLAN_DAILY_LIMIT[plan];
@@ -111,6 +113,20 @@ export default function ContentStudio() {
       setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const repurpose = async (item: ContentItem) => {
+    const target = repurposePlatform[item.id];
+    if (!target) return;
+    setRepurposing((s) => ({ ...s, [item.id]: true }));
+    try {
+      const newItem = await api.post<ContentItem>(`/content/${item.id}/repurpose?target_platform=${target}`);
+      setResults((prev) => [newItem, ...prev]);
+    } catch (err: unknown) {
+      setPostError((s) => ({ ...s, [item.id]: err instanceof Error ? err.message : "Repurpose failed" }));
+    } finally {
+      setRepurposing((s) => ({ ...s, [item.id]: false }));
     }
   };
 
@@ -295,6 +311,24 @@ export default function ContentStudio() {
                     className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition">
                     Copy
                   </button>
+                  {/* Repurpose */}
+                  <div className="flex items-center gap-1 ml-auto">
+                    <select
+                      value={repurposePlatform[item.id] ?? ""}
+                      onChange={(e) => setRepurposePlatform((s) => ({ ...s, [item.id]: e.target.value }))}
+                      className="bg-gray-800 border border-gray-700 text-gray-400 text-xs rounded-lg px-2 py-1.5 focus:outline-none">
+                      <option value="">Repurpose for…</option>
+                      {availablePlatforms.filter((p) => p !== item.platform).map((p) => (
+                        <option key={p} value={p}>{PLATFORM_CONFIG[p]?.emoji} {p}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => repurpose(item)}
+                      disabled={!repurposePlatform[item.id] || repurposing[item.id]}
+                      className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition">
+                      {repurposing[item.id] ? "…" : "♻️"}
+                    </button>
+                  </div>
                   {status === "failed" && (
                     <span className="text-xs text-red-400">{postError[item.id] || "Failed"}</span>
                   )}
