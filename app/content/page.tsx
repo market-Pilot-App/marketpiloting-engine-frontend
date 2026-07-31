@@ -68,6 +68,8 @@ export default function ContentStudio() {
   const [postError, setPostError] = useState<Record<number, string>>({});
   const [repurposePlatform, setRepurposePlatform] = useState<Record<number, string>>({});
   const [repurposing, setRepurposing] = useState<Record<number, boolean>>({});
+  const [storyPlatform, setStoryPlatform] = useState<"instagram" | "facebook">("instagram");
+  const [generatingStory, setGeneratingStory] = useState(false);
 
   const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
   const dailyLimit = PLAN_DAILY_LIMIT[plan];
@@ -113,6 +115,19 @@ export default function ContentStudio() {
       setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateStory = async () => {
+    setGeneratingStory(true);
+    setGenError("");
+    try {
+      const item = await api.post<ContentItem>("/content/generate-story", { platform: storyPlatform });
+      setResults((prev) => [item, ...prev]);
+    } catch (err: unknown) {
+      setGenError(err instanceof Error ? err.message : "Story generation failed");
+    } finally {
+      setGeneratingStory(false);
     }
   };
 
@@ -172,7 +187,30 @@ export default function ContentStudio() {
         {dailyLimit && <span className="ml-1 text-indigo-400">{dailyLimit} generations/day on {plan} plan.</span>}
       </p>
 
-      {/* Generator controls */}
+        {/* Story generator — growth/agency only */}
+        {(plan === "growth" || plan === "agency" || plan === "admin") && (
+          <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-4 mb-6 flex items-center gap-4 flex-wrap">
+            <span className="text-sm font-medium text-purple-300">📱 Story Generator</span>
+            <select
+              value={storyPlatform}
+              onChange={(e) => setStoryPlatform(e.target.value as "instagram" | "facebook")}
+              className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+            >
+              <option value="instagram">📸 Instagram Story</option>
+              <option value="facebook">📘 Facebook Story</option>
+            </select>
+            <button
+              onClick={generateStory}
+              disabled={generatingStory}
+              className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition"
+            >
+              {generatingStory ? "Generating..." : "✨ Generate Story"}
+            </button>
+            <span className="text-xs text-gray-500">Vertical format · max 8 words · auto-scheduled at 7 AM</span>
+          </div>
+        )}
+
+        {/* Generator controls */}}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 space-y-4">
         {/* Platform */}
         <div>
@@ -271,7 +309,7 @@ export default function ContentStudio() {
             const status = postStatus[item.id] ?? "idle";
             return (
               <div key={item.id} className={`bg-gray-900 border rounded-xl overflow-hidden transition ${
-                status === "posted" ? "border-green-700" : status === "failed" ? "border-red-700" : "border-gray-800"
+                status === "posted" ? "border-green-700" : status === "failed" ? "border-red-700" : item.is_story ? "border-purple-800" : "border-gray-800"
               }`}>
                 <div className="flex gap-4 p-4">
                   {item.image_url && (
@@ -288,7 +326,10 @@ export default function ContentStudio() {
                       <span className={`text-xs ${over ? "text-red-400" : "text-gray-500"}`}>
                         {text.length} / {charLimit} chars{over ? " — over limit" : ""}
                       </span>
-                      <span className="text-xs text-gray-600">{item.angle} · {item.language}</span>
+                      <span className="text-xs text-gray-600">
+                        {item.is_story && <span className="text-purple-400 mr-2">📱 Story</span>}
+                        {item.angle} · {item.language}
+                      </span>
                     </div>
                   </div>
                 </div>

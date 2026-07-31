@@ -13,6 +13,7 @@ interface QueuedPost {
   likes: number;
   reach: number;
   posted_at: string | null;
+  is_story?: boolean;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -136,6 +137,9 @@ export default function SchedulerPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-white text-sm font-medium capitalize">{post.platform}</span>
+                    {post.is_story && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900 text-purple-300">📱 Story</span>
+                    )}
                     <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[post.status] || "bg-gray-800 text-gray-400"}`}>
                       {post.status}
                     </span>
