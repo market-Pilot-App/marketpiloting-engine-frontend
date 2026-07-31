@@ -48,6 +48,15 @@ interface ContentItem {
   created_at: string;
 }
 
+interface ContentInsight {
+  id: number;
+  topic: string;
+  frequency: number;
+  suggested_angle: string;
+  sample_messages: string[];
+  content_generated: boolean;
+}
+
 type PostStatus = "idle" | "posting" | "posted" | "failed";
 
 export default function ContentStudio() {
@@ -70,6 +79,8 @@ export default function ContentStudio() {
   const [repurposing, setRepurposing] = useState<Record<number, boolean>>({});
   const [storyPlatform, setStoryPlatform] = useState<"instagram" | "facebook">("instagram");
   const [generatingStory, setGeneratingStory] = useState(false);
+  const [insights, setInsights] = useState<ContentInsight[]>([]);
+  const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
   const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
   const dailyLimit = PLAN_DAILY_LIMIT[plan];
@@ -84,9 +95,10 @@ export default function ContentStudio() {
       setPlan(c.plan ?? "solo");
       setSubscriptionStatus(c.subscription_status ?? "active");
     }
-    // Default platform to first available for this plan
     const platforms = PLAN_PLATFORMS[JSON.parse(localStorage.getItem("mp_client") || "{}").plan ?? "solo"] ?? ["facebook"];
     setPlatform(platforms[0]);
+    // Load conversation insights
+    api.get<ContentInsight[]>("/insights/").then(setInsights).catch(() => {});
   }, []);
 
   const getText = (item: ContentItem) =>
@@ -115,6 +127,19 @@ export default function ContentStudio() {
       setGenError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateFromInsight = async (insight: ContentInsight) => {
+    setGeneratingInsight((s) => ({ ...s, [insight.id]: true }));
+    try {
+      const item = await api.post<ContentItem>(`/insights/generate-content/${insight.id}`);
+      setResults((prev) => [item, ...prev]);
+      setInsights((prev) => prev.map((i) => i.id === insight.id ? { ...i, content_generated: true } : i));
+    } catch (err: unknown) {
+      setGenError(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setGeneratingInsight((s) => ({ ...s, [insight.id]: false }));
     }
   };
 
@@ -207,6 +232,30 @@ export default function ContentStudio() {
               {generatingStory ? "Generating..." : "✨ Generate Story"}
             </button>
             <span className="text-xs text-gray-500">Vertical format · max 8 words · auto-scheduled at 7 AM</span>
+          </div>
+        )}
+
+        {/* From Conversations */}
+        {insights.length > 0 && (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+            <p className="text-sm font-medium text-gray-300 mb-3">💬 From Conversations <span className="text-xs text-gray-500 ml-1">Top topics customers asked this week</span></p>
+            <div className="space-y-2">
+              {insights.map((insight) => (
+                <div key={insight.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{insight.topic}</p>
+                    <p className="text-xs text-gray-500">{insight.frequency}x this week · {insight.suggested_angle}</p>
+                  </div>
+                  <button
+                    onClick={() => generateFromInsight(insight)}
+                    disabled={generatingInsight[insight.id] || insight.content_generated}
+                    className="shrink-0 px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition"
+                  >
+                    {insight.content_generated ? "✓ Done" : generatingInsight[insight.id] ? "..." : "Generate Post"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
