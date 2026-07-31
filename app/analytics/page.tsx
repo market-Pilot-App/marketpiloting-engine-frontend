@@ -40,11 +40,27 @@ function BarChart({ series, metric, color }: { series: DaySeries[]; metric: keyo
   );
 }
 
+interface ReportPreview {
+  business_name: string;
+  month: string;
+  posts_month: number;
+  likes: number;
+  reach: number;
+  leads_month: number;
+  boost_spend: number;
+  referral_clicks: number;
+  dna_score: number;
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [aggregating, setAggregating] = useState(false);
+  const [reportPreview, setReportPreview] = useState<ReportPreview | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [reportError, setReportError] = useState("");
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -57,6 +73,23 @@ export default function AnalyticsPage() {
   }, [days]);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  useEffect(() => {
+    api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
+  }, []);
+
+  const generateReport = async () => {
+    setGenerating(true);
+    setReportError("");
+    try {
+      const res = await api.post<{ download_url: string }>("/analytics/report/generate");
+      setDownloadUrl(res.download_url);
+    } catch (err: unknown) {
+      setReportError(err instanceof Error ? err.message : "Failed to generate report");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const runAggregate = async () => {
     setAggregating(true);
@@ -176,6 +209,46 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          {/* PDF Report section */}
+          {reportPreview && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-semibold text-gray-900">📄 Monthly Performance Report</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{reportPreview.month} · {reportPreview.business_name}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {downloadUrl && (
+                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-sm text-indigo-600 hover:underline font-medium">
+                      ⬇ Download PDF
+                    </a>
+                  )}
+                  <button
+                    onClick={generateReport}
+                    disabled={generating}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {generating ? "Generating..." : "📄 Generate & Email Report"}
+                  </button>
+                </div>
+              </div>
+              {reportError && <p className="text-red-500 text-xs mb-3">{reportError}</p>}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Posts This Month", value: reportPreview.posts_month },
+                  { label: "Leads This Month", value: reportPreview.leads_month },
+                  { label: "Referral Clicks", value: reportPreview.referral_clicks },
+                  { label: "Brand DNA Score", value: `${reportPreview.dna_score}/100` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xl font-bold text-gray-900">{value}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
