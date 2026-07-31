@@ -17,7 +17,6 @@ const NAV = [
   { href: "/landing-page", label: "Landing Page", icon: "🌐" },
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/leads", label: "Leads", icon: "👥" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
   { href: "/auto-reply", label: "Auto-Reply", icon: "💬" },
   { href: "/catalog", label: "Catalog", icon: "🛍️" },
 ];
@@ -173,8 +172,18 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Sign out */}
-      <div className="px-3 py-4 border-t border-gray-800">
+      {/* Settings + Sign out */}
+      <div className="px-3 py-4 border-t border-gray-800 space-y-0.5">
+        <Link
+          href="/settings"
+          title={collapsed ? "Settings" : undefined}
+          className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
+            collapsed ? "justify-center" : ""
+          } ${pathname === "/settings" ? "bg-indigo-600 text-white" : ""}`}
+        >
+          <span className="text-base">⚙️</span>
+          {!collapsed && "Settings"}
+        </Link>
         <button
           onClick={logout}
           title={collapsed ? "Sign out" : undefined}
