@@ -28,6 +28,8 @@ interface TrendData { all_topics: string[]; relevant: string[]; }
 interface ReferralStats { total_clicks: number; top_links: { code: string; angle: string; clicks: number }[]; }
 interface CampaignSummary { id: number; name: string; niche: string; platforms: string[]; active: boolean; }
 interface BrandDNA { consistency_score: number; business_name: string; }
+interface OnboardingItem { key: string; label: string; href: string; done: boolean; }
+interface OnboardingHealth { score: number; max: number; items: OnboardingItem[]; }
 
 const PLATFORM_ICONS: Record<string, string> = {
   facebook: "📘", linkedin: "💼", instagram: "📸", twitter: "🐦", telegram: "✈️", tiktok: "🎵",
@@ -95,6 +97,7 @@ export default function DashboardPage() {
   const [trends, setTrends] = useState<TrendData | null>(null);
   const [referrals, setReferrals] = useState<ReferralStats | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
+  const [onboarding, setOnboarding] = useState<OnboardingHealth | null>(null);
 
   useEffect(() => {
     if (!sessionStorage.getItem("mp_intro_seen")) setShowIntro(true);
@@ -110,7 +113,8 @@ export default function DashboardPage() {
       api.get("/jobs/trends"),
       api.get("/referrals/stats"),
       api.get("/brand-dna/"),
-    ]).then(([s, o, ap, r, t, ref, d]) => {
+      api.get("/analytics/onboarding-health"),
+    ]).then(([s, o, ap, r, t, ref, d, ob]) => {
       setStats(s);
       setOverview(o);
       setAnglePerf((ap as any).angles || []);
@@ -118,6 +122,7 @@ export default function DashboardPage() {
       setTrends(t as TrendData);
       setReferrals(ref as ReferralStats);
       setDna(d as BrandDNA);
+      setOnboarding(ob as OnboardingHealth);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
@@ -177,6 +182,47 @@ export default function DashboardPage() {
         <p className="text-gray-400 text-sm">Loading...</p>
       ) : (
         <>
+          {/* Onboarding Health Widget — hidden when fully complete */}
+          {onboarding && onboarding.score < onboarding.max && (
+            <div className="bg-gray-900 border border-indigo-500/30 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-white">🚀 Engine Setup</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Complete these steps to activate your marketing engine</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-indigo-400">{onboarding.score}</span>
+                  <span className="text-gray-500 text-sm">/{onboarding.max}</span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
+                <div
+                  className="bg-indigo-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${(onboarding.score / onboarding.max) * 100}%` }}
+                />
+              </div>
+              {/* Checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {onboarding.items.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={item.done ? "#" : item.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+                      item.done
+                        ? "bg-green-500/10 text-green-400 cursor-default"
+                        : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-base flex-shrink-0">{item.done ? "✅" : "⬜"}</span>
+                    <span>{item.label}</span>
+                    {!item.done && <span className="ml-auto text-xs text-indigo-400">→</span>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stat Cards */}
           <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             {statCards.map((c) => (
