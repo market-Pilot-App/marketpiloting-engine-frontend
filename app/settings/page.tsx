@@ -20,6 +20,15 @@ interface AutoReplySettings {
   escalation_keywords: string[];
 }
 
+interface PaymentForm {
+  payment_method: string;
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  payment_link: string;
+  payment_instructions: string;
+}
+
 interface PlatformForm {
   fb_access_token?: string;
   fb_page_id?: string;
@@ -159,12 +168,40 @@ export default function SettingsPage() {
   const [kwInput, setKwInput] = useState("");
   const canAutoReply = ["starter", "growth", "agency", "admin"].includes(plan);
 
+  // Payment state
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({
+    payment_method: "", bank_name: "", account_number: "",
+    account_name: "", payment_link: "", payment_instructions: "",
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [savedPayment, setSavedPayment] = useState(false);
+
   useEffect(() => {
     const stored = localStorage.getItem("mp_client");
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
+    api.get<PaymentForm>("/brand-dna/").then((d) => {
+      setPaymentForm({
+        payment_method: (d as unknown as Record<string, string>).payment_method || "",
+        bank_name: (d as unknown as Record<string, string>).bank_name || "",
+        account_number: (d as unknown as Record<string, string>).account_number || "",
+        account_name: (d as unknown as Record<string, string>).account_name || "",
+        payment_link: (d as unknown as Record<string, string>).payment_link || "",
+        payment_instructions: (d as unknown as Record<string, string>).payment_instructions || "",
+      });
+    }).catch(() => {});
   }, []);
+
+  const savePayment = async () => {
+    setSavingPayment(true);
+    try {
+      await api.patch("/brand-dna/", paymentForm);
+      setSavedPayment(true);
+      setTimeout(() => setSavedPayment(false), 3000);
+    } catch {}
+    finally { setSavingPayment(false); }
+  };
 
   const saveAutoReply = async () => {
     setArSaving(true);
@@ -310,6 +347,74 @@ export default function SettingsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* ── Payment Details ── */}
+      <div className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">💳 Payment Details</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Auto-replies will include these details when customers ask about payment.
+        </p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+            <select
+              value={paymentForm.payment_method}
+              onChange={(e) => setPaymentForm((f) => ({ ...f, payment_method: e.target.value }))}
+              className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+            >
+              <option value="">Select method</option>
+              <option value="bank">Bank Transfer Only</option>
+              <option value="link">Payment Link Only</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          {(paymentForm.payment_method === "bank" || paymentForm.payment_method === "both") && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(["bank_name", "account_number", "account_name"] as const).map((field) => (
+                <div key={field}>
+                  <p className="text-xs text-gray-500 mb-1 capitalize">{field.replace("_", " ")}</p>
+                  <input
+                    value={paymentForm[field]}
+                    onChange={(e) => setPaymentForm((f) => ({ ...f, [field]: e.target.value }))}
+                    placeholder={field === "bank_name" ? "GTBank" : field === "account_number" ? "0123456789" : "Adunola Stores"}
+                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {(paymentForm.payment_method === "link" || paymentForm.payment_method === "both") && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Payment Link</p>
+              <input
+                value={paymentForm.payment_link}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, payment_link: e.target.value }))}
+                placeholder="https://paystack.com/pay/your-store"
+                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+          {paymentForm.payment_method && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Payment Instructions</p>
+              <textarea
+                value={paymentForm.payment_instructions}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, payment_instructions: e.target.value }))}
+                placeholder="e.g. Send proof of payment to this DM after transfer"
+                rows={2}
+                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+          <button
+            onClick={savePayment}
+            disabled={savingPayment}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+          >
+            {savingPayment ? "Saving..." : savedPayment ? "✓ Saved" : "Save Payment Info"}
+          </button>
+        </div>
       </div>
 
       {/* ── Auto-Reply Settings ── */}

@@ -32,25 +32,14 @@ export default function BrandDNAPage() {
   const [error, setError] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<Partial<BrandDNA>>({});
-  const [paymentForm, setPaymentForm] = useState({
-    payment_method: "", bank_name: "", account_number: "",
-    account_name: "", payment_link: "", payment_instructions: "",
-  });
-  const [savingPayment, setSavingPayment] = useState(false);
+
 
   const fetchDNA = async () => {
     try {
       const data = await api.get<BrandDNA>("/brand-dna/");
       setDna(data);
       setForm(data);
-      setPaymentForm({
-        payment_method: data.payment_method || "",
-        bank_name: data.bank_name || "",
-        account_number: data.account_number || "",
-        account_name: data.account_name || "",
-        payment_link: data.payment_link || "",
-        payment_instructions: data.payment_instructions || "",
-      });
+
     } catch {
       setDna(null);
     } finally {
@@ -94,19 +83,6 @@ export default function BrandDNAPage() {
       setError(err instanceof Error ? err.message : "Extraction failed");
     } finally {
       setExtracting(false);
-    }
-  };
-
-  const savePayment = async () => {
-    setSavingPayment(true);
-    setError("");
-    try {
-      const updated = await api.patch<BrandDNA>("/brand-dna/", paymentForm);
-      setDna(updated);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSavingPayment(false);
     }
   };
 
@@ -279,78 +255,6 @@ export default function BrandDNAPage() {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Payment Details */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-white">💳 Payment Details</h2>
-              <button
-                onClick={savePayment}
-                disabled={savingPayment}
-                className="text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg transition"
-              >
-                {savingPayment ? "Saving..." : "Save Payment Info"}
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">Auto-replies will include these details when customers ask about payment.</p>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Payment Method</p>
-                <select
-                  value={paymentForm.payment_method}
-                  onChange={(e) => setPaymentForm((f) => ({ ...f, payment_method: e.target.value }))}
-                  className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">Select method</option>
-                  <option value="bank">Bank Transfer Only</option>
-                  <option value="link">Payment Link Only</option>
-                  <option value="both">Both</option>
-                </select>
-              </div>
-
-              {(paymentForm.payment_method === "bank" || paymentForm.payment_method === "both") && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {(["bank_name", "account_number", "account_name"] as const).map((field) => (
-                    <div key={field}>
-                      <p className="text-xs text-gray-500 mb-1 capitalize">{field.replace("_", " ")}</p>
-                      <input
-                        value={paymentForm[field]}
-                        onChange={(e) => setPaymentForm((f) => ({ ...f, [field]: e.target.value }))}
-                        placeholder={field === "bank_name" ? "GTBank" : field === "account_number" ? "0123456789" : "Adunola Stores"}
-                        className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {(paymentForm.payment_method === "link" || paymentForm.payment_method === "both") && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Payment Link</p>
-                  <input
-                    value={paymentForm.payment_link}
-                    onChange={(e) => setPaymentForm((f) => ({ ...f, payment_link: e.target.value }))}
-                    placeholder="https://paystack.com/pay/your-store"
-                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              )}
-
-              {paymentForm.payment_method && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Payment Instructions</p>
-                  <textarea
-                    value={paymentForm.payment_instructions}
-                    onChange={(e) => setPaymentForm((f) => ({ ...f, payment_instructions: e.target.value }))}
-                    placeholder="e.g. Send proof of payment to this DM after transfer"
-                    rows={2}
-                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              )}
             </div>
           </div>
 
