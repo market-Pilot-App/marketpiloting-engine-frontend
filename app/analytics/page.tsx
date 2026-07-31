@@ -91,6 +91,25 @@ export default function AnalyticsPage() {
     }
   };
 
+  const downloadReport = async () => {
+    try {
+      const token = localStorage.getItem("mp_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/report/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report_${reportPreview?.month?.replace(" ", "_") ?? "report"}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setReportError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
   const runAggregate = async () => {
     setAggregating(true);
     await api.post("/analytics/aggregate", {});
@@ -219,14 +238,12 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {reportReady && (
-                    <a
-                      href={`${process.env.NEXT_PUBLIC_API_URL}/analytics/report/download`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={downloadReport}
                       className="text-sm text-indigo-600 hover:underline font-medium"
                     >
                       ⬇ Download PDF
-                    </a>
+                    </button>
                   )}
                   <button
                     onClick={generateReport}
