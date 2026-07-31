@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 
 const PLATFORM_CONFIG: Record<string, { emoji: string; limit: number }> = {
   facebook:  { emoji: "📘", limit: 500 },
@@ -45,6 +45,7 @@ interface ContentItem {
   text: string;
   image_url: string | null;
   used: boolean;
+  is_story?: boolean;
   created_at: string;
 }
 
@@ -236,9 +237,29 @@ export default function ContentStudio() {
         )}
 
         {/* From Conversations */}
-        {insights.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
-            <p className="text-sm font-medium text-gray-300 mb-3">💬 From Conversations <span className="text-xs text-gray-500 ml-1">Top topics customers asked this week</span></p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-300">💬 From Conversations <span className="text-xs text-gray-500 ml-1">Top topics customers asked this week</span></p>
+            <button
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("mp_token");
+                  await window.fetch(`${API_URL}/cron/analyze-conversations`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}`, "x-cron-secret": "cron-secret-change-me" },
+                  });
+                  const data = await api.get<ContentInsight[]>("/insights/");
+                  setInsights(data);
+                } catch { setGenError("Analysis failed — check if you have conversation messages."); }
+              }}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+            >
+              ↻ Run Analysis
+            </button>
+          </div>
+          {insights.length === 0 ? (
+            <p className="text-xs text-gray-600 py-2">No insights yet. Click ↻ Run Analysis to scan this week's incoming messages.</p>
+          ) : (
             <div className="space-y-2">
               {insights.map((insight) => (
                 <div key={insight.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2 gap-3">
@@ -256,8 +277,8 @@ export default function ContentStudio() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Generator controls */}}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 space-y-4">

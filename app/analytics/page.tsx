@@ -237,14 +237,12 @@ export default function AnalyticsPage() {
                   <p className="text-xs text-gray-400 mt-0.5">{reportPreview.month} · {reportPreview.business_name}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {reportReady && (
-                    <button
-                      onClick={downloadReport}
-                      className="text-sm text-indigo-600 hover:underline font-medium"
-                    >
-                      ⬇ Download PDF
-                    </button>
-                  )}
+                  <button
+                    onClick={downloadReport}
+                    className="text-sm text-indigo-600 hover:underline font-medium"
+                  >
+                    ⬇ Download PDF
+                  </button>
                   <button
                     onClick={generateReport}
                     disabled={generating}
