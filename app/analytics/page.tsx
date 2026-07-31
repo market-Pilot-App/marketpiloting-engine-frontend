@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
   const [aggregating, setAggregating] = useState(false);
   const [reportPreview, setReportPreview] = useState<ReportPreview | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
 
   const fetch = useCallback(async () => {
@@ -82,8 +82,8 @@ export default function AnalyticsPage() {
     setGenerating(true);
     setReportError("");
     try {
-      const res = await api.post<{ download_url: string }>("/analytics/report/generate");
-      setDownloadUrl(res.download_url);
+      await api.post("/analytics/report/generate");
+      setReportReady(true);
     } catch (err: unknown) {
       setReportError(err instanceof Error ? err.message : "Failed to generate report");
     } finally {
@@ -218,9 +218,13 @@ export default function AnalyticsPage() {
                   <p className="text-xs text-gray-400 mt-0.5">{reportPreview.month} · {reportPreview.business_name}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {downloadUrl && (
-                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-indigo-600 hover:underline font-medium">
+                  {reportReady && (
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL}/analytics/report/download`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-indigo-600 hover:underline font-medium"
+                    >
                       ⬇ Download PDF
                     </a>
                   )}
