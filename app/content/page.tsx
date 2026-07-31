@@ -32,9 +32,6 @@ const ANGLE_SUGGESTIONS = [
 const LANGUAGES = [
   { value: "en", label: "🇬🇧 English" },
   { value: "fr", label: "🇫🇷 French" },
-  { value: "yo", label: "Yoruba" },
-  { value: "ha", label: "Hausa" },
-  { value: "ig", label: "Igbo" },
 ];
 
 interface ContentItem {
