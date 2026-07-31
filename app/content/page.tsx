@@ -280,7 +280,7 @@ export default function ContentStudio() {
           )}
         </div>
 
-        {/* Generator controls */}}
+        {/* Generator controls */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 space-y-4">
         {/* Platform */}
         <div>
