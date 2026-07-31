@@ -187,13 +187,23 @@ export default function BrandDNAPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-white">Brand Profile</h2>
-              <button
-                onClick={() => editMode ? save() : setEditMode(true)}
-                disabled={saving}
-                className="text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg transition"
-              >
-                {saving ? "Saving..." : editMode ? "Save Changes" : "Edit"}
-              </button>
+              <div className="flex gap-2">
+                {editMode && (
+                  <button
+                    onClick={() => { setEditMode(false); setForm(dna); }}
+                    className="text-sm bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={() => editMode ? save() : setEditMode(true)}
+                  disabled={saving}
+                  className="text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg transition"
+                >
+                  {saving ? "Saving..." : editMode ? "Save Changes" : "Edit"}
+                </button>
+              </div>
             </div>
 
             {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
@@ -236,19 +246,37 @@ export default function BrandDNAPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-2">✅ Always Use</p>
-                  <div className="flex flex-wrap gap-1">
-                    {dna.brand_keywords.map((k) => (
-                      <span key={k} className="bg-indigo-900 text-indigo-300 text-xs px-2 py-0.5 rounded-full">{k}</span>
-                    ))}
-                  </div>
+                  {editMode ? (
+                    <input
+                      value={(form.brand_keywords || []).join(", ")}
+                      onChange={(e) => setForm((f) => ({ ...f, brand_keywords: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }))}
+                      placeholder="word1, word2, word3"
+                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {dna.brand_keywords.map((k) => (
+                        <span key={k} className="bg-indigo-900 text-indigo-300 text-xs px-2 py-0.5 rounded-full">{k}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-2">🚫 Never Use</p>
-                  <div className="flex flex-wrap gap-1">
-                    {dna.avoid_words.map((w) => (
-                      <span key={w} className="bg-red-900 text-red-300 text-xs px-2 py-0.5 rounded-full">{w}</span>
-                    ))}
-                  </div>
+                  {editMode ? (
+                    <input
+                      value={(form.avoid_words || []).join(", ")}
+                      onChange={(e) => setForm((f) => ({ ...f, avoid_words: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }))}
+                      placeholder="word1, word2, word3"
+                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {dna.avoid_words.map((w) => (
+                        <span key={w} className="bg-red-900 text-red-300 text-xs px-2 py-0.5 rounded-full">{w}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
