@@ -5,6 +5,13 @@ function getToken(): string | null {
   return localStorage.getItem("mp_token");
 }
 
+function clearSessionAndRedirect() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("mp_token");
+  localStorage.removeItem("mp_client");
+  window.location.href = "/login";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
@@ -14,7 +21,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
-  });
+  }).catch(() => { throw new Error("Network error — backend may be sleeping"); });
+
+  if (res.status === 401) {
+    clearSessionAndRedirect();
+    throw new Error("Session expired. Please log in again.");
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
