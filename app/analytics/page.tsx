@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 
 interface DaySeries { date: string; posts: number; likes: number; reach: number; }
 interface PlatformStats { posts: number; likes: number; reach: number; }
@@ -94,10 +94,11 @@ export default function AnalyticsPage() {
   const downloadReport = async () => {
     try {
       const token = localStorage.getItem("mp_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/report/download`, {
+      const apiUrl = API_URL;
+      const res = await fetch(`${apiUrl}/analytics/report/download`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Download failed");
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
