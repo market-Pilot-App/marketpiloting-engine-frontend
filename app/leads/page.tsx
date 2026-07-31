@@ -9,6 +9,10 @@ interface Lead {
   whatsapp: string | null;
   source: string;
   created_at: string;
+  lead_score: string;
+  intent_tags: string[];
+  source_platform: string | null;
+  message_count: number;
 }
 
 interface Stats {
@@ -22,17 +26,19 @@ const SOURCE_LABELS: Record<string, string> = {
   referral: "Referral Link",
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  landing_page: "bg-indigo-100 text-indigo-700",
-  subscribe_page: "bg-green-100 text-green-700",
-  referral: "bg-purple-100 text-purple-700",
+const SCORE_CONFIG: Record<string, { label: string; emoji: string; cls: string }> = {
+  hot:  { label: "Hot",  emoji: "🔴", cls: "bg-red-100 text-red-700" },
+  warm: { label: "Warm", emoji: "🟡", cls: "bg-yellow-100 text-yellow-700" },
+  cold: { label: "Cold", emoji: "🔵", cls: "bg-blue-100 text-blue-700" },
 };
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [source, setSource] = useState("");
+  const [scoreFilter, setScoreFilter] = useState("");
   const [tab, setTab] = useState<"leads" | "broadcast">("leads");
+  const [scoring, setScoring] = useState(false);
+  const [scoreResult, setScoreResult] = useState("");
   const [broadcastGoal, setBroadcastGoal] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -41,26 +47,36 @@ export default function LeadsPage() {
   const [sendResult, setSendResult] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
-    const params = source ? `?source=${source}` : "";
-    const data = await api.get(`/leads${params}`);
+    const params = scoreFilter ? `?score=${scoreFilter}` : "";
+    const data = await api.get<Lead[]>(`/leads/scored${params}`);
     setLeads(data);
-  }, [source]);
+  }, [scoreFilter]);
 
   const fetchStats = async () => {
-    const data = await api.get("/leads/stats");
+    const data = await api.get<Stats>("/leads/stats");
     setStats(data);
   };
 
   useEffect(() => { fetchLeads(); fetchStats(); }, [fetchLeads]);
 
-  const exportCSV = () => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/leads/export`, "_blank");
+  const scoreNow = async () => {
+    setScoring(true);
+    setScoreResult("");
+    try {
+      const res = await api.post<{ scored_threads: number }>("/leads/score-now");
+      setScoreResult(`✓ Scored ${res.scored_threads} threads`);
+      await fetchLeads();
+    } catch (err: unknown) {
+      setScoreResult(err instanceof Error ? err.message : "Scoring failed");
+    } finally {
+      setScoring(false);
+    }
   };
 
   const draftBroadcast = async () => {
     if (!broadcastGoal) return;
     setDrafting(true);
-    const data = await api.post("/leads/broadcast/draft", { goal: broadcastGoal });
+    const data = await api.post<{ draft: string }>("/leads/broadcast/draft", { goal: broadcastGoal });
     setBody(data.draft);
     setDrafting(false);
   };
@@ -69,10 +85,14 @@ export default function LeadsPage() {
     if (!subject || !body) return;
     setSending(true);
     setSendResult(null);
-    const data = await api.post("/leads/broadcast/send", { subject, body });
+    const data = await api.post<{ sent?: number; error?: string }>("/leads/broadcast/send", { subject, body });
     setSendResult(data.sent !== undefined ? `✓ Sent to ${data.sent} leads` : data.error ?? "Failed");
     setSending(false);
   };
+
+  const hotCount  = leads.filter((l) => l.lead_score === "hot").length;
+  const warmCount = leads.filter((l) => l.lead_score === "warm").length;
+  const coldCount = leads.filter((l) => l.lead_score === "cold").length;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -81,27 +101,42 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Leads & CRM</h1>
           <p className="text-sm text-gray-500 mt-1">Everyone who raised their hand for your brand</p>
         </div>
-        <button
-          onClick={exportCSV}
-          className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"
-        >
-          ↓ Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={scoreNow}
+            disabled={scoring}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {scoring ? "Scoring..." : "⚡ Score Now"}
+          </button>
+        </div>
       </div>
+
+      {scoreResult && (
+        <p className={`text-sm mb-4 font-medium ${scoreResult.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>
+          {scoreResult}
+        </p>
+      )}
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 md:col-span-1">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
             <p className="text-sm text-gray-500 mt-1">Total Leads</p>
           </div>
-          {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-            <div key={key} className="bg-white border border-gray-200 rounded-xl p-5">
-              <p className="text-3xl font-bold text-gray-900">{stats.by_source[key] ?? 0}</p>
-              <p className="text-sm text-gray-500 mt-1">{label}</p>
-            </div>
-          ))}
+          <div className="bg-red-50 border border-red-100 rounded-xl p-5">
+            <p className="text-3xl font-bold text-red-600">{hotCount}</p>
+            <p className="text-sm text-red-400 mt-1">🔴 Hot</p>
+          </div>
+          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-5">
+            <p className="text-3xl font-bold text-yellow-600">{warmCount}</p>
+            <p className="text-sm text-yellow-400 mt-1">🟡 Warm</p>
+          </div>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+            <p className="text-3xl font-bold text-blue-600">{coldCount}</p>
+            <p className="text-sm text-blue-400 mt-1">🔵 Cold</p>
+          </div>
         </div>
       )}
 
@@ -120,21 +155,24 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      {/* Lead List Tab */}
       {tab === "leads" && (
         <>
+          {/* Score filter */}
           <div className="flex gap-2 mb-4">
-            <select
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
-            >
-              <option value="">All sources</option>
-              {Object.entries(SOURCE_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-            <span className="text-sm text-gray-400 self-center">{leads.length} leads</span>
+            {["", "hot", "warm", "cold"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setScoreFilter(s)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                  scoreFilter === s
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                {s === "" ? "All" : `${SCORE_CONFIG[s].emoji} ${SCORE_CONFIG[s].label}`}
+              </button>
+            ))}
+            <span className="text-sm text-gray-400 self-center ml-2">{leads.length} leads</span>
           </div>
 
           {leads.length === 0 ? (
@@ -146,29 +184,44 @@ export default function LeadsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Score</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Name</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Email</th>
-                    <th className="text-left px-4 py-3 text-gray-500 font-medium">WhatsApp</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Source</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Intent</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {leads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-800 font-medium">{lead.name || "—"}</td>
-                      <td className="px-4 py-3 text-gray-600">{lead.email}</td>
-                      <td className="px-4 py-3 text-gray-500">{lead.whatsapp || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${SOURCE_COLORS[lead.source] ?? "bg-gray-100 text-gray-600"}`}>
+                  {leads.map((lead) => {
+                    const sc = SCORE_CONFIG[lead.lead_score] ?? SCORE_CONFIG.warm;
+                    return (
+                      <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-full font-semibold ${sc.cls}`}>
+                            {sc.emoji} {sc.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-800 font-medium">{lead.name || "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">{lead.email}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
                           {SOURCE_LABELS[lead.source] ?? lead.source}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">
-                        {new Date(lead.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {lead.intent_tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">
+                          {new Date(lead.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -176,14 +229,11 @@ export default function LeadsPage() {
         </>
       )}
 
-      {/* Broadcast Tab */}
       {tab === "broadcast" && (
         <div className="max-w-2xl">
           <p className="text-sm text-gray-500 mb-6">
             Send an email to all {stats?.total ?? 0} leads. Use AI to draft the message, then review before sending.
           </p>
-
-          {/* AI Draft */}
           <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
             <h3 className="font-semibold text-gray-900 mb-3 text-sm">1. AI Draft (optional)</h3>
             <div className="flex gap-2">
@@ -203,8 +253,6 @@ export default function LeadsPage() {
               </button>
             </div>
           </div>
-
-          {/* Compose */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h3 className="font-semibold text-gray-900 mb-3 text-sm">2. Review & Send</h3>
             <input
@@ -216,14 +264,12 @@ export default function LeadsPage() {
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Email body — paste your draft here or write manually"
+              placeholder="Email body"
               rows={10}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none mb-4"
             />
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-400">
-                Will send to {stats?.total ?? 0} leads
-              </p>
+              <p className="text-xs text-gray-400">Will send to {stats?.total ?? 0} leads</p>
               <button
                 onClick={sendBroadcast}
                 disabled={sending || !subject || !body}
