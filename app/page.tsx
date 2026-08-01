@@ -105,25 +105,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isAgency && !client?.campaign_id) return;
+    const safe = (p: Promise<any>) => p.catch(() => null);
     Promise.all([
-      api.get("/analytics/dashboard"),
-      api.get("/analytics/overview"),
-      api.get("/analytics/angle-performance"),
-      api.get("/analytics/history?days=1"),
-      api.get("/analytics/trends"),
-      api.get("/referrals/stats"),
-      api.get("/brand-dna/"),
-      api.get("/analytics/onboarding-health"),
+      safe(api.get("/analytics/dashboard")),
+      safe(api.get("/analytics/overview")),
+      safe(api.get("/analytics/angle-performance")),
+      safe(api.get("/analytics/history?days=1")),
+      safe(api.get("/analytics/trends")),
+      safe(api.get("/referrals/stats")),
+      safe(api.get("/brand-dna/")),
+      safe(api.get("/analytics/onboarding-health")),
     ]).then(([s, o, ap, r, t, ref, d, ob]) => {
-      setStats(s);
-      setOverview(o);
-      setAnglePerf((ap as any).angles || []);
-      setRecent((r as RecentPost[]).slice(0, 10));
-      setTrends(t as TrendData);
-      setReferrals(ref as ReferralStats);
-      setDna(d as BrandDNA);
-      setOnboarding(ob as OnboardingHealth);
-    }).catch(() => {}).finally(() => setLoading(false));
+      if (s) setStats(s);
+      if (o) setOverview(o);
+      if (ap) setAnglePerf((ap as any).angles || []);
+      if (r) setRecent((r as RecentPost[]).slice(0, 10));
+      if (t) setTrends(t as TrendData);
+      if (ref) setReferrals(ref as ReferralStats);
+      if (d) setDna(d as BrandDNA);
+      if (ob) setOnboarding(ob as OnboardingHealth);
+    }).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
   const runAction = async (label: string, endpoint: string, msg: string) => {
