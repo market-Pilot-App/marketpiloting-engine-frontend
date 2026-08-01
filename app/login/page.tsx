@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -81,13 +82,15 @@ export default function LoginPage() {
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
-        </form>
 
-        <p className="text-center text-sm mt-4">
-          <Link href="/forgot-password" className="text-indigo-400 hover:underline text-xs">
+          <button
+            type="button"
+            onClick={() => router.push("/forgot-password")}
+            className="w-full text-center text-xs text-indigo-400 hover:underline pt-1"
+          >
             Forgot password?
-          </Link>
-        </p>
+          </button>
+        </form>
       </div>
     </div>
   );
