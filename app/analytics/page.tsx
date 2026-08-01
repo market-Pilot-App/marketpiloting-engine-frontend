@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
           >
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>

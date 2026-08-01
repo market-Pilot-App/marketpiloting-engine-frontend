@@ -159,8 +159,8 @@ export default function DashboardPage() {
   const cronActions = [
     { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",        msg: "Posts triggered!" },
     { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
-    { label: "🔥 Newsjack Now",           endpoint: "/jobs/newsjack",              msg: "Newsjack generated!" },
-    { label: "📝 Auto Blog",             endpoint: "/jobs/auto-blog",             msg: "Blog post generated!" },
+    { label: "🔥 Newsjack Now",           endpoint: "/opportunities/hijack-news",  msg: "Newsjack generated!" },
+    { label: "📝 Auto Blog",             endpoint: "/blog/generate",              msg: "Blog post generated!" },
     { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news", msg: "News posts generated!" },
     { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report", msg: "Report sent!" },
     { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",         msg: "Schedule filled!" },
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Google Trends · Live</span>
                   <button
-                    onClick={() => runAction("🔥 Newsjack Now", "/jobs/newsjack", "Newsjack generated!")}
+                    onClick={() => runAction("🔥 Newsjack Now", "/opportunities/hijack-news", "Newsjack generated!")}
                     disabled={actionLoading === "🔥 Newsjack Now"}
                     className="px-3 py-1 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
                     {actionLoading === "🔥 Newsjack Now" ? "Running..." : "🔥 Newsjack Now"}
