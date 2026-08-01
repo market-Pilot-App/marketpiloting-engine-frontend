@@ -13,6 +13,12 @@ interface LandingPageData {
   updated_at: string;
 }
 
+interface BlogSettings {
+  use_landing_page: boolean;
+  blog_api_url: string | null;
+  blog_api_key_set: boolean;
+}
+
 const PUBLIC_BASE = "https://dashboard.marketpiloting.online/p";
 
 export default function LandingPageDashboard() {
@@ -23,11 +29,28 @@ export default function LandingPageDashboard() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Blog settings state
+  const [blogSettings, setBlogSettings] = useState<BlogSettings | null>(null);
+  const [blogMode, setBlogMode] = useState<"landing_page" | "own_site">("landing_page");
+  const [blogUrl, setBlogUrl] = useState("");
+  const [blogKey, setBlogKey] = useState("");
+  const [savingBlog, setSavingBlog] = useState(false);
+  const [blogSaved, setBlogSaved] = useState(false);
+  const [blogError, setBlogError] = useState("");
+
   useEffect(() => {
     api.get<LandingPageData | null>("/landing-page")
       .then(setPage)
       .catch(() => setPage(null))
       .finally(() => setLoading(false));
+
+    api.get<BlogSettings>("/landing-page/blog-settings")
+      .then((s) => {
+        setBlogSettings(s);
+        setBlogMode(s.use_landing_page ? "landing_page" : "own_site");
+        setBlogUrl(s.blog_api_url || "");
+      })
+      .catch(() => {});
   }, []);
 
   const generate = async () => {
@@ -61,6 +84,26 @@ export default function LandingPageDashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const saveBlogSettings = async () => {
+    setSavingBlog(true);
+    setBlogError("");
+    setBlogSaved(false);
+    try {
+      const body =
+        blogMode === "landing_page"
+          ? { use_landing_page: true }
+          : { use_landing_page: false, blog_api_url: blogUrl, blog_api_key: blogKey || undefined };
+      const s = await api.patch<BlogSettings>("/landing-page/blog-settings", body);
+      setBlogSettings(s);
+      setBlogSaved(true);
+      setTimeout(() => setBlogSaved(false), 3000);
+    } catch (err: unknown) {
+      setBlogError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSavingBlog(false);
+    }
+  };
+
   const conversionRate =
     page && page.views > 0
       ? ((page.conversions / page.views) * 100).toFixed(1)
@@ -92,7 +135,7 @@ export default function LandingPageDashboard() {
       )}
 
       {/* Main card */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
         {!page ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-3">🌐</p>
@@ -158,11 +201,7 @@ export default function LandingPageDashboard() {
                     : "bg-green-700 hover:bg-green-600 text-white"
                 }`}
               >
-                {toggling
-                  ? "..."
-                  : page.is_published
-                  ? "Unpublish"
-                  : "Publish"}
+                {toggling ? "..." : page.is_published ? "Unpublish" : "Publish"}
               </button>
 
               <button
@@ -193,6 +232,89 @@ export default function LandingPageDashboard() {
         )}
 
         {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
+      </div>
+
+      {/* Blog Settings card */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h2 className="text-white font-semibold mb-1">📝 Blog Destination</h2>
+        <p className="text-gray-400 text-sm mb-4">
+          Where should AI-generated blog posts be published?
+        </p>
+
+        {/* Option 1 — MarketPilot landing page */}
+        <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer mb-3 transition ${
+          blogMode === "landing_page"
+            ? "border-indigo-500 bg-indigo-950/40"
+            : "border-gray-700 hover:border-gray-600"
+        }`}>
+          <input
+            type="radio"
+            name="blogMode"
+            value="landing_page"
+            checked={blogMode === "landing_page"}
+            onChange={() => setBlogMode("landing_page")}
+            className="mt-0.5 accent-indigo-500"
+          />
+          <div>
+            <p className="text-white text-sm font-medium">Use my MarketPilot landing page</p>
+            <p className="text-gray-400 text-xs mt-0.5">
+              Blog posts will be stored here and accessible at your landing page URL. No setup needed.
+            </p>
+            {blogMode === "landing_page" && blogSettings?.use_landing_page && (
+              <p className="text-green-400 text-xs mt-1">✅ Active</p>
+            )}
+          </div>
+        </label>
+
+        {/* Option 2 — Own website */}
+        <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer mb-4 transition ${
+          blogMode === "own_site"
+            ? "border-indigo-500 bg-indigo-950/40"
+            : "border-gray-700 hover:border-gray-600"
+        }`}>
+          <input
+            type="radio"
+            name="blogMode"
+            value="own_site"
+            checked={blogMode === "own_site"}
+            onChange={() => setBlogMode("own_site")}
+            className="mt-0.5 accent-indigo-500"
+          />
+          <div className="flex-1">
+            <p className="text-white text-sm font-medium">Publish to my own website</p>
+            <p className="text-gray-400 text-xs mt-0.5 mb-3">
+              Enter your blog API endpoint (WordPress, Ghost, custom). Posts will be pushed there on publish.
+            </p>
+            {blogMode === "own_site" && (
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  placeholder="Blog API URL (e.g. https://yourblog.com/wp-json/wp/v2/posts)"
+                  value={blogUrl}
+                  onChange={(e) => setBlogUrl(e.target.value)}
+                  className="w-full bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500"
+                />
+                <input
+                  type="password"
+                  placeholder={blogSettings?.blog_api_key_set ? "API Key (leave blank to keep existing)" : "API Key / Bearer Token"}
+                  value={blogKey}
+                  onChange={(e) => setBlogKey(e.target.value)}
+                  className="w-full bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+          </div>
+        </label>
+
+        {blogError && <p className="text-red-400 text-xs mb-3">{blogError}</p>}
+
+        <button
+          onClick={saveBlogSettings}
+          disabled={savingBlog}
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition"
+        >
+          {savingBlog ? "Saving..." : blogSaved ? "✅ Saved!" : "Save Blog Settings"}
+        </button>
       </div>
     </div>
   );
