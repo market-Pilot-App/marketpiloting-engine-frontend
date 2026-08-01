@@ -110,7 +110,7 @@ export default function DashboardPage() {
       api.get("/analytics/overview"),
       api.get("/analytics/angle-performance"),
       api.get("/analytics/history?days=1"),
-      api.get("/jobs/trends"),
+      api.get("/analytics/trends"),
       api.get("/referrals/stats"),
       api.get("/brand-dna/"),
       api.get("/analytics/onboarding-health"),

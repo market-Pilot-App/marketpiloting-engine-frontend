@@ -184,7 +184,7 @@ export default function OpportunitiesPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-900"
               >
                 <option value="">All statuses</option>
                 <option value="pending_approval">Pending</option>
@@ -195,7 +195,7 @@ export default function OpportunitiesPage() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-900"
               >
                 <option value="">All types</option>
                 <option value="COMPETITOR_INSIGHT">Competitor</option>
@@ -279,7 +279,7 @@ export default function OpportunitiesPage() {
                     <select
                       value={publishPlatform}
                       onChange={(e) => setPublishPlatform(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
                     >
                       <option value="facebook">Facebook</option>
                       <option value="instagram">Instagram</option>
