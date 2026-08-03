@@ -14,6 +14,15 @@ interface DashStats {
   queued_posts: number;
   active_campaigns: number;
 }
+interface BoostedPost {
+  post_id: number;
+  platform: string;
+  caption: string;
+  post_url: string | null;
+  posted_at: string | null;
+  boosts: { service_type: string; quantity: number; delivered_count: number | null; status: string }[];
+  overall_status: string;
+}
 interface Overview {
   total_posts: number;
   total_blogs: number;
@@ -98,6 +107,7 @@ export default function DashboardPage() {
   const [referrals, setReferrals] = useState<ReferralStats | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingHealth | null>(null);
+  const [recentBoosts, setRecentBoosts] = useState<BoostedPost[]>([]);
 
   useEffect(() => {
     if (!sessionStorage.getItem("mp_intro_seen")) setShowIntro(true);
@@ -115,7 +125,8 @@ export default function DashboardPage() {
       safe(api.get("/referrals/stats")),
       safe(api.get("/brand-dna/")),
       safe(api.get("/analytics/onboarding-health")),
-    ]).then(([s, o, ap, r, t, ref, d, ob]) => {
+      safe(api.get("/boosts/posts?limit=5")),
+    ]).then(([s, o, ap, r, t, ref, d, ob, rb]) => {
       if (s) setStats(s);
       if (o) setOverview(o);
       if (ap) setAnglePerf((ap as any).angles || []);
@@ -124,6 +135,7 @@ export default function DashboardPage() {
       if (ref) setReferrals(ref as ReferralStats);
       if (d) setDna(d as BrandDNA);
       if (ob) setOnboarding(ob as OnboardingHealth);
+      if (rb) setRecentBoosts(rb as BoostedPost[]);
     }).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
@@ -438,6 +450,60 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* Recent Boosted Posts */}
+          {recentBoosts.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">🚀 Recent Boosts</h3>
+                <a href="/boosts" className="text-indigo-400 text-xs hover:underline">View all →</a>
+              </div>
+              <div className="space-y-3">
+                {recentBoosts.map((post) => {
+                  const overallStyle =
+                    post.overall_status === "delivered" ? "bg-green-900 text-green-400"
+                    : post.overall_status === "active" ? "bg-blue-900 text-blue-300"
+                    : post.overall_status === "failed" ? "bg-red-900 text-red-400"
+                    : "bg-yellow-900 text-yellow-300";
+                  const overallLabel =
+                    post.overall_status === "delivered" ? "✅ Delivered"
+                    : post.overall_status === "active" ? "⚡ Active"
+                    : post.overall_status === "failed" ? "❌ Failed"
+                    : "⏳ Processing";
+                  return (
+                    <div key={post.post_id} className="flex items-start justify-between gap-3 py-2 border-b border-gray-800 last:border-0">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="text-lg">{PLATFORM_ICONS[post.platform] || "📄"}</span>
+                        <div className="min-w-0">
+                          <p className="text-white text-sm capitalize font-medium">{post.platform}</p>
+                          {post.caption && (
+                            <p className="text-gray-500 text-xs truncate max-w-xs">{post.caption}</p>
+                          )}
+                          <div className="flex gap-3 mt-1">
+                            {post.boosts.map((b) => (
+                              <span key={b.service_type} className="text-xs text-gray-400">
+                                {b.service_type}: <span className="text-white font-medium">
+                                  {b.delivered_count != null ? b.delivered_count.toLocaleString() : "—"}
+                                </span>
+                                <span className="text-gray-600"> /{b.quantity.toLocaleString()}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${overallStyle}`}>{overallLabel}</span>
+                        {post.post_url && (
+                          <a href={post.post_url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-indigo-400 hover:text-indigo-300">View →</a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Today's Activity */}
           {recent.length > 0 && (

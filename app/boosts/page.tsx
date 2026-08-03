@@ -11,7 +11,18 @@ interface BoostOrder {
   cost: number;
   status: string;
   provider_order_id: string | null;
+  delivered_count: number | null;
   ordered_at: string;
+}
+
+interface BoostedPost {
+  post_id: number;
+  platform: string;
+  caption: string;
+  post_url: string | null;
+  posted_at: string | null;
+  boosts: { service_type: string; quantity: number; delivered_count: number | null; status: string }[];
+  overall_status: string;
 }
 
 interface Budget { spent: number; budget: number; remaining: number; boost_credit_usd: number; }
@@ -33,18 +44,21 @@ export default function BoostsPage() {
   const { isAdmin } = useAuth();
   const [orders, setOrders] = useState<BoostOrder[]>([]);
   const [pending, setPending] = useState<BoostOrder[]>([]);
+  const [boostedPosts, setBoostedPosts] = useState<BoostedPost[]>([]);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersData, budgetData] = await Promise.all([
+      const [ordersData, budgetData, postsData] = await Promise.all([
         api.get<BoostOrder[]>("/boosts?limit=30"),
         api.get<Budget>("/boosts/budget"),
+        api.get<BoostedPost[]>("/boosts/posts?limit=20"),
       ]);
       setOrders(ordersData);
       setBudget(budgetData);
+      setBoostedPosts(postsData);
 
       if (isAdmin) {
         const pendingData = await api.get<BoostOrder[]>("/admin/boosts/pending");
@@ -159,36 +173,115 @@ export default function BoostsPage() {
         </div>
       )}
 
-      {/* Orders list */}
-      <h2 className="font-semibold text-white mb-3">Boost Orders</h2>
-      {orders.length === 0 ? (
-        <p className="text-gray-500 text-sm">No boost orders yet. Posts are auto-boosted after publishing.</p>
+      {/* Orders list — admin only (raw order data) */}
+      {isAdmin && (
+        <>
+          <h2 className="font-semibold text-white mb-3">Boost Orders</h2>
+          {orders.length === 0 ? (
+            <p className="text-gray-500 text-sm">No boost orders yet.</p>
+          ) : (
+            <div className="space-y-2 mb-8">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{PLATFORM_EMOJI[order.platform] || "📄"}</span>
+                    <div>
+                      <p className="text-white text-sm capitalize">
+                        {order.platform} — {order.service_type} × {order.quantity.toLocaleString()}
+                        {order.delivered_count != null && (
+                          <span className="text-gray-400"> ({order.delivered_count.toLocaleString()} delivered)</span>
+                        )}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        ${order.cost.toFixed(4)} · {new Date(order.ordered_at).toLocaleDateString()}
+                        {order.provider_order_id && (
+                          <span className="text-gray-600"> · #{order.provider_order_id}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[order.status] || "bg-gray-800 text-gray-400"}`}>
+                    {order.status.replace("_", " ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Boosted Posts — client-facing view */}
+      <h2 className="font-semibold text-white mb-3">Boosted Posts</h2>
+      {boostedPosts.length === 0 ? (
+        <p className="text-gray-500 text-sm">No boosted posts yet. Posts are automatically boosted after publishing.</p>
       ) : (
-        <div className="space-y-2">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{PLATFORM_EMOJI[order.platform] || "📄"}</span>
-                <div>
-                  <p className="text-white text-sm capitalize">
-                    {order.platform} — {order.service_type} × {order.quantity.toLocaleString()}
-                  </p>
-                  <p className="text-gray-500 text-xs mt-0.5">
-                    ${order.cost.toFixed(4)} · {new Date(order.ordered_at).toLocaleDateString()}
-                    {order.provider_order_id && (
-                      <span className="text-gray-600"> · #{order.provider_order_id}</span>
+        <div className="space-y-3">
+          {boostedPosts.map((post) => {
+            const overallStyle =
+              post.overall_status === "delivered" ? "bg-green-900 text-green-400"
+              : post.overall_status === "active" ? "bg-blue-900 text-blue-300"
+              : post.overall_status === "failed" ? "bg-red-900 text-red-400"
+              : "bg-yellow-900 text-yellow-300";
+            const overallLabel =
+              post.overall_status === "delivered" ? "✅ Delivered"
+              : post.overall_status === "active" ? "⚡ Active"
+              : post.overall_status === "failed" ? "❌ Failed"
+              : "⏳ Processing";
+            return (
+              <div key={post.post_id} className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span className="text-xl mt-0.5">{PLATFORM_EMOJI[post.platform] || "📄"}</span>
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium capitalize">{post.platform}</p>
+                      {post.caption && (
+                        <p className="text-gray-400 text-xs mt-0.5 truncate max-w-xs">{post.caption}</p>
+                      )}
+                      {post.posted_at && (
+                        <p className="text-gray-600 text-xs mt-0.5">{new Date(post.posted_at).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${overallStyle}`}>{overallLabel}</span>
+                    {post.post_url && (
+                      <a
+                        href={post.post_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-indigo-400 hover:text-indigo-300"
+                      >
+                        View →
+                      </a>
                     )}
-                  </p>
+                  </div>
+                </div>
+                {/* Boost metrics per service type */}
+                <div className="flex flex-wrap gap-3 mt-3">
+                  {post.boosts.map((b) => {
+                    const delivered = b.delivered_count ?? 0;
+                    const pct = b.quantity > 0 ? Math.min((delivered / b.quantity) * 100, 100) : 0;
+                    const barColor = pct >= 90 ? "bg-green-500" : pct >= 50 ? "bg-yellow-500" : "bg-gray-600";
+                    return (
+                      <div key={b.service_type} className="bg-gray-800 rounded-lg px-3 py-2 min-w-[110px]">
+                        <p className="text-gray-400 text-xs capitalize mb-1">{b.service_type}</p>
+                        <p className="text-white text-sm font-semibold">
+                          {b.delivered_count != null ? b.delivered_count.toLocaleString() : "—"}
+                          <span className="text-gray-500 font-normal text-xs"> / {b.quantity.toLocaleString()}</span>
+                        </p>
+                        <div className="w-full bg-gray-700 rounded-full h-1 mt-1.5">
+                          <div className={`h-1 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[order.status] || "bg-gray-800 text-gray-400"}`}>
-                {order.status.replace("_", " ")}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
