@@ -1,0 +1,140 @@
+"use client";
+import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
+
+const PLANS = [
+  { key: "solo",    label: "Solo",    monthly: "₦29,999", yearly: "₦20,999", desc: "1 brand, core features" },
+  { key: "starter", label: "Starter", monthly: "₦75,000", yearly: "₦52,500", desc: "1 brand, full features" },
+  { key: "growth",  label: "Growth",  monthly: "₦150,000", yearly: "₦105,000", desc: "1 brand + video + Twitter boost" },
+  { key: "agency",  label: "Agency",  monthly: "₦450,000", yearly: "₦315,000", desc: "11 brands, everything" },
+];
+
+const PLAN_ORDER = ["solo", "starter", "growth", "agency"];
+
+export default function UpgradePage() {
+  const { client } = useAuth();
+  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const currentPlanIdx = PLAN_ORDER.indexOf(client?.plan || "");
+
+  const handleSelect = async (planKey: string) => {
+    setError("");
+    setLoading(planKey);
+    try {
+      const data = await api.post<{ payment_url: string; type: string }>("/auth/upgrade", {
+        plan: planKey,
+        billing,
+      });
+      window.location.href = data.payment_url;
+    } catch (e: any) {
+      setError(e.message || "Something went wrong");
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white">Upgrade Your Plan</h1>
+        <p className="text-gray-400 mt-1">
+          You're currently on <span className="text-indigo-400 font-semibold capitalize">{client?.plan}</span>.
+          Choose a plan below to upgrade or resubscribe.
+        </p>
+      </div>
+
+      {/* Billing toggle */}
+      <div className="flex items-center gap-3 mb-8">
+        <button
+          onClick={() => setBilling("monthly")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            billing === "monthly" ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setBilling("yearly")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            billing === "yearly" ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+          }`}
+        >
+          Yearly <span className="text-emerald-400 text-xs ml-1">30% off</span>
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-6 p-3 bg-red-900/30 border border-red-700/40 rounded-lg text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {PLANS.map((plan, idx) => {
+          const isCurrent = plan.key === client?.plan;
+          const isUpgrade = idx > currentPlanIdx;
+          const isDowngrade = idx < currentPlanIdx;
+          const price = billing === "yearly" ? plan.yearly : plan.monthly;
+
+          return (
+            <div
+              key={plan.key}
+              className={`relative bg-gray-900 border rounded-2xl p-5 flex flex-col gap-4 transition ${
+                isCurrent
+                  ? "border-indigo-500 ring-1 ring-indigo-500"
+                  : isDowngrade
+                  ? "border-gray-800 opacity-40"
+                  : "border-gray-700 hover:border-indigo-400"
+              }`}
+            >
+              {isCurrent && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs px-3 py-0.5 rounded-full font-semibold">
+                  Current Plan
+                </span>
+              )}
+              {isUpgrade && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-3 py-0.5 rounded-full font-semibold">
+                  Upgrade
+                </span>
+              )}
+              <div>
+                <p className="text-white font-bold text-lg">{plan.label}</p>
+                <p className="text-gray-400 text-xs mt-1">{plan.desc}</p>
+              </div>
+              <div>
+                <p className="text-white text-2xl font-bold">{price}</p>
+                <p className="text-gray-500 text-xs">/{billing === "yearly" ? "mo, billed yearly" : "month"}</p>
+              </div>
+              <button
+                onClick={() => !isDowngrade && handleSelect(plan.key)}
+                disabled={isDowngrade || loading === plan.key}
+                className={`w-full py-2 rounded-lg text-sm font-semibold transition ${
+                  isDowngrade
+                    ? "bg-gray-800 text-gray-600 cursor-not-allowed"
+                    : isCurrent
+                    ? "bg-indigo-900 hover:bg-indigo-800 text-indigo-300"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                }`}
+              >
+                {loading === plan.key
+                  ? "Redirecting…"
+                  : isCurrent
+                  ? "Resubscribe"
+                  : isUpgrade
+                  ? `Upgrade to ${plan.label}`
+                  : "Unavailable"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-gray-600 text-xs mt-8 text-center">
+        Payments are processed securely by Paystack. Your card is saved for automatic renewal.
+        Cancel anytime by contacting support.
+      </p>
+    </div>
+  );
+}

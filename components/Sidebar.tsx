@@ -37,6 +37,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { client, isAdmin, logout, switchBrand } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
   const isVideoAllowed = ["growth", "agency", "admin"].includes(client?.plan || "");
+  const showUpgrade = !isAdmin && client?.plan !== "agency";
 
   const [collapsed, setCollapsed] = useState(false);
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
@@ -172,6 +173,19 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Upgrade prompt — non-admin, non-agency only */}
+      {!collapsed && showUpgrade && (
+        <div className="px-3 pb-3">
+          <Link
+            href="/upgrade"
+            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-indigo-900/40 border border-indigo-700/40 text-indigo-300 hover:bg-indigo-900/60 transition text-sm font-medium"
+          >
+            <span>⚡</span>
+            <span>Upgrade Plan</span>
+          </Link>
+        </div>
+      )}
 
       {/* Settings + Sign out */}
       <div className="px-3 py-4 border-t border-gray-800 space-y-0.5">

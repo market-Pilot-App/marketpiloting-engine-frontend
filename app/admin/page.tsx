@@ -59,6 +59,10 @@ export default function AdminPage() {
   const [reportStatus, setReportStatus] = useState<Record<number, string>>({});
   const [renewStatus, setRenewStatus] = useState<Record<number, string>>({});
   const [search, setSearch] = useState("");
+  const [grantModal, setGrantModal] = useState<number | null>(null);
+  const [grantPlan, setGrantPlan] = useState("starter");
+  const [grantDays, setGrantDays] = useState(30);
+  const [actionStatus, setActionStatus] = useState<Record<number, string>>({});
 
   const fetchClients = useCallback(async () => {
     const data = await api.get("/admin/clients");
@@ -87,13 +91,7 @@ export default function AdminPage() {
     setTimeout(() => setReportStatus((s) => ({ ...s, [clientId]: "" })), 3000);
   };
 
-  const deactivate = async (clientId: number) => {
-    if (!confirm("Deactivate this client?")) return;
-    await api.post(`/admin/clients/${clientId}/deactivate`, {});
-    fetchClients();
-  };
-
-  const saveBudget = async (clientId: number) => {
+const saveBudget = async (clientId: number) => {
     const val = parseFloat(editBudget[clientId]);
     if (isNaN(val)) return;
     await api.patch(`/admin/clients/${clientId}/budget`, { boost_monthly_budget: val });
@@ -119,6 +117,28 @@ export default function AdminPage() {
     });
     setRenewStatus((s) => ({ ...s, [clientId]: "done" }));
     setTimeout(() => setRenewStatus((s) => ({ ...s, [clientId]: "" })), 2000);
+    fetchClients();
+  };
+
+  const doAction = async (clientId: number, action: string) => {
+    setActionStatus((s) => ({ ...s, [clientId]: action }));
+    try {
+      if (action === "delete") {
+        if (!confirm("Delete this client? This cannot be undone.")) return;
+        if (!confirm("Are you absolutely sure?")) return;
+        await api.del(`/admin/clients/${clientId}`);
+      } else {
+        await api.post(`/admin/clients/${clientId}/${action}`, {});
+      }
+      fetchClients();
+    } finally {
+      setTimeout(() => setActionStatus((s) => ({ ...s, [clientId]: "" })), 1500);
+    }
+  };
+
+  const grantAccess = async (clientId: number) => {
+    await api.post(`/admin/clients/${clientId}/grant-access`, { plan: grantPlan, days: grantDays });
+    setGrantModal(null);
     fetchClients();
   };
 
@@ -286,6 +306,12 @@ export default function AdminPage() {
                             Manage
                           </button>
                           <button
+                            onClick={() => { setGrantModal(client.id); setGrantPlan(client.plan); setGrantDays(30); }}
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-3 py-1.5 rounded-lg transition"
+                          >
+                            Grant Access
+                          </button>
+                          <button
                             onClick={() => renewSubscription(client.id)}
                             disabled={renewStatus[client.id] === "renewing"}
                             className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50"
@@ -297,22 +323,45 @@ export default function AdminPage() {
                             disabled={reportStatus[client.id] === "sending"}
                             className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50"
                           >
-                            {reportStatus[client.id] === "sending"
-                              ? "Sending…"
-                              : reportStatus[client.id] === "sent"
-                              ? "✓ Sent"
-                              : reportStatus[client.id] === "error"
-                              ? "✗ Error"
-                              : "Report"}
+                            {reportStatus[client.id] === "sending" ? "Sending…" : reportStatus[client.id] === "sent" ? "✓ Sent" : reportStatus[client.id] === "error" ? "✗ Error" : "Report"}
                           </button>
+                          {!client.active && (
+                            <button
+                              onClick={() => doAction(client.id, "activate")}
+                              className="bg-green-100 hover:bg-green-200 text-green-700 text-xs px-3 py-1.5 rounded-lg transition"
+                            >
+                              Activate
+                            </button>
+                          )}
                           {client.active && (
                             <button
-                              onClick={() => deactivate(client.id)}
-                              className="text-red-400 hover:text-red-600 text-xs px-2 py-1.5 transition"
+                              onClick={() => doAction(client.id, "deactivate")}
+                              className="text-orange-500 hover:text-orange-700 text-xs px-2 py-1.5 transition"
                             >
                               Deactivate
                             </button>
                           )}
+                          {client.subscription_status !== "suspended" ? (
+                            <button
+                              onClick={() => doAction(client.id, "suspend")}
+                              className="text-yellow-600 hover:text-yellow-800 text-xs px-2 py-1.5 transition"
+                            >
+                              Suspend
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => doAction(client.id, "unsuspend")}
+                              className="text-emerald-600 hover:text-emerald-800 text-xs px-2 py-1.5 transition"
+                            >
+                              Unsuspend
+                            </button>
+                          )}
+                          <button
+                            onClick={() => doAction(client.id, "delete")}
+                            className="text-red-400 hover:text-red-600 text-xs px-2 py-1.5 transition"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -361,6 +410,65 @@ export default function AdminPage() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* Grant Access Modal */}
+      {grantModal !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Grant Access</h2>
+            <div className="mb-3">
+              <label className="text-xs text-gray-500 mb-1 block">Plan</label>
+              <select
+                value={grantPlan}
+                onChange={(e) => setGrantPlan(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              >
+                {["solo", "starter", "growth", "agency"].map((p) => (
+                  <option key={p} value={p} className="capitalize">{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="text-xs text-gray-500 mb-1 block">Duration</label>
+              <div className="flex gap-2 flex-wrap mb-2">
+                {[7, 30, 90, 365].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setGrantDays(d)}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition ${
+                      grantDays === d ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 text-gray-600 hover:border-indigo-400"
+                    }`}
+                  >
+                    {d === 365 ? "1yr" : `${d}d`}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                value={grantDays}
+                onChange={(e) => setGrantDays(parseInt(e.target.value) || 30)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                placeholder="Custom days"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => grantAccess(grantModal)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 rounded-lg transition"
+              >
+                Grant
+              </button>
+              <button
+                onClick={() => setGrantModal(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

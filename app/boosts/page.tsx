@@ -82,27 +82,43 @@ export default function BoostsPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
           <div className="flex justify-between items-center mb-2">
             <p className="text-white font-semibold">Monthly Boost Budget</p>
-            <p className="text-white font-bold">
-              ${budget.spent.toFixed(2)}
-              <span className="text-gray-500 font-normal"> / ${budget.budget.toFixed(2)}</span>
-            </p>
+            {isAdmin ? (
+              <p className="text-white font-bold">
+                ${budget.spent.toFixed(2)}
+                <span className="text-gray-500 font-normal"> / ${budget.budget.toFixed(2)}</span>
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-gray-400">
+                {budgetPct >= 100 ? "Boost Full" : "Boost Active"}
+              </p>
+            )}
           </div>
           <div className="w-full bg-gray-800 rounded-full h-3">
             <div
               className={`h-3 rounded-full transition-all ${
-                budgetPct >= 90 ? "bg-red-500" : budgetPct >= 70 ? "bg-yellow-500" : "bg-indigo-500"
+                budgetPct >= 90 ? "bg-red-500" : budgetPct >= 70 ? "bg-yellow-500" : "bg-green-500"
               }`}
               style={{ width: `${budgetPct}%` }}
             />
           </div>
-          <p className="text-gray-400 text-xs mt-2">${budget.remaining.toFixed(2)} remaining this month</p>
+          {isAdmin ? (
+            <p className="text-gray-400 text-xs mt-2">${budget.remaining.toFixed(2)} remaining this month</p>
+          ) : (
+            <p className="text-gray-400 text-xs mt-2">
+              {budgetPct >= 100
+                ? `Boost Full — resets next month`
+                : `Resets in ${Math.ceil((new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() - Date.now()) / 86400000)} days`}
+            </p>
+          )}
           {budget.boost_credit_usd > 0 && (
-            <p className="text-emerald-400 text-xs mt-1">💳 Boost credit: ${budget.boost_credit_usd.toFixed(2)} available</p>
+            <p className="text-emerald-400 text-xs mt-1">
+              {isAdmin ? `💳 Boost credit: $${budget.boost_credit_usd.toFixed(2)} available` : "💳 Extra boost credit available"}
+            </p>
           )}
           {budget.remaining <= 0 && budget.boost_credit_usd <= 0 && (
             <div className="mt-3 flex items-center gap-3 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded-lg">
               <span className="text-yellow-400 text-sm">🔒 Monthly boost budget exhausted</span>
-              <a href="/subscribe" className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs font-medium text-white">Upgrade Plan</a>
+              <a href="/upgrade" className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs font-medium text-white">Upgrade Plan</a>
             </div>
           )}
         </div>
