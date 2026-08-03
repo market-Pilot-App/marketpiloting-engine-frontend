@@ -40,8 +40,11 @@ const PLATFORM_EMOJI: Record<string, string> = {
   youtube: "▶️", website: "🌐",
 };
 
+const TWITTER_BOOST_PLANS = new Set(["growth", "agency", "admin"]);
+
 export default function BoostsPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, client } = useAuth();
+  const plan = client?.plan ?? "starter";
   const [orders, setOrders] = useState<BoostOrder[]>([]);
   const [pending, setPending] = useState<BoostOrder[]>([]);
   const [boostedPosts, setBoostedPosts] = useState<BoostedPost[]>([]);
@@ -211,6 +214,17 @@ export default function BoostsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Twitter boost plan gate — shown to solo/starter only */}
+      {!isAdmin && !TWITTER_BOOST_PLANS.has(plan) && (
+        <div className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 mb-6">
+          <span className="text-xl">🐦</span>
+          <p className="text-sm text-gray-400">
+            Twitter boost is available on <span className="text-white font-medium">Growth</span> and <span className="text-white font-medium">Agency</span> plans.
+          </p>
+          <a href="/upgrade" className="ml-auto px-3 py-1 bg-indigo-700 hover:bg-indigo-600 rounded text-xs text-white font-medium transition">Upgrade</a>
+        </div>
       )}
 
       {/* Boosted Posts — client-facing view */}
