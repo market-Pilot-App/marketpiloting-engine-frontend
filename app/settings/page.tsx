@@ -168,6 +168,13 @@ export default function SettingsPage() {
   const [kwInput, setKwInput] = useState("");
   const canAutoReply = ["starter", "growth", "agency", "admin"].includes(plan);
 
+  // Delete account state
+  const [deleteStep, setDeleteStep] = useState(0); // 0=hidden, 1=warn, 2=password, 3=confirm-text
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Payment state
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
     payment_method: "", bank_name: "", account_number: "",
@@ -231,6 +238,23 @@ export default function SettingsPage() {
 
   const removeKeyword = (kw: string) => {
     setArSettings((s) => ({ ...s, escalation_keywords: s.escalation_keywords.filter((k) => k !== kw) }));
+  };
+
+  const deleteAccount = async () => {
+    setDeleteError("");
+    if (deleteConfirmText !== "DELETE MY ACCOUNT") {
+      setDeleteError("Type exactly: DELETE MY ACCOUNT");
+      return;
+    }
+    setDeleteLoading(true);
+    try {
+      await api.del("/auth/account", { password: deletePassword, confirmation: deleteConfirmText });
+      localStorage.clear();
+      window.location.href = "/login";
+    } catch (e: any) {
+      setDeleteError(e.message || "Failed. Check your password.");
+      setDeleteLoading(false);
+    }
   };
 
   const canUsePlatform = (key: string) =>
@@ -517,6 +541,119 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* ── Danger Zone ── */}
+      <div className="mt-10 mb-10">
+        <h2 className="text-xl font-bold text-red-400 mb-2">⚠️ Danger Zone</h2>
+        <p className="text-gray-500 text-sm mb-4">
+          Deleting your account is permanent after 30 days. All your data, campaigns, content, and posts will be erased.
+          You have a 30-day grace period — contact support to recover your account before then.
+        </p>
+
+        <div className="bg-gray-900 border border-red-900/50 rounded-xl p-5">
+          {deleteStep === 0 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium text-sm">Delete My Account</p>
+                <p className="text-gray-500 text-xs mt-0.5">Permanently removes all your data after 30 days.</p>
+              </div>
+              <button
+                onClick={() => setDeleteStep(1)}
+                className="px-4 py-2 bg-red-900/40 hover:bg-red-900/70 border border-red-700/50 text-red-400 text-sm font-medium rounded-lg transition"
+              >
+                Delete Account
+              </button>
+            </div>
+          )}
+
+          {deleteStep === 1 && (
+            <div className="space-y-4">
+              <div className="p-3 bg-red-950/50 border border-red-800/50 rounded-lg">
+                <p className="text-red-300 text-sm font-semibold mb-1">Before you continue — understand what happens:</p>
+                <ul className="text-red-400/80 text-xs space-y-1 list-disc list-inside">
+                  <li>Your account is immediately deactivated and login is blocked</li>
+                  <li>All campaigns, content, posts, leads, and analytics are preserved for 30 days</li>
+                  <li>After 30 days, everything is permanently and irreversibly deleted</li>
+                  <li>Your Paystack subscription will be cancelled immediately</li>
+                  <li>Contact support within 30 days to recover your account</li>
+                </ul>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDeleteStep(2)}
+                  className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition"
+                >
+                  I understand, continue
+                </button>
+                <button
+                  onClick={() => setDeleteStep(0)}
+                  className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {deleteStep === 2 && (
+            <div className="space-y-4">
+              <p className="text-white text-sm font-medium">Step 2 of 3 — Confirm your password</p>
+              <input
+                type="password"
+                placeholder="Enter your current password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { if (deletePassword.length >= 6) setDeleteStep(3); else setDeleteError("Enter your password first."); }}
+                  className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition"
+                >
+                  Continue
+                </button>
+                <button
+                  onClick={() => { setDeleteStep(0); setDeletePassword(""); setDeleteError(""); }}
+                  className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+              {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
+            </div>
+          )}
+
+          {deleteStep === 3 && (
+            <div className="space-y-4">
+              <p className="text-white text-sm font-medium">Step 3 of 3 — Final confirmation</p>
+              <p className="text-gray-400 text-xs">Type <span className="text-red-400 font-mono font-bold">DELETE MY ACCOUNT</span> to confirm.</p>
+              <input
+                type="text"
+                placeholder="DELETE MY ACCOUNT"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="w-full bg-gray-800 border border-red-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-red-500 font-mono"
+              />
+              {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={deleteAccount}
+                  disabled={deleteLoading || deleteConfirmText !== "DELETE MY ACCOUNT"}
+                  className="flex-1 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
+                >
+                  {deleteLoading ? "Deleting..." : "Permanently Delete My Account"}
+                </button>
+                <button
+                  onClick={() => { setDeleteStep(0); setDeletePassword(""); setDeleteConfirmText(""); setDeleteError(""); }}
+                  className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
