@@ -71,10 +71,22 @@ export default function AdminPage() {
   const [pendingPosts, setPendingPosts] = useState<{ id: number; client_name: string; platform: string; scheduled_time: string; text: string; image_url: string | null }[]>([]);
   const [peakerrBalance, setPeakerrBalance] = useState<{ balance: string; currency: string } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [approvalToggles, setApprovalToggles] = useState<Record<number, boolean>>({});
 
   const fetchClients = useCallback(async () => {
     const data = await api.get("/admin/clients");
     setRows(data);
+    // Load approval_required for each agency client
+    const toggles: Record<number, boolean> = {};
+    for (const row of data) {
+      if (["agency", "admin"].includes(row.client.plan) && row.campaign_id) {
+        try {
+          const r = await api.get<{ approval_required: boolean }>(`/admin/clients/${row.client.id}/approval-required`);
+          toggles[row.client.id] = r.approval_required;
+        } catch { toggles[row.client.id] = false; }
+      }
+    }
+    setApprovalToggles(toggles);
     setLoading(false);
   }, []);
 
@@ -425,6 +437,23 @@ const saveBudget = async (clientId: number) => {
                           >
                             Usage
                           </button>
+                          {["agency", "admin"].includes(client.plan) && (
+                            <button
+                              onClick={async () => {
+                                const next = !approvalToggles[client.id];
+                                await api.patch(`/admin/clients/${client.id}/approval-required`, { enabled: next });
+                                setApprovalToggles((t) => ({ ...t, [client.id]: next }));
+                              }}
+                              className={`text-xs px-3 py-1.5 rounded-lg transition font-medium ${
+                                approvalToggles[client.id]
+                                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              }`}
+                              title="Toggle post approval requirement for this agency client"
+                            >
+                              {approvalToggles[client.id] ? "✅ Approval ON" : "⬜ Approval OFF"}
+                            </button>
+                          )}
                           <button
                             onClick={() => doAction(client.id, "delete")}
                             className="text-red-400 hover:text-red-600 text-xs px-2 py-1.5 transition"

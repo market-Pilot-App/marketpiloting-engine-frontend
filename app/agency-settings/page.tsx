@@ -25,6 +25,8 @@ export default function AgencySettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [approvalSaving, setApprovalSaving] = useState(false);
 
   useEffect(() => {
     const plan = client?.plan || "";
@@ -37,6 +39,9 @@ export default function AgencySettingsPage() {
         custom_report_footer_text: d.custom_report_footer_text || "",
       })
     );
+    api.get<{ approval_required: boolean }>("/agency/approval-required")
+      .then((d) => setApprovalRequired(d.approval_required))
+      .catch(() => {});
   }, [client, router]);
 
   const uploadLogo = async (file: File) => {
@@ -136,8 +141,45 @@ export default function AgencySettingsPage() {
         />
       </div>
 
+      {/* Post Approval Toggle */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">Post Approval Workflow</p>
+            <p className="text-gray-500 text-xs mt-1">
+              When ON, all scheduled posts go to your Approval Queue before publishing.
+              You review and approve each post manually.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              const next = !approvalRequired;
+              setApprovalSaving(true);
+              try {
+                await api.patch("/agency/approval-required", { enabled: next });
+                setApprovalRequired(next);
+              } finally {
+                setApprovalSaving(false);
+              }
+            }}
+            disabled={approvalSaving}
+            className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
+              approvalRequired ? "bg-indigo-600" : "bg-gray-700"
+            }`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+              approvalRequired ? "translate-x-6" : "translate-x-0.5"
+            }`} />
+          </button>
+        </div>
+        {approvalRequired && (
+          <p className="text-indigo-400 text-xs mt-3">
+            ✅ Active — go to <a href="/approval-queue" className="underline hover:text-indigo-300">Approval Queue</a> to review pending posts.
+          </p>
+        )}
+      </div>
+
       <button
-        onClick={save}
         disabled={saving}
         className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition"
       >
