@@ -493,12 +493,25 @@ const saveBudget = async (clientId: number) => {
           <p className="text-4xl mb-3">📧</p>
           <p className="text-2xl font-bold text-gray-900 mb-1">{leadMagnetCount ?? "…"} emails collected</p>
           <p className="text-sm text-gray-500 mb-6">From the landing page lead magnet form</p>
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL || ""}/admin/lead-magnet/export`}
+          <button
+            onClick={async () => {
+              const token = localStorage.getItem("mp_token");
+              const base = process.env.NEXT_PUBLIC_API_URL || "";
+              const res = await fetch(`${base}/admin/lead-magnet/export`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "lead_magnet_emails.csv";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
             className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition"
           >
             ⬇ Export CSV
-          </a>
+          </button>
         </div>
       )}
 
