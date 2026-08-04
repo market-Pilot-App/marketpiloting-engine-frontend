@@ -69,6 +69,8 @@ export default function AdminPage() {
 
   const [leadMagnetCount, setLeadMagnetCount] = useState<number | null>(null);
   const [pendingPosts, setPendingPosts] = useState<{ id: number; client_name: string; platform: string; scheduled_time: string; text: string; image_url: string | null }[]>([]);
+  const [peakerrBalance, setPeakerrBalance] = useState<{ balance: string; currency: string } | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   const fetchClients = useCallback(async () => {
     const data = await api.get("/admin/clients");
@@ -197,7 +199,7 @@ const saveBudget = async (clientId: number) => {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-4">
         {[
           { label: "Total Clients", value: rows.length },
           { label: "Active", value: rows.filter((r) => r.client.active).length },
@@ -212,6 +214,36 @@ const saveBudget = async (clientId: number) => {
             <p className="text-sm text-gray-500 mt-1">{label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Peakerr Balance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">💰</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-700">Peakerr Provider Balance</p>
+            {peakerrBalance ? (
+              <p className="text-xl font-bold text-gray-900">${peakerrBalance.balance} <span className="text-sm font-normal text-gray-400">{peakerrBalance.currency}</span></p>
+            ) : (
+              <p className="text-sm text-gray-400">{balanceLoading ? "Checking…" : "Click to check"}</p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            setBalanceLoading(true);
+            try {
+              const data = await api.get<{ balance: string; currency: string }>("/admin/boosts/balance");
+              setPeakerrBalance(data);
+            } finally {
+              setBalanceLoading(false);
+            }
+          }}
+          disabled={balanceLoading}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+        >
+          {balanceLoading ? "Checking…" : peakerrBalance ? "↻ Refresh" : "Check Balance"}
+        </button>
       </div>
 
       {/* Tabs */}
