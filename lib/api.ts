@@ -44,4 +44,12 @@ export const api = {
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   del: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "DELETE", ...(body ? { body: JSON.stringify(body) } : {}) }),
+  upload: <T>(path: string, form: FormData) => {
+    const token = getToken();
+    return fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    }).then((r) => r.json()) as Promise<T>;
+  },
 };

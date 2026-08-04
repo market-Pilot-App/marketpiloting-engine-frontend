@@ -16,6 +16,8 @@ interface ClientRow {
     report_email: string | null;
     subscription_status: string | null;
     subscription_expires_at: string | null;
+    created_at: string | null;
+    first_payment_at: string | null;
   };
   campaign_id: number | null;
   posts_today: number;
@@ -52,7 +54,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"clients" | "audit">("clients");
+  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals">("clients");
   const [loading, setLoading] = useState(true);
   const [editBudget, setEditBudget] = useState<Record<number, string>>({});
   const [editBoost, setEditBoost] = useState<Record<number, string>>({});
@@ -63,6 +65,10 @@ export default function AdminPage() {
   const [grantPlan, setGrantPlan] = useState("starter");
   const [grantDays, setGrantDays] = useState(30);
   const [actionStatus, setActionStatus] = useState<Record<number, string>>({});
+  const [usageModal, setUsageModal] = useState<null | { name: string; email: string; plan: string; created_at: string | null; first_payment_at: string | null; ai_posts: number; published: number; refund_eligible: boolean; refund_note: string }>(null);
+
+  const [leadMagnetCount, setLeadMagnetCount] = useState<number | null>(null);
+  const [pendingPosts, setPendingPosts] = useState<{ id: number; client_name: string; platform: string; scheduled_time: string; text: string; image_url: string | null }[]>([]);
 
   const fetchClients = useCallback(async () => {
     const data = await api.get("/admin/clients");
@@ -79,6 +85,18 @@ export default function AdminPage() {
     if (!isAdmin) { router.push("/"); return; }
     fetchClients();
   }, [isAdmin, router, fetchClients]);
+
+  useEffect(() => {
+    if (tab === "approvals") {
+      api.get<typeof pendingPosts>("/admin/pending-approvals").then(setPendingPosts);
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab === "leads") {
+      api.get<{ count: number }>("/admin/lead-magnet/count").then((d) => setLeadMagnetCount(d.count));
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (tab === "audit") fetchAuditLog();
@@ -142,6 +160,19 @@ const saveBudget = async (clientId: number) => {
     fetchClients();
   };
 
+  const viewUsage = async (clientId: number) => {
+    const data = await api.get<any>(`/admin/clients/${clientId}/usage`);
+    setUsageModal({
+      name: data.name, email: data.email, plan: data.plan,
+      created_at: data.account_creation_date,
+      first_payment_at: data.first_payment_at,
+      ai_posts: data.ai_posts_generated,
+      published: data.total_posts_published,
+      refund_eligible: data.refund_eligible,
+      refund_note: data.refund_note,
+    });
+  };
+
   const filtered = rows.filter(
     ({ client }) =>
       client.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -185,7 +216,7 @@ const saveBudget = async (clientId: number) => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(["clients", "audit"] as const).map((t) => (
+        {(["clients", "audit", "leads", "approvals"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -193,7 +224,7 @@ const saveBudget = async (clientId: number) => {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "clients" ? "All Clients" : "Audit Log"}
+            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : "Approvals"}
           </button>
         ))}
       </div>
@@ -357,6 +388,12 @@ const saveBudget = async (clientId: number) => {
                             </button>
                           )}
                           <button
+                            onClick={() => viewUsage(client.id)}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg transition"
+                          >
+                            Usage
+                          </button>
+                          <button
                             onClick={() => doAction(client.id, "delete")}
                             className="text-red-400 hover:text-red-600 text-xs px-2 py-1.5 transition"
                           >
@@ -410,6 +447,85 @@ const saveBudget = async (clientId: number) => {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* Approvals Tab */}
+      {tab === "approvals" && (
+        <div className="space-y-3">
+          {pendingPosts.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-sm border border-dashed border-gray-200 rounded-xl">
+              No posts pending approval.
+            </div>
+          ) : pendingPosts.map((p) => (
+            <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 items-start">
+              {p.image_url && <img src={p.image_url} alt="" className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-gray-900">{p.client_name}</span>
+                  <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full capitalize">{p.platform}</span>
+                  <span className="text-xs text-gray-400">{new Date(p.scheduled_time).toLocaleString()}</span>
+                </div>
+                <p className="text-sm text-gray-700 line-clamp-3">{p.text}</p>
+              </div>
+              <div className="flex flex-col gap-2 flex-shrink-0">
+                <button
+                  onClick={async () => { await api.post(`/admin/approve-post/${p.id}`, {}); setPendingPosts((prev) => prev.filter((x) => x.id !== p.id)); }}
+                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs px-3 py-1.5 rounded-lg transition"
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  onClick={async () => { await api.post(`/admin/reject-post/${p.id}`, {}); setPendingPosts((prev) => prev.filter((x) => x.id !== p.id)); }}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-3 py-1.5 rounded-lg transition"
+                >
+                  ✗ Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lead Magnet Tab */}
+      {tab === "leads" && (
+        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+          <p className="text-4xl mb-3">📧</p>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{leadMagnetCount ?? "…"} emails collected</p>
+          <p className="text-sm text-gray-500 mb-6">From the landing page lead magnet form</p>
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || ""}/admin/lead-magnet/export`}
+            className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition"
+          >
+            ⬇ Export CSV
+          </a>
+        </div>
+      )}
+
+      {/* Usage Modal */}
+      {usageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setUsageModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Usage — {usageModal.name}</h2>
+              <button onClick={() => setUsageModal(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="text-gray-900 font-medium">{usageModal.email}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Plan</span><span className="capitalize text-gray-900 font-medium">{usageModal.plan}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Registered</span><span className="text-gray-900">{usageModal.created_at ? new Date(usageModal.created_at).toLocaleDateString() : "—"}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">First Payment</span><span className="text-gray-900">{usageModal.first_payment_at ? new Date(usageModal.first_payment_at).toLocaleDateString() : "—"}</span></div>
+              <hr className="border-gray-100" />
+              <div className="flex justify-between"><span className="text-gray-500">AI Posts Generated</span><span className="text-gray-900 font-bold">{usageModal.ai_posts}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Posts Published</span><span className="text-gray-900 font-bold">{usageModal.published}</span></div>
+              <hr className="border-gray-100" />
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${usageModal.refund_eligible ? "bg-green-50 text-green-700" : "bg-orange-50 text-orange-700"}`}>
+                <span className="text-lg">{usageModal.refund_eligible ? "✅" : "⚠️"}</span>
+                <span className="text-xs font-medium">{usageModal.refund_note}</span>
+              </div>
+            </div>
+            <button onClick={() => setUsageModal(null)} className="mt-5 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 rounded-lg transition">Close</button>
+          </div>
         </div>
       )}
 

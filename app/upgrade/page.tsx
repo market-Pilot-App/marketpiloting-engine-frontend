@@ -17,6 +17,7 @@ export default function UpgradePage() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [agreedToTos, setAgreedToTos] = useState(false);
 
   const currentPlanIdx = PLAN_ORDER.indexOf(client?.plan || "");
 
@@ -109,13 +110,13 @@ export default function UpgradePage() {
               </div>
               <button
                 onClick={() => !isDowngrade && handleSelect(plan.key)}
-                disabled={isDowngrade || loading === plan.key}
+                disabled={isDowngrade || loading === plan.key || !agreedToTos}
                 className={`w-full py-2 rounded-lg text-sm font-semibold transition ${
                   isDowngrade
                     ? "bg-gray-800 text-gray-600 cursor-not-allowed"
                     : isCurrent
-                    ? "bg-indigo-900 hover:bg-indigo-800 text-indigo-300"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                    ? "bg-indigo-900 hover:bg-indigo-800 text-indigo-300 disabled:opacity-40"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40"
                 }`}
               >
                 {loading === plan.key
@@ -135,6 +136,23 @@ export default function UpgradePage() {
         Payments are processed securely by Paystack. Your card is saved for automatic renewal.
         Cancel anytime by contacting support.
       </p>
+
+      {/* ToS Checkbox */}
+      <label className="flex items-start gap-3 cursor-pointer mt-4 max-w-lg mx-auto">
+        <input
+          type="checkbox"
+          checked={agreedToTos}
+          onChange={(e) => setAgreedToTos(e.target.checked)}
+          className="mt-0.5 accent-indigo-500 w-4 h-4 flex-shrink-0"
+        />
+        <span className="text-xs text-gray-400 leading-relaxed">
+          I agree to the{" "}
+          <a href="https://marketpiloting.online/terms" target="_blank" className="text-indigo-400 hover:underline">Terms of Service</a>
+          {" "}and{" "}
+          <a href="https://marketpiloting.online/privacy" target="_blank" className="text-indigo-400 hover:underline">Privacy Policy</a>
+          , including the 7-day guarantee and refund policy.
+        </span>
+      </label>
     </div>
   );
 }

@@ -24,6 +24,10 @@ const NAV = [
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
+const AGENCY_NAV = [
+  { href: "/approval-queue", label: "Approval Queue", icon: "✅" },
+  { href: "/agency-settings", label: "Agency Branding", icon: "🎨" },
+];
 const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
 interface CampaignSummary { id: number; name: string; niche: string; }
@@ -31,9 +35,10 @@ interface CampaignSummary { id: number; name: string; niche: string; }
 interface SidebarProps {
   mobileOpen: boolean;
   onClose: () => void;
+  agencyLogoUrl?: string | null;
 }
 
-export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
+export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarProps) {
   const pathname = usePathname();
   const { client, isAdmin, logout, switchBrand } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
@@ -56,8 +61,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const allNav = [
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
+    ...(isAgency ? AGENCY_NAV : []),
     ...(isAdmin ? ADMIN_NAV : []),
   ];
+
+  const logoSrc = agencyLogoUrl || "/logo.png";
 
   const sidebarContent = (collapsed: boolean) => (
     <aside
@@ -71,11 +79,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           <div className="bg-white rounded-2xl px-3 py-4 mb-3 flex items-center justify-center shadow-xl">
             <div className="relative w-full h-28">
               <Image
-                src="/logo.png"
-                alt="Marketpiloting"
+                src={logoSrc}
+                alt="Logo"
                 fill
                 className="object-contain object-center"
                 priority
+                unoptimized={!!agencyLogoUrl}
               />
             </div>
           </div>
@@ -83,7 +92,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         {collapsed && (
           <div className="bg-white rounded-xl p-1 mb-2 flex items-center justify-center shadow-lg">
             <div className="relative w-10 h-10">
-              <Image src="/logo.png" alt="Marketpiloting" fill className="object-contain object-center" priority />
+              <Image src={logoSrc} alt="Logo" fill className="object-contain object-center" priority unoptimized={!!agencyLogoUrl} />
             </div>
           </div>
         )}

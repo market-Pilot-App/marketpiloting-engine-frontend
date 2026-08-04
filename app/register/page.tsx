@@ -19,6 +19,7 @@ function RegisterContent() {
   const [billing, setBilling] = useState(searchParams.get("billing") || "monthly");
   const [form, setForm] = useState({ name: "", email: "", password: "", business_name: "", niche: "", website_url: "", target_audience: "", tone: "professional" });
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTos, setAgreedToTos] = useState(false);
   const [error, setError] = useState("");
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -204,12 +205,29 @@ function RegisterContent() {
               </button>
               <button
                 onClick={handleRegister}
-                disabled={!form.name || !form.email || !form.password || !form.business_name || !form.niche || !form.target_audience}
+                disabled={!form.name || !form.email || !form.password || !form.business_name || !form.niche || !form.target_audience || !agreedToTos}
                 className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition"
               >
                 Create Account & Pay →
               </button>
             </div>
+
+            {/* ToS Checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer mt-1">
+              <input
+                type="checkbox"
+                checked={agreedToTos}
+                onChange={(e) => setAgreedToTos(e.target.checked)}
+                className="mt-0.5 accent-indigo-500 w-4 h-4 flex-shrink-0"
+              />
+              <span className="text-xs text-gray-400 leading-relaxed">
+                I agree to the{" "}
+                <a href="https://marketpiloting.online/terms" target="_blank" className="text-indigo-400 hover:underline">Terms of Service</a>
+                {" "}and{" "}
+                <a href="https://marketpiloting.online/privacy" target="_blank" className="text-indigo-400 hover:underline">Privacy Policy</a>
+                . I understand the 7-day guarantee and refund policy.
+              </span>
+            </label>
           </div>
         )}
       </div>
