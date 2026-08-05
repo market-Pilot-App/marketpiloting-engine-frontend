@@ -151,8 +151,10 @@ export default function DashboardPage() {
 
   const statCards = stats ? [
     { label: "Posts Today",          value: stats.total_posts_today,                    icon: "📝" },
-    { label: "Boosts Today",         value: stats.total_boosts_today,                   icon: "🚀" },
-    { label: "Spend Today",          value: `$${stats.spend_today.toFixed(2)}`,          icon: "💰" },
+    ...(isAdmin ? [
+      { label: "Boosts Today",       value: stats.total_boosts_today,                   icon: "🚀" },
+      { label: "Spend Today",        value: `$${stats.spend_today.toFixed(2)}`,          icon: "💰" },
+    ] : []),
     { label: "Queued Posts",         value: stats.queued_posts,                          icon: "📅" },
     { label: "Total Posts",          value: overview?.total_posts ?? "—",               icon: "📊" },
     { label: "Blogs Published",      value: overview?.total_blogs ?? "—",               icon: "✍️" },
@@ -451,8 +453,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent Boosted Posts */}
-          {recentBoosts.length > 0 && (
+          {/* Recent Boosted Posts — admin only */}
+          {isAdmin && recentBoosts.length > 0 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">🚀 Recent Boosts</h3>
