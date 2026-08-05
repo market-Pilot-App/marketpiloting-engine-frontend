@@ -40,6 +40,14 @@ function BarChart({ series, metric, color }: { series: DaySeries[]; metric: keyo
   );
 }
 
+interface SentimentData {
+  positive: number;
+  negative: number;
+  neutral: number;
+  total: number;
+  trend_delta: number;
+}
+
 interface ReportPreview {
   business_name: string;
   month: string;
@@ -61,6 +69,7 @@ export default function AnalyticsPage() {
   const [generating, setGenerating] = useState(false);
   const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
+  const [sentiment, setSentiment] = useState<SentimentData | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -76,6 +85,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
+    api.get<SentimentData>("/auto-reply/analytics/sentiment").then(setSentiment).catch(() => {});
   }, []);
 
   const generateReport = async () => {
@@ -228,6 +238,56 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          {/* Brand Sentiment */}
+          {sentiment && sentiment.total > 0 && (() => {
+            const { positive, neutral, negative, total, trend_delta } = sentiment;
+            const pPos = Math.round((positive / total) * 100);
+            const pNeu = Math.round((neutral / total) * 100);
+            const pNeg = Math.round((negative / total) * 100);
+            // SVG donut: r=40, circumference=251.2
+            const C = 251.2;
+            const posArc = (positive / total) * C;
+            const neuArc = (neutral / total) * C;
+            const negArc = (negative / total) * C;
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="font-semibold text-gray-900">💬 Brand Sentiment</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Based on {total} messages in the last 30 days</p>
+                  </div>
+                  <span className={`text-sm font-semibold ${trend_delta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {trend_delta >= 0 ? "↑" : "↓"} {Math.abs(trend_delta)}% vs last week
+                  </span>
+                </div>
+                <div className="flex items-center gap-8">
+                  <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" strokeWidth="16" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="16"
+                      strokeDasharray={`${posArc} ${C}`} strokeDashoffset="0" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#9ca3af" strokeWidth="16"
+                      strokeDasharray={`${neuArc} ${C}`} strokeDashoffset={`-${posArc}`} />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" strokeWidth="16"
+                      strokeDasharray={`${negArc} ${C}`} strokeDashoffset={`-${posArc + neuArc}`} />
+                  </svg>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Positive", pct: pPos, color: "bg-green-500", emoji: "😊" },
+                      { label: "Neutral",  pct: pNeu, color: "bg-gray-400",  emoji: "😐" },
+                      { label: "Negative", pct: pNeg, color: "bg-red-500",   emoji: "😠" },
+                    ].map(({ label, pct, color, emoji }) => (
+                      <div key={label} className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${color}`} />
+                        <span className="text-sm text-gray-700">{emoji} {label}</span>
+                        <span className="text-sm font-bold text-gray-900 ml-auto">{pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* PDF Report section */}
           {reportPreview && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">

@@ -10,6 +10,7 @@ interface Message {
   sender_name: string | null;
   content: string;
   status: string;
+  sentiment: string;
   received_at: string;
   reply_id: number | null;
   reply_content: string | null;
@@ -39,12 +40,21 @@ const STATUS_STYLE: Record<string, string> = {
   processing: "bg-blue-900 text-blue-400",
 };
 
+const SENTIMENT_BADGE: Record<string, string> = {
+  positive: "😊", neutral: "😐", negative: "😠",
+};
+
+const SENTIMENT_COLOR: Record<string, string> = {
+  positive: "text-green-400", neutral: "text-gray-400", negative: "text-red-400",
+};
+
 export default function AutoReplyPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [selected, setSelected] = useState<Message | null>(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPlatform, setFilterPlatform] = useState("");
+  const [filterSentiment, setFilterSentiment] = useState("");
   const [overrideText, setOverrideText] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState("");
@@ -53,6 +63,7 @@ export default function AutoReplyPage() {
     const params = new URLSearchParams();
     if (filterStatus) params.set("status", filterStatus);
     if (filterPlatform) params.set("platform", filterPlatform);
+    if (filterSentiment) params.set("sentiment", filterSentiment);
     const data = await api.get<Message[]>(`/auto-reply/inbox?${params}`);
     setMessages(data);
     if (selected) {
@@ -66,7 +77,7 @@ export default function AutoReplyPage() {
     setAnalytics(data);
   };
 
-  useEffect(() => { fetchMessages(); fetchAnalytics(); }, [filterStatus, filterPlatform]);
+  useEffect(() => { fetchMessages(); fetchAnalytics(); }, [filterStatus, filterPlatform, filterSentiment]);
 
   const flash = (msg: string) => {
     setActionMsg(msg);
@@ -151,7 +162,7 @@ export default function AutoReplyPage() {
       <div className="flex gap-4">
         {/* Left: message list */}
         <div className="w-1/2">
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="text-sm bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white">
               <option value="">All statuses</option>
@@ -167,6 +178,13 @@ export default function AutoReplyPage() {
               <option value="telegram">Telegram</option>
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
+            </select>
+            <select value={filterSentiment} onChange={(e) => setFilterSentiment(e.target.value)}
+              className="text-sm bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white">
+              <option value="">All sentiments</option>
+              <option value="negative">😠 Negative</option>
+              <option value="neutral">😐 Neutral</option>
+              <option value="positive">😊 Positive</option>
             </select>
           </div>
 
@@ -186,9 +204,14 @@ export default function AutoReplyPage() {
                     <span>{PLATFORM_ICON[m.platform] || "💬"}</span>
                     <span className="text-white text-sm font-medium">{m.sender_name || m.sender_id}</span>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[m.status] || "bg-gray-800 text-gray-400"}`}>
-                    {m.status.replace("_", " ")}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm ${SENTIMENT_COLOR[m.sentiment] || "text-gray-400"}`} title={m.sentiment}>
+                      {SENTIMENT_BADGE[m.sentiment] || "😐"}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[m.status] || "bg-gray-800 text-gray-400"}`}>
+                      {m.status.replace("_", " ")}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-gray-400 text-xs truncate">{m.content}</p>
                 <p className="text-gray-600 text-xs mt-1">{new Date(m.received_at).toLocaleString()}</p>
@@ -208,6 +231,9 @@ export default function AutoReplyPage() {
               <div className="flex items-center gap-2">
                 <span>{PLATFORM_ICON[selected.platform] || "💬"}</span>
                 <span className="text-white font-semibold">{selected.sender_name || selected.sender_id}</span>
+                <span className={`text-sm ml-1 ${SENTIMENT_COLOR[selected.sentiment] || "text-gray-400"}`}>
+                  {SENTIMENT_BADGE[selected.sentiment] || "😐"} {selected.sentiment}
+                </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ml-auto ${STATUS_STYLE[selected.status] || "bg-gray-800 text-gray-400"}`}>
                   {selected.status.replace("_", " ")}
                 </span>
@@ -250,7 +276,7 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
-              {/* Override — always available for pending/escalated */}
+              {/* Override */}
               {(selected.status === "pending" || selected.status === "escalated") && (
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Or send a custom reply instead</p>
