@@ -19,6 +19,7 @@ const NAV = [
   { href: "/landing-page", label: "Landing Page", icon: "🌐" },
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/leads", label: "Leads", icon: "👥" },
+  { href: "/sequences", label: "Sequences", icon: "📧" },
   { href: "/referrals", label: "Referrals", icon: "🔗" },
   { href: "/auto-reply", label: "Auto-Reply", icon: "💬" },
   { href: "/catalog", label: "Catalog", icon: "🛍️" },
