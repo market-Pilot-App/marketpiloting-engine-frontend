@@ -147,6 +147,76 @@ const PLATFORMS = [
   },
 ];
 
+function RecyclingSettings() {
+  const [enabled, setEnabled] = useState(false);
+  const [threshold, setThreshold] = useState(10.0);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api.get<{ recycling_enabled: boolean; recycle_threshold: number }>("/campaigns/me")
+      .then((d) => {
+        setEnabled((d as Record<string, unknown>).recycling_enabled as boolean ?? false);
+        setThreshold((d as Record<string, unknown>).recycle_threshold as number ?? 10.0);
+      }).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch("/campaigns/me/recycling", { recycling_enabled: enabled, recycle_threshold: threshold });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {}
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-white font-medium text-sm">Enable Content Recycling</p>
+          <p className="text-gray-500 text-xs mt-0.5">Top-performing posts will be automatically re-queued after their interval expires.</p>
+        </div>
+        <button
+          onClick={() => setEnabled((e) => !e)}
+          className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? "bg-indigo-600" : "bg-gray-700"}`}
+        >
+          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-0.5"}`} />
+        </button>
+      </div>
+      {enabled && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-white font-medium text-sm">Minimum Engagement Score</p>
+            <span className="text-indigo-400 text-sm font-bold">{threshold.toFixed(0)}</span>
+          </div>
+          <p className="text-gray-500 text-xs mb-2">
+            Score = likes + (comments × 3) + (reach × 0.05) + (clicks × 2). Only posts above this score get recycled.
+          </p>
+          <input
+            type="range" min={5} max={50} step={5}
+            value={threshold}
+            onChange={(e) => setThreshold(parseFloat(e.target.value))}
+            className="w-full accent-indigo-500"
+          />
+          <div className="flex justify-between text-xs text-gray-600 mt-1">
+            <span>5 (recycle more)</span>
+            <span>50 (only viral posts)</span>
+          </div>
+        </div>
+      )}
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+      >
+        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Recycling Settings"}
+      </button>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [plan, setPlan] = useState("solo");
   const [connections, setConnections] = useState<Connections | null>(null);
@@ -543,7 +613,16 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ── Danger Zone ── */}
+      {/* ── Content Recycling ── */}
+      <div className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">🔄 Content Recycling</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Automatically re-queue top-performing posts after a set interval. Enable recycling per post from the Scheduler page.
+        </p>
+        <RecyclingSettings />
+      </div>
+
+      {/* ── Danger Zone ── */}}
       <div className="mt-10 mb-10">
         <h2 className="text-xl font-bold text-red-400 mb-2">⚠️ Danger Zone</h2>
         <p className="text-gray-500 text-sm mb-4">

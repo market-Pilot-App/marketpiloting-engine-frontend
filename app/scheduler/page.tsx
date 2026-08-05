@@ -14,6 +14,9 @@ interface QueuedPost {
   reach: number;
   posted_at: string | null;
   is_story?: boolean;
+  is_recyclable?: boolean;
+  recycle_interval_days?: number;
+  engagement_score?: number;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -39,6 +42,8 @@ export default function SchedulerPage() {
   const [filling, setFilling] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [fillResult, setFillResult] = useState<string>("");
+  const [recycleModal, setRecycleModal] = useState<{ postId: number; enabled: boolean; interval: number } | null>(null);
+  const [recycleSaving, setRecycleSaving] = useState(false);
 
   const fetchQueue = async (status?: string) => {
     setLoading(true);
@@ -79,8 +84,83 @@ export default function SchedulerPage() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const saveRecycle = async () => {
+    if (!recycleModal) return;
+    setRecycleSaving(true);
+    try {
+      await api.patch(`/scheduler/${recycleModal.postId}/recycle-settings`, {
+        is_recyclable: recycleModal.enabled,
+        recycle_interval_days: recycleModal.interval,
+      });
+      setPosts((prev) => prev.map((p) =>
+        p.id === recycleModal.postId
+          ? { ...p, is_recyclable: recycleModal.enabled, recycle_interval_days: recycleModal.interval }
+          : p
+      ));
+      setRecycleModal(null);
+    } catch {}
+    finally { setRecycleSaving(false); }
+  };
+
   return (
     <div>
+      {/* Recycle settings modal */}
+      {recycleModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-80 space-y-4">
+            <h3 className="text-white font-semibold">🔄 Content Recycling</h3>
+            <p className="text-gray-400 text-xs">When enabled, this post will be automatically re-queued after the interval if it performed well.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white">Enable recycling</span>
+              <button
+                onClick={() => setRecycleModal((m) => m ? { ...m, enabled: !m.enabled } : m)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  recycleModal.enabled ? "bg-indigo-600" : "bg-gray-700"
+                }`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  recycleModal.enabled ? "translate-x-5" : "translate-x-0.5"
+                }`} />
+              </button>
+            </div>
+            {recycleModal.enabled && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Recycle interval</p>
+                <div className="flex gap-2">
+                  {[14, 30, 60, 90].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setRecycleModal((m) => m ? { ...m, interval: d } : m)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition ${
+                        recycleModal.interval === d
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                      }`}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={saveRecycle}
+                disabled={recycleSaving}
+                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+              >
+                {recycleSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => setRecycleModal(null)}
+                className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Scheduler</h1>
@@ -167,6 +247,21 @@ export default function SchedulerPage() {
                   className="text-gray-600 hover:text-red-400 text-xs transition"
                 >
                   Remove
+                </button>
+              )}
+              {post.status === "posted" && (
+                <button
+                  onClick={() => setRecycleModal({
+                    postId: post.id,
+                    enabled: post.is_recyclable ?? false,
+                    interval: post.recycle_interval_days ?? 30,
+                  })}
+                  className={`text-xs transition ${
+                    post.is_recyclable ? "text-indigo-400 hover:text-indigo-300" : "text-gray-600 hover:text-gray-400"
+                  }`}
+                  title="Content recycling"
+                >
+                  {post.is_recyclable ? "🔄 Recycling on" : "🔄"}
                 </button>
               )}
             </div>
