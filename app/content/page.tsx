@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api, API_URL } from "@/lib/api";
+import HashtagSuggester from "@/components/HashtagSuggester";
 
 const PLATFORM_CONFIG: Record<string, { emoji: string; limit: number }> = {
   facebook:  { emoji: "📘", limit: 500 },
@@ -60,6 +61,7 @@ type PostStatus = "idle" | "posting" | "posted" | "failed";
 export default function ContentStudio() {
   const [plan, setPlan] = useState("solo");
   const [subscriptionStatus, setSubscriptionStatus] = useState("active");
+  const [niche, setNiche] = useState("general");
 
   const [platform, setPlatform] = useState("facebook");
   const [angle, setAngle] = useState("");
@@ -95,6 +97,8 @@ export default function ContentStudio() {
     }
     const platforms = PLAN_PLATFORMS[JSON.parse(localStorage.getItem("mp_client") || "{}").plan ?? "solo"] ?? ["facebook"];
     setPlatform(platforms[0]);
+    // Load campaign niche for hashtag suggestions
+    api.get<{ niche?: string }>("/campaigns/me").then((d) => { if (d.niche) setNiche(d.niche); }).catch(() => {});
     // Load conversation insights
     api.get<ContentInsight[]>("/insights/").then(setInsights).catch(() => {});
   }, []);
@@ -388,6 +392,11 @@ export default function ContentStudio() {
                       onChange={(e) => setEditText((prev) => ({ ...prev, [item.id]: e.target.value }))}
                       rows={4}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 resize-none focus:outline-none focus:border-indigo-500"
+                    />
+                    <HashtagSuggester
+                      niche={niche}
+                      content={text}
+                      onInsert={(tag) => setEditText((prev) => ({ ...prev, [item.id]: (prev[item.id] ?? item.text) + " " + tag }))}
                     />
                     <div className="flex items-center justify-between mt-1">
                       <span className={`text-xs ${over ? "text-red-400" : "text-gray-500"}`}>
