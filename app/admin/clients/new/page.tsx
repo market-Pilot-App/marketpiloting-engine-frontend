@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const PLATFORMS = ["facebook", "instagram", "linkedin", "telegram", "twitter", "tiktok"];
-const PLANS = ["starter", "growth", "agency"];
+const PLANS = ["solo", "starter", "growth", "agency"];
 
 export default function NewClientPage() {
   const router = useRouter();
