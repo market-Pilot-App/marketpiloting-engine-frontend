@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Marketpiloting — Autonomous Marketing Engine",
   description: "Autonomous marketing on autopilot",
-  icons: { icon: "/favicon-32x32.png" },
+  icons: { icon: "/favicon-32x32.png", apple: "/favicon-32x32.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
