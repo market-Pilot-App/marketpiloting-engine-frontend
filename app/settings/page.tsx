@@ -8,6 +8,7 @@ interface Connections {
   linkedin: boolean;
   twitter: boolean;
   telegram: boolean;
+  whatsapp: boolean;
   blog: boolean;
   youtube: boolean;
   website: boolean;
@@ -41,6 +42,8 @@ interface PlatformForm {
   twitter_access_secret?: string;
   telegram_bot_token?: string;
   telegram_channel_id?: string;
+  whatsapp_phone_number_id?: string;
+  whatsapp_access_token?: string;
   blog_api_url?: string;
   blog_api_key?: string;
   youtube_client_id?: string;
@@ -57,6 +60,7 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
   linkedin: "growth",
   twitter: "growth",
   telegram: "starter",
+  whatsapp: "starter",
   blog: "starter",
   youtube: "growth",
   website: "growth",
@@ -113,6 +117,16 @@ const PLATFORMS = [
     fields: [
       { name: "telegram_bot_token", label: "Bot Token", placeholder: "123456:ABC-DEF...", secret: true },
       { name: "telegram_channel_id", label: "Channel ID", placeholder: "@yourchannel or -100123456789" },
+    ],
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    icon: "💬",
+    hint: "Connect via Meta Cloud API. Go to developers.facebook.com → your app → WhatsApp → API Setup. You need your Phone Number ID and a permanent System User Access Token. Set your webhook URL to: https://marketpiloting-engine-backend.onrender.com/whatsapp/webhook — Verify Token: mp_whatsapp_verify",
+    fields: [
+      { name: "whatsapp_phone_number_id", label: "Phone Number ID", placeholder: "123456789012345" },
+      { name: "whatsapp_access_token", label: "System User Access Token", placeholder: "EAABwz...", secret: true },
     ],
   },
   {
@@ -639,6 +653,7 @@ export default function SettingsPage() {
               <div className="flex gap-2 flex-wrap">
                 {[
                   { key: "telegram", label: "✈️ Telegram", available: true },
+                  { key: "whatsapp", label: "💬 WhatsApp", available: true },
                   { key: "facebook", label: "📘 Facebook", available: false },
                   { key: "instagram", label: "📸 Instagram", available: false },
                 ].map((p) => (

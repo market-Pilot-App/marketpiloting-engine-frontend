@@ -28,7 +28,7 @@ interface Analytics {
 }
 
 const PLATFORM_ICON: Record<string, string> = {
-  telegram: "✈️", facebook: "📘", instagram: "📸",
+  telegram: "✈️", facebook: "📘", instagram: "📸", whatsapp: "💬",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -176,6 +176,7 @@ export default function AutoReplyPage() {
               className="text-sm bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-white">
               <option value="">All platforms</option>
               <option value="telegram">Telegram</option>
+              <option value="whatsapp">WhatsApp</option>
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
             </select>
