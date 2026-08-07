@@ -64,7 +64,6 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
     ...(isAgency ? AGENCY_NAV : []),
-    ...(isAdmin ? ADMIN_NAV : []),
   ];
 
   const logoSrc = agencyLogoUrl || "/logo.png";
@@ -201,6 +200,18 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
 
       {/* Settings + Sign out */}
       <div className="px-3 py-4 border-t border-gray-800 space-y-0.5">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            title={collapsed ? "Admin Panel" : undefined}
+            className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
+              collapsed ? "justify-center" : ""
+            } ${pathname === "/admin" ? "bg-indigo-600 text-white" : ""}`}
+          >
+            <span className="text-base">⚙️</span>
+            {!collapsed && "Admin Panel"}
+          </Link>
+        )}
         <Link
           href="/settings"
           title={collapsed ? "Settings" : undefined}
