@@ -35,6 +35,7 @@ interface AnglePerf { angle: string; clicks: number; posts: number; ctr: number;
 interface RecentPost { id: number; platform: string; status: string; posted_at: string; post_url: string; }
 interface TrendData { all_topics: string[]; relevant: string[]; }
 interface ReferralStats { total_clicks: number; top_links: { code: string; angle: string; clicks: number }[]; }
+interface RevenueData { total_revenue: number; total_sales: number; by_platform: { platform: string; sales: number; revenue: number }[]; chart: { date: string; revenue: number }[]; top_posts: { post_id: number; platform: string; sales: number; revenue: number; preview: string }[]; }
 interface CampaignSummary { id: number; name: string; niche: string; platforms: string[]; active: boolean; }
 interface BrandDNA { consistency_score: number; business_name: string; }
 interface OnboardingItem { key: string; label: string; href: string; done: boolean; }
@@ -105,6 +106,7 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<RecentPost[]>([]);
   const [trends, setTrends] = useState<TrendData | null>(null);
   const [referrals, setReferrals] = useState<ReferralStats | null>(null);
+  const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingHealth | null>(null);
   const [recentBoosts, setRecentBoosts] = useState<BoostedPost[]>([]);
@@ -126,7 +128,8 @@ export default function DashboardPage() {
       safe(api.get("/brand-dna/")),
       safe(api.get("/analytics/onboarding-health")),
       safe(api.get("/boosts/posts?limit=5")),
-    ]).then(([s, o, ap, r, t, ref, d, ob, rb]) => {
+      safe(api.get("/revenue/summary?days=30")),
+    ]).then(([s, o, ap, r, t, ref, d, ob, rb, rev]) => {
       if (s) setStats(s);
       if (o) setOverview(o);
       if (ap) setAnglePerf((ap as any).angles || []);
@@ -136,6 +139,7 @@ export default function DashboardPage() {
       if (d) setDna(d as BrandDNA);
       if (ob) setOnboarding(ob as OnboardingHealth);
       if (rb) setRecentBoosts(rb as BoostedPost[]);
+      if (rev) setRevenue(rev as RevenueData);
     }).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
@@ -161,6 +165,10 @@ export default function DashboardPage() {
     { label: "Referral Clicks",      value: overview?.total_referral_clicks ?? "—",     icon: "🔗" },
     { label: "Telegram Members",     value: overview?.telegram_members ?? "—",          icon: "✈️" },
     { label: "Brand DNA Score",      value: dna ? `${dna.consistency_score}/100` : "—", icon: "🧬" },
+    ...(revenue && revenue.total_revenue > 0 ? [
+      { label: "Revenue (30d)", value: `₦${revenue.total_revenue.toLocaleString()}`, icon: "💵" },
+      { label: "Sales (30d)",   value: revenue.total_sales,                           icon: "🛒" },
+    ] : []),
   ] : [];
 
   const quickActions = [
