@@ -13,6 +13,7 @@ interface Product {
   promo_price: number | null;
   promo_starts_at: string | null;
   promo_ends_at: string | null;
+  last_promoted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +33,9 @@ export default function CatalogPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const [promoting, setPromoting] = useState<number | null>(null);
+  const [promoteMsg, setPromoteMsg] = useState<Record<number, string>>({});
 
   const fetch = async () => {
     try { setProducts(await api.get<Product[]>("/catalog/")); }
@@ -76,6 +80,18 @@ export default function CatalogPage() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally { setSaving(false); }
+  };
+
+  const promote = async (id: number) => {
+    setPromoting(id);
+    try {
+      const r = await api.post(`/catalog/${id}/promote-now`) as { posts_scheduled?: number; skipped?: string };
+      setPromoteMsg((m) => ({ ...m, [id]: r.posts_scheduled ? `✓ ${r.posts_scheduled} posts scheduled` : (r.skipped || "Done") }));
+      setTimeout(() => setPromoteMsg((m) => { const n = { ...m }; delete n[id]; return n; }), 4000);
+      await fetch();
+    } catch (e: unknown) {
+      setPromoteMsg((m) => ({ ...m, [id]: e instanceof Error ? e.message : "Failed" }));
+    } finally { setPromoting(null); }
   };
 
   const toggle = async (id: number) => {
@@ -214,6 +230,10 @@ export default function CatalogPage() {
                     <span className="text-indigo-400 font-bold text-sm">{p.currency} {p.price.toLocaleString()}</span>
                   )}
                 </div>
+                {promoteMsg[p.id] && <p className="text-indigo-400 text-xs mt-1">{promoteMsg[p.id]}</p>}
+                {p.last_promoted_at && !promoteMsg[p.id] && (
+                  <p className="text-gray-600 text-xs mt-1">Last promoted {new Date(p.last_promoted_at).toLocaleDateString()}</p>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => toggle(p.id)}
@@ -221,6 +241,13 @@ export default function CatalogPage() {
                   {p.available ? "Available" : "Unavailable"}
                 </button>
                 <button onClick={() => openEdit(p)} className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded transition">Edit</button>
+                <button
+                  onClick={() => promote(p.id)}
+                  disabled={promoting === p.id}
+                  className="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                >
+                  {promoting === p.id ? "Promoting..." : "🚀 Promote"}
+                </button>
                 <button onClick={() => del(p.id)} className="text-xs text-red-500 hover:text-red-400 px-2 py-1 rounded transition">Delete</button>
               </div>
             </div>
