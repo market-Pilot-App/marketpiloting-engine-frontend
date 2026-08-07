@@ -253,11 +253,27 @@ export default function SettingsPage() {
   const [savingPayment, setSavingPayment] = useState(false);
   const [savedPayment, setSavedPayment] = useState(false);
 
+  // Revenue tracking state
+  const [paystackKey, setPaystackKey] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [revKeySet, setRevKeySet] = useState(false);
+  const [revKeyHint, setRevKeyHint] = useState("");
+  const [savingRev, setSavingRev] = useState(false);
+  const [savedRev, setSavedRev] = useState(false);
+  const [revError, setRevError] = useState("");
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     const stored = localStorage.getItem("mp_client");
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
+    api.get<{ paystack_secret_key_set: boolean; paystack_secret_key_hint: string }>("/revenue/settings")
+      .then((d) => { setRevKeySet(d.paystack_secret_key_set); setRevKeyHint(d.paystack_secret_key_hint); })
+      .catch(() => {});
+    api.get<{ webhook_url: string }>("/revenue/webhook-url")
+      .then((d) => setWebhookUrl(d.webhook_url))
+      .catch(() => {});
     api.get<PaymentForm>("/brand-dna/").then((d) => {
       setPaymentForm({
         payment_method: (d as unknown as Record<string, string>).payment_method || "",
@@ -269,6 +285,28 @@ export default function SettingsPage() {
       });
     }).catch(() => {});
   }, []);
+
+  const saveRevenue = async () => {
+    setRevError("");
+    if (!paystackKey.startsWith("sk_")) { setRevError("Key must start with sk_live_ or sk_test_"); return; }
+    setSavingRev(true);
+    try {
+      await api.patch("/revenue/settings", { paystack_secret_key: paystackKey });
+      setRevKeySet(true);
+      setRevKeyHint(`sk_...${paystackKey.slice(-4)}`);
+      setPaystackKey("");
+      setSavedRev(true);
+      setTimeout(() => setSavedRev(false), 3000);
+    } catch (e: unknown) {
+      setRevError(e instanceof Error ? e.message : "Save failed");
+    } finally { setSavingRev(false); }
+  };
+
+  const copyWebhook = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const savePayment = async () => {
     setSavingPayment(true);
@@ -441,6 +479,61 @@ export default function SettingsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* ── Revenue Tracking ── */}
+      <div id="revenue-tracking" className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">💵 Revenue Tracking</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Connect your Paystack account so MarketPilot can track which posts are driving real sales.
+        </p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
+          <div>
+            <p className="text-white font-medium text-sm mb-1">Step 1 — Paste your Paystack Secret Key</p>
+            <p className="text-gray-500 text-xs mb-3">
+              Go to <span className="text-indigo-400">dashboard.paystack.com → Settings → API Keys</span> and copy your Secret Key.
+              We use it only to verify that webhook events are genuinely from Paystack.
+            </p>
+            {revKeySet && (
+              <p className="text-green-400 text-xs mb-2">✅ Key saved: <span className="font-mono">{revKeyHint}</span> — paste a new key below to update</p>
+            )}
+            <input
+              type="password"
+              placeholder={revKeySet ? "Paste new key to update" : "sk_live_... or sk_test_..."}
+              value={paystackKey}
+              onChange={(e) => setPaystackKey(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 font-mono"
+            />
+            {revError && <p className="text-red-400 text-xs mt-2">{revError}</p>}
+            <button
+              onClick={saveRevenue}
+              disabled={savingRev || !paystackKey}
+              className="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
+            >
+              {savingRev ? "Saving..." : savedRev ? "✓ Saved" : "Save Secret Key"}
+            </button>
+          </div>
+          {webhookUrl && (
+            <div className="border-t border-gray-800 pt-5">
+              <p className="text-white font-medium text-sm mb-1">Step 2 — Add this webhook URL to your Paystack dashboard</p>
+              <p className="text-gray-500 text-xs mb-3">
+                Go to <span className="text-indigo-400">dashboard.paystack.com → Settings → Webhooks</span> and paste this URL.
+                Every successful payment will be attributed to the post that drove it.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-indigo-300 font-mono truncate">
+                  {webhookUrl}
+                </code>
+                <button
+                  onClick={copyWebhook}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition whitespace-nowrap"
+                >
+                  {copied ? "✓ Copied" : "Copy"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Payment Details ── */}
