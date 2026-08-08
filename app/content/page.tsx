@@ -82,6 +82,14 @@ export default function ContentStudio() {
   const [insights, setInsights] = useState<ContentInsight[]>([]);
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
+  const [tab, setTab] = useState<"generate" | "repurpose">("generate");
+  const [repurposeSource, setRepurposeSource] = useState("");
+  const [repurposeUrl, setRepurposeUrl] = useState("");
+  const [repurposeLang, setRepurposeLang] = useState("en");
+  const [repurposeResults, setRepurposeResults] = useState<ContentItem[]>([]);
+  const [repurposeLoading, setRepurposeLoading] = useState(false);
+  const [repurposeError, setRepurposeError] = useState("");
+
   const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
   const dailyLimit = PLAN_DAILY_LIMIT[plan];
   const maxCount = dailyLimit ? Math.min(10, dailyLimit) : 10;
@@ -105,6 +113,25 @@ export default function ContentStudio() {
 
   const getText = (item: ContentItem) =>
     editText[item.id] !== undefined ? editText[item.id] : item.text;
+
+  const runRepurpose = async () => {
+    if (!repurposeSource.trim() && !repurposeUrl.trim()) {
+      setRepurposeError("Paste some text or enter a URL."); return;
+    }
+    setRepurposeLoading(true); setRepurposeError(""); setRepurposeResults([]);
+    try {
+      const data = await api.post<ContentItem[]>("/content/repurpose", {
+        source_text: repurposeSource.trim(),
+        source_url: repurposeUrl.trim(),
+        language: repurposeLang,
+      });
+      setRepurposeResults(data);
+    } catch (err: unknown) {
+      setRepurposeError(err instanceof Error ? err.message : "Repurpose failed");
+    } finally {
+      setRepurposeLoading(false);
+    }
+  };
 
   const generate = async () => {
     if (!newsMode && !angle.trim()) { setGenError("Please enter a topic or angle."); return; }
@@ -214,7 +241,86 @@ export default function ContentStudio() {
         {dailyLimit && <span className="ml-1 text-indigo-400">{dailyLimit} generations/day on {plan} plan.</span>}
       </p>
 
-        {/* Story generator — growth/agency only */}
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-6">
+        {(["generate", "repurpose"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              tab === t ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}>
+            {t === "generate" ? "✨ Generate" : "♻️ Repurpose"}
+          </button>
+        ))}
+      </div>
+
+      {/* Repurpose tab */}
+      {tab === "repurpose" && (
+        <div className="space-y-5">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p className="text-sm text-gray-400">Paste any text or URL — AI rewrites it for all your platforms simultaneously.</p>
+            <div>
+              <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Paste Text</label>
+              <textarea value={repurposeSource} onChange={(e) => setRepurposeSource(e.target.value)}
+                rows={5} placeholder="Paste a blog post, article, product description, idea..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Or URL</label>
+                <input value={repurposeUrl} onChange={(e) => setRepurposeUrl(e.target.value)}
+                  placeholder="https://yourblog.com/article"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Language</label>
+                <select value={repurposeLang} onChange={(e) => setRepurposeLang(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                  {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                </select>
+              </div>
+            </div>
+            {repurposeError && <p className="text-red-400 text-sm">{repurposeError}</p>}
+            <button onClick={runRepurpose} disabled={repurposeLoading}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition">
+              {repurposeLoading ? "Repurposing for all platforms..." : "♻️ Repurpose for All Platforms →"}
+            </button>
+          </div>
+
+          {repurposeResults.length > 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">{repurposeResults.length} platform versions generated — add to queue or post now.</p>
+              {repurposeResults.map((item) => (
+                <div key={item.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                  <div className="flex gap-4 p-4">
+                    {item.image_url && (
+                      <img src={item.image_url} alt="" className="w-20 h-20 object-cover rounded-lg shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-indigo-400 font-semibold mb-1">
+                        {PLATFORM_CONFIG[item.platform]?.emoji} {item.platform}
+                      </p>
+                      <textarea
+                        defaultValue={item.text} rows={3}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 resize-none focus:outline-none focus:border-indigo-500" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 px-4 pb-4">
+                    <button onClick={() => postTo(item, item.platform)}
+                      disabled={postStatus[item.id] === "posting" || postStatus[item.id] === "posted"}
+                      className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                      {postStatus[item.id] === "posted" ? "✓ Posted" : postStatus[item.id] === "posting" ? "Posting..." : `Post to ${item.platform}`}
+                    </button>
+                    <button onClick={() => navigator.clipboard.writeText(item.text)}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition">Copy</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "generate" && (<>
         {(plan === "growth" || plan === "agency" || plan === "admin") && (
           <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-4 mb-6 flex items-center gap-4 flex-wrap">
             <span className="text-sm font-medium text-purple-300">📱 Story Generator</span>
@@ -457,6 +563,8 @@ export default function ContentStudio() {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   );
