@@ -23,6 +23,7 @@ const NAV = [
   { href: "/referrals", label: "Referrals", icon: "🔗" },
   { href: "/auto-reply", label: "Auto-Reply", icon: "💬" },
   { href: "/catalog", label: "Catalog", icon: "🛍️" },
+  { href: "/newsletter", label: "Newsletter", icon: "📬" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
