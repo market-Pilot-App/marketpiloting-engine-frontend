@@ -13,12 +13,27 @@ interface Lead {
   intent_tags: string[];
   source_platform: string | null;
   message_count: number;
+  pipeline_stage: string;
 }
 
 interface Stats {
   total: number;
   by_source: Record<string, number>;
 }
+
+interface PipelineData {
+  stages: Record<string, Lead[]>;
+  counts: Record<string, number>;
+}
+
+const PIPELINE_STAGES = [
+  { key: "new",         label: "New",         color: "border-gray-500",   bg: "bg-gray-900" },
+  { key: "contacted",   label: "Contacted",   color: "border-blue-500",   bg: "bg-blue-950" },
+  { key: "interested",  label: "Interested",  color: "border-yellow-500", bg: "bg-yellow-950" },
+  { key: "negotiating", label: "Negotiating", color: "border-orange-500", bg: "bg-orange-950" },
+  { key: "closed",      label: "Closed ✅",   color: "border-green-500",  bg: "bg-green-950" },
+  { key: "lost",        label: "Lost",        color: "border-red-800",    bg: "bg-red-950" },
+];
 
 const SOURCE_LABELS: Record<string, string> = {
   landing_page: "Landing Page",
@@ -36,7 +51,9 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [scoreFilter, setScoreFilter] = useState("");
-  const [tab, setTab] = useState<"leads" | "broadcast">("leads");
+  const [tab, setTab] = useState<"leads" | "pipeline" | "broadcast">("leads");
+  const [pipeline, setPipeline] = useState<PipelineData | null>(null);
+  const [movingLead, setMovingLead] = useState<number | null>(null);
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState("");
   const [broadcastGoal, setBroadcastGoal] = useState("");
@@ -52,12 +69,30 @@ export default function LeadsPage() {
     setLeads(data);
   }, [scoreFilter]);
 
+  const fetchPipeline = async () => {
+    const data = await api.get<PipelineData>("/leads/pipeline");
+    setPipeline(data);
+  };
+
+  const moveStage = async (leadId: number, stage: string) => {
+    setMovingLead(leadId);
+    try {
+      await api.patch(`/leads/${leadId}/stage`, { stage });
+      await fetchPipeline();
+    } catch (err: any) {
+      alert(err.message || "Failed to move lead");
+    } finally {
+      setMovingLead(null);
+    }
+  };
+
   const fetchStats = async () => {
     const data = await api.get<Stats>("/leads/stats");
     setStats(data);
   };
 
   useEffect(() => { fetchLeads(); fetchStats(); }, [fetchLeads]);
+  useEffect(() => { if (tab === "pipeline") fetchPipeline(); }, [tab]);
 
   const scoreNow = async () => {
     setScoring(true);
@@ -142,7 +177,7 @@ export default function LeadsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-gray-200">
-        {(["leads", "broadcast"] as const).map((t) => (
+        {(["leads", "pipeline", "broadcast"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -150,7 +185,7 @@ export default function LeadsPage() {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "leads" ? "Lead List" : "Email Broadcast"}
+            {t === "leads" ? "Lead List" : t === "pipeline" ? "Sales Pipeline" : "Email Broadcast"}
           </button>
         ))}
       </div>
@@ -227,6 +262,56 @@ export default function LeadsPage() {
             </div>
           )}
         </>
+      )}
+
+      {tab === "pipeline" && (
+        <div className="overflow-x-auto">
+          {!pipeline ? (
+            <p className="text-gray-400 text-sm">Loading pipeline...</p>
+          ) : (
+            <div className="flex gap-4 min-w-max pb-4">
+              {PIPELINE_STAGES.map(({ key, label, color, bg }) => {
+                const stageLeads = pipeline.stages[key] || [];
+                return (
+                  <div key={key} className={`w-56 rounded-xl border-t-4 ${color} bg-gray-900 flex flex-col`}>
+                    <div className="px-3 py-2.5 border-b border-gray-800 flex items-center justify-between">
+                      <span className="text-white text-xs font-bold uppercase tracking-wide">{label}</span>
+                      <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{stageLeads.length}</span>
+                    </div>
+                    <div className="flex-1 p-2 space-y-2 min-h-24">
+                      {stageLeads.map((lead) => (
+                        <div key={lead.id} className="bg-gray-800 rounded-lg p-3 space-y-2">
+                          <p className="text-white text-xs font-semibold truncate">{lead.name || lead.email}</p>
+                          <p className="text-gray-500 text-xs truncate">{lead.email}</p>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                              lead.lead_score === "hot" ? "bg-red-900 text-red-300" :
+                              lead.lead_score === "warm" ? "bg-yellow-900 text-yellow-300" :
+                              "bg-blue-900 text-blue-300"
+                            }`}>
+                              {lead.lead_score === "hot" ? "🔴" : lead.lead_score === "warm" ? "🟡" : "🔵"} {lead.lead_score}
+                            </span>
+                          </div>
+                          {/* Move to stage */}
+                          <select
+                            value={key}
+                            disabled={movingLead === lead.id}
+                            onChange={(e) => moveStage(lead.id, e.target.value)}
+                            className="w-full bg-gray-700 text-gray-300 text-xs rounded px-2 py-1 border border-gray-600 focus:outline-none"
+                          >
+                            {PIPELINE_STAGES.map((s) => (
+                              <option key={s.key} value={s.key}>{s.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {tab === "broadcast" && (
