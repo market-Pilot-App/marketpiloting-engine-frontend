@@ -26,6 +26,7 @@ const NAV = [
   { href: "/newsletter", label: "Newsletter", icon: "📬" },
   { href: "/bio-settings", label: "Link-in-Bio", icon: "🔗" },
   { href: "/testimonials", label: "Testimonials", icon: "⭐" },
+  { href: "/ads", label: "Ad Generator", icon: "🎯" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
