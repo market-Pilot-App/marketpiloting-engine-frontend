@@ -695,7 +695,7 @@ export default function ContentStudio() {
                 <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                     <span className="text-xs text-gray-400">Landing page saved · slug: <code className="text-indigo-400">{offerResult.landing_page_slug}</code></span>
-                    <a href={`/p/${offerResult.landing_page_slug}`} target="_blank"
+                    <a href={`/offer/${offerResult.landing_page_slug}`} target="_blank"
                       className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition font-medium">Open Page ↗</a>
                   </div>
                   <div className="p-5 space-y-3">
