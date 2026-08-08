@@ -266,18 +266,37 @@ export default function AnalyticsPage() {
         <>
           {/* Totals */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: "Total Posts", value: data.totals.posts, icon: "✍️" },
-              { label: "Total Likes", value: data.totals.likes, icon: "❤️" },
-              { label: "Total Reach", value: data.totals.reach.toLocaleString(), icon: "👁️" },
-              { label: "Boost Spend", value: `$${data.totals.boost_spend.toFixed(2)}`, icon: "🚀" },
-            ].map(({ label, value, icon }) => (
-              <div key={label} className="bg-white border border-gray-200 rounded-xl p-5">
-                <p className="text-2xl mb-2">{icon}</p>
-                <p className="text-2xl font-bold text-gray-900">{value}</p>
-                <p className="text-gray-500 text-sm mt-1">{label}</p>
-              </div>
-            ))}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">✍️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.posts}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Posts</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">❤️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.likes}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Likes</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">👁️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.reach.toLocaleString()}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Reach</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">🚀</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">Boost Activity</p>
+              {(() => {
+                const pct = data.totals.boost_spend > 0 ? Math.min(data.totals.boost_spend * 10, 100) : 0;
+                const color = pct >= 90 ? "bg-red-500" : pct >= 60 ? "bg-yellow-500" : pct > 0 ? "bg-green-500" : "bg-gray-300";
+                return (
+                  <>
+                    <div className="w-full bg-gray-100 rounded-full h-2.5">
+                      <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${Math.max(pct, pct > 0 ? 8 : 0)}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">{pct === 0 ? "No boosts yet" : pct >= 90 ? "Boost Full" : "Boost Active"}</p>
+                  </>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Charts */}
