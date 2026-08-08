@@ -696,13 +696,23 @@ export default function ContentStudio() {
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                     <span className="text-xs text-gray-400">Landing page saved · slug: <code className="text-indigo-400">{offerResult.landing_page_slug}</code></span>
                     <a href={`/p/${offerResult.landing_page_slug}`} target="_blank"
-                      className="text-xs text-indigo-400 hover:text-indigo-300 transition">Preview ↗</a>
+                      className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition font-medium">Open Page ↗</a>
                   </div>
-                  <iframe
-                    srcDoc={offerResult.landing_page_html}
-                    className="w-full h-96 border-0"
-                    sandbox="allow-same-origin"
-                  />
+                  <div className="p-5 space-y-3">
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Headline:</span> {offerResult.headline}</p>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Value Stack</p>
+                      <ul className="space-y-1">
+                        {offerResult.value_stack.map((b, i) => (
+                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                            <span className="text-green-400">✓</span>{b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Price anchor:</span> {offerResult.price_anchor}</p>
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Guarantee:</span> {offerResult.guarantee}</p>
+                  </div>
                 </div>
               )}
 
