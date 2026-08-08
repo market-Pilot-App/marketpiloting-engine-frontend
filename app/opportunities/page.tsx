@@ -14,7 +14,7 @@ interface Opportunity {
   status: OppStatus;
   created_at: string;
 }
-interface TrendTopic { topic: string; relevant: boolean; }
+interface TrendTopic { topic: string; relevant: boolean; source?: string; }
 interface TrendData { trending: TrendTopic[]; last_updated: string; }
 interface Competitor { id: number; url: string; social_handle: string | null; last_scraped_at: string | null; }
 interface Keyword { id: number; keyword: string; }
@@ -224,9 +224,14 @@ export default function OpportunitiesPage() {
                     <span className="text-gray-500 text-sm font-mono w-6 flex-shrink-0">#{i + 1}</span>
                     <div className="min-w-0">
                       <p className="text-white text-sm font-medium truncate">{t.topic}</p>
-                      {t.relevant && (
-                        <span className="text-xs text-orange-400 font-medium">🔥 Relevant to your niche</span>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {t.source && (
+                          <span className="text-xs text-gray-500">{t.source}</span>
+                        )}
+                        {t.relevant && (
+                          <span className="text-xs text-orange-400 font-medium">🔥 Relevant</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
