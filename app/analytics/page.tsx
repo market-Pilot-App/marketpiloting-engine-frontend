@@ -60,6 +60,14 @@ interface ReportPreview {
   dna_score: number;
 }
 
+interface WeeklyReport {
+  id: number;
+  narrative: string;
+  week_start: string;
+  stats: { posts: number; likes: number; reach: number; leads: number; top_platform: string };
+  created_at: string;
+}
+
 interface RevenueData {
   total_revenue: number;
   total_sales: number;
@@ -80,6 +88,8 @@ export default function AnalyticsPage() {
   const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null | undefined>(undefined);
+  const [generatingWeekly, setGeneratingWeekly] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -100,6 +110,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
     api.get<SentimentData>("/auto-reply/analytics/sentiment").then(setSentiment).catch(() => {});
+    api.get<WeeklyReport>("/analytics/weekly-report/latest").then(setWeeklyReport).catch(() => setWeeklyReport(null));
   }, []);
 
   const generateReport = async () => {
@@ -377,6 +388,56 @@ export default function AnalyticsPage() {
               </div>
             );
           })()}
+
+          {/* Weekly AI Narrative Report */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">🤖 Weekly AI Narrative Report</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {weeklyReport ? `Week of ${weeklyReport.week_start}` : "AI-written analysis of your week's performance"}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  setGeneratingWeekly(true);
+                  try {
+                    const r = await api.post<WeeklyReport>("/analytics/weekly-report/generate");
+                    setWeeklyReport(r);
+                  } finally {
+                    setGeneratingWeekly(false);
+                  }
+                }}
+                disabled={generatingWeekly}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {generatingWeekly ? "Generating..." : "✨ Generate Now"}
+              </button>
+            </div>
+            {weeklyReport === undefined ? (
+              <p className="text-sm text-gray-400">Loading...</p>
+            ) : weeklyReport === null ? (
+              <p className="text-sm text-gray-400">No report yet. Click Generate Now to create your first AI narrative report.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  {[
+                    { label: "Posts", value: weeklyReport.stats.posts },
+                    { label: "Reach", value: weeklyReport.stats.reach?.toLocaleString() },
+                    { label: "Likes", value: weeklyReport.stats.likes },
+                    { label: "New Leads", value: weeklyReport.stats.leads },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold text-gray-900">{value}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{weeklyReport.narrative}</p>
+                <p className="text-xs text-gray-400 mt-3">Top platform: {weeklyReport.stats.top_platform} · Generated {new Date(weeklyReport.created_at).toLocaleDateString()}</p>
+              </>
+            )}
+          </div>
 
           {/* PDF Report section */}
           {reportPreview && (
