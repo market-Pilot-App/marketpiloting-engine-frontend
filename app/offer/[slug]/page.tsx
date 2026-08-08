@@ -10,6 +10,7 @@ export default function PublicOfferPage() {
 
   const [html, setHtml] = useState("");
   const [cta, setCta] = useState("Claim Your Spot");
+  const [paymentLink, setPaymentLink] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [campaignId, setCampaignId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "" });
@@ -19,7 +20,18 @@ export default function PublicOfferPage() {
   useEffect(() => {
     fetch(`${API_URL}/offer/${slug}`)
       .then((r) => { if (!r.ok) { setNotFound(true); return null; } return r.json(); })
-      .then((d) => { if (d) { setHtml(d.html); setCta(d.cta); setCampaignId(d.campaign_id); } });
+      .then((d) => {
+        if (d) {
+          // Replace dead href="#" buttons with real payment link or scroll-to-contact
+          const destination = d.payment_link || "#contact";
+          const fixedHtml = d.html
+            .replace(/href="#"/g, `href="${destination}"`)
+            .replace(/href='#'/g, `href='${destination}'`);
+          setHtml(fixedHtml);
+          setCta(d.cta);
+          setPaymentLink(d.payment_link || "");
+        }
+      });
   }, [slug]);
 
   const submit = async (e: React.FormEvent) => {
@@ -51,8 +63,8 @@ export default function PublicOfferPage() {
       {/* AI-generated offer HTML */}
       <div dangerouslySetInnerHTML={{ __html: html }} />
 
-      {/* Lead capture */}
-      <section className="bg-indigo-700 text-white py-12 px-6 text-center">
+      {/* Lead capture — shown when no payment link, or always as backup */}
+      <section id="contact" className="bg-indigo-700 text-white py-12 px-6 text-center">
         <h2 className="text-2xl font-bold mb-2">Ready? Claim Your Spot</h2>
         <p className="text-indigo-200 mb-6">Enter your details and we&apos;ll be in touch.</p>
         {submitted ? (
