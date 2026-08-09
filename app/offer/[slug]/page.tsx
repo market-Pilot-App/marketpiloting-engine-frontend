@@ -92,7 +92,7 @@ export default function PublicOfferPage() {
 
       <footer className="py-6 text-center text-xs text-gray-500 bg-gray-950">
         Powered by{" "}
-        <a href="https://marketpiloting.online" className="text-indigo-400 hover:underline">
+        <a href="https://marketpiloting.com" className="text-indigo-400 hover:underline">
           MarketPiloting
         </a>
       </footer>

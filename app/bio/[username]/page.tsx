@@ -142,7 +142,7 @@ export default function BioPage() {
         )}
 
         <p className="text-center text-gray-600 text-xs pb-4">
-          Powered by <a href="https://marketpiloting.online" className="text-indigo-500">MarketPiloting</a>
+          Powered by <a href="https://marketpiloting.com" className="text-indigo-500">MarketPiloting</a>
         </p>
       </div>
     </div>

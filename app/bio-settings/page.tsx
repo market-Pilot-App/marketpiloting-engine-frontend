@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-const DASHBOARD_URL = "https://dashboard.marketpiloting.online";
+const DASHBOARD_URL = "https://dashboard.marketpiloting.com";
 
 interface BioSettings {
   bio_username: string; bio_headline: string;
