@@ -40,7 +40,7 @@ const STATUS_STYLES: Record<OppStatus, string> = {
 };
 
 export default function OpportunitiesPage() {
-  const [tab, setTab] = useState<Tab>("trends");
+  const [tab, setTab] = useState<Tab>("inbox");
 
   // Trends state
   const [trendData, setTrendData] = useState<TrendData | null>(null);
