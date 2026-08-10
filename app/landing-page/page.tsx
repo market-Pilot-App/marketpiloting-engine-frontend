@@ -19,7 +19,7 @@ interface BlogSettings {
   blog_api_key_set: boolean;
 }
 
-const PUBLIC_BASE = "https://dashboard.marketpiloting.online/p";
+const PUBLIC_BASE = "https://dashboard.marketpiloting.com/p";
 
 export default function LandingPageDashboard() {
   const [page, setPage] = useState<LandingPageData | null>(null);

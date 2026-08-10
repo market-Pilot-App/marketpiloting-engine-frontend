@@ -7,6 +7,22 @@
     {
       "path": "/api/cron/analytics",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-newsletter",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/auto-send-newsletters",
+      "schedule": "0 6 * * 3"
+    },
+    {
+      "path": "/api/cron/weekly-ai-report",
+      "schedule": "0 7 * * 5"
+    },
+    {
+      "path": "/api/cron/check-abandoned-leads",
+      "schedule": "0 8 * * *"
     }
   ]
 }

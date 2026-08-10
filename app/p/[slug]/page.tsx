@@ -192,7 +192,7 @@ export default function PublicLandingPage() {
         </div>
         <p className="text-gray-400 text-xs">
           Powered by{" "}
-          <a href="https://marketpiloting.online" className="text-indigo-400 hover:underline">
+          <a href="https://marketpiloting.com" className="text-indigo-400 hover:underline">
             MarketPiloting
           </a>
         </p>

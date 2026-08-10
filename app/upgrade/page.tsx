@@ -147,9 +147,9 @@ export default function UpgradePage() {
         />
         <span className="text-xs text-gray-400 leading-relaxed">
           I agree to the{" "}
-          <a href="https://marketpiloting.online/terms" target="_blank" className="text-indigo-400 hover:underline">Terms of Service</a>
+          <a href="https://marketpiloting.com/terms" target="_blank" className="text-indigo-400 hover:underline">Terms of Service</a>
           {" "}and{" "}
-          <a href="https://marketpiloting.online/privacy" target="_blank" className="text-indigo-400 hover:underline">Privacy Policy</a>
+          <a href="https://marketpiloting.com/privacy" target="_blank" className="text-indigo-400 hover:underline">Privacy Policy</a>
           , including the 7-day guarantee and refund policy.
         </span>
       </label>

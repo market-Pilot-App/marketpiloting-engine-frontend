@@ -60,6 +60,21 @@ interface ReportPreview {
   dna_score: number;
 }
 
+interface WeeklyReport {
+  id: number;
+  narrative: string;
+  week_start: string;
+  stats: { posts: number; likes: number; reach: number; leads: number; top_platform: string };
+  created_at: string;
+}
+
+interface HeatmapData {
+  matrix: number[][];
+  days: string[];
+  top_slots: Record<string, { day: string; hour: number; label: string; score: number; posts: number }[]>;
+  has_data: boolean;
+}
+
 interface RevenueData {
   total_revenue: number;
   total_sales: number;
@@ -71,7 +86,7 @@ interface RevenueData {
 export default function AnalyticsPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [days, setDays] = useState(30);
-  const [activeTab, setActiveTab] = useState<"engagement" | "revenue">("engagement");
+  const [activeTab, setActiveTab] = useState<"engagement" | "revenue" | "heatmap">("engagement");
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [aggregating, setAggregating] = useState(false);
@@ -80,6 +95,12 @@ export default function AnalyticsPage() {
   const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null | undefined>(undefined);
+  const [generatingWeekly, setGeneratingWeekly] = useState(false);
+  const [heatmapPlatform, setHeatmapPlatform] = useState("all");
+  const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
+  const [heatmapLoading, setHeatmapLoading] = useState(false);
+  const [applyingSchedule, setApplyingSchedule] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -100,6 +121,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
     api.get<SentimentData>("/auto-reply/analytics/sentiment").then(setSentiment).catch(() => {});
+    api.get<WeeklyReport>("/analytics/weekly-report/latest").then(setWeeklyReport).catch(() => setWeeklyReport(null));
   }, []);
 
   const generateReport = async () => {
@@ -143,6 +165,20 @@ export default function AnalyticsPage() {
 
   const platforms = data ? Object.entries(data.by_platform) : [];
 
+  const loadHeatmap = useCallback(async (plat: string) => {
+    setHeatmapLoading(true);
+    try {
+      const d = await api.get<HeatmapData>(`/analytics/heatmap?platform=${plat}`);
+      setHeatmapData(d);
+    } finally {
+      setHeatmapLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "heatmap") loadHeatmap(heatmapPlatform);
+  }, [activeTab, heatmapPlatform, loadHeatmap]);
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -153,14 +189,14 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3">
           {/* Tab switcher */}
           <div className="flex bg-gray-100 rounded-lg p-1">
-            <button onClick={() => setActiveTab("engagement")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
-                activeTab === "engagement" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-              }`}>Engagement</button>
-            <button onClick={() => setActiveTab("revenue")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
-                activeTab === "revenue" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-              }`}>Revenue 💵</button>
+            {(["engagement", "revenue", "heatmap"] as const).map((t) => (
+              <button key={t} onClick={() => setActiveTab(t)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                  activeTab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}>
+                {t === "engagement" ? "Engagement" : t === "revenue" ? "Revenue 💵" : "🔥 Heat Map"}
+              </button>
+            ))}
           </div>
           <select
             value={days}
@@ -182,7 +218,119 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {activeTab === "heatmap" ? (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">Best days & hours to post based on your engagement history (WAT)</p>
+            <select
+              value={heatmapPlatform}
+              onChange={(e) => setHeatmapPlatform(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
+            >
+              {["all", "facebook", "instagram", "linkedin", "twitter", "telegram"].map((p) => (
+                <option key={p} value={p} className="capitalize">{p === "all" ? "All Platforms" : p}</option>
+              ))}
+            </select>
+          </div>
+
+          {heatmapLoading ? (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading heat map…</div>
+          ) : !heatmapData || !heatmapData.has_data ? (
+            <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+              <p className="text-4xl mb-3">🔥</p>
+              <p className="font-semibold text-gray-900 mb-1">No engagement data yet</p>
+              <p className="text-sm text-gray-500">Post content and let MarketPilot track engagement. The heat map will appear once posts start going live.</p>
+            </div>
+          ) : (
+            <>
+              {/* 7x24 grid */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 overflow-x-auto">
+                <div className="min-w-[640px]">
+                  {/* Hour labels */}
+                  <div className="flex mb-1 ml-10">
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <div key={h} className="flex-1 text-center text-xs text-gray-400">
+                        {h % 3 === 0 ? `${h}h` : ""}
+                      </div>
+                    ))}
+                  </div>
+                  {heatmapData.matrix.map((row, dow) => (
+                    <div key={dow} className="flex items-center mb-0.5">
+                      <span className="w-10 text-xs text-gray-500 shrink-0">{heatmapData.days[dow]}</span>
+                      {row.map((val, hr) => {
+                        const opacity = val === 0 ? 0.05 : 0.15 + (val / 100) * 0.85;
+                        const bg = val === 0 ? "#e5e7eb" : val < 40 ? "#f97316" : "#ef4444";
+                        return (
+                          <div
+                            key={hr}
+                            title={`${heatmapData.days[dow]} ${hr}:00 — score ${val}`}
+                            className="flex-1 h-6 rounded-sm mx-px cursor-default"
+                            style={{ backgroundColor: bg, opacity }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                  {/* Legend */}
+                  <div className="flex items-center gap-2 mt-3 justify-end">
+                    <span className="text-xs text-gray-400">Low</span>
+                    {[0.15, 0.35, 0.55, 0.75, 1].map((o) => (
+                      <div key={o} className="w-5 h-3 rounded-sm" style={{ backgroundColor: "#ef4444", opacity: o }} />
+                    ))}
+                    <span className="text-xs text-gray-400">High</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top slots */}
+              {Object.keys(heatmapData.top_slots).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+                  <h2 className="font-semibold text-gray-900 mb-4">🏆 Best Posting Times</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(heatmapData.top_slots).map(([plat, slots]) => (
+                      <div key={plat} className="border border-gray-100 rounded-lg p-4">
+                        <p className="text-sm font-medium text-gray-700 capitalize mb-3">
+                          {PLATFORM_EMOJI[plat] || "📄"} {plat}
+                        </p>
+                        {slots.map((s, i) => (
+                          <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                            <span className="text-sm text-gray-700">#{i + 1} {s.label}</span>
+                            <div className="text-right">
+                              <span className="text-xs text-gray-500">{s.posts} post{s.posts !== 1 ? "s" : ""}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Apply to schedule */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-indigo-900">Apply Optimal Times to Schedule</p>
+                  <p className="text-sm text-indigo-700 mt-0.5">Tomorrow's fill-schedule cron will use your top engagement slots instead of default times.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setApplyingSchedule(true);
+                    try {
+                      await api.post("/analytics/heatmap/apply", { platform: heatmapPlatform, top_slots: heatmapData?.top_slots });
+                      alert("✅ Optimal times saved! They'll be used in tomorrow's schedule fill.");
+                    } catch { alert("Failed to apply — try again."); }
+                    finally { setApplyingSchedule(false); }
+                  }}
+                  disabled={applyingSchedule}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition whitespace-nowrap"
+                >
+                  {applyingSchedule ? "Saving..." : "Apply to Schedule →"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading analytics…</div>
       ) : activeTab === "revenue" ? (
         <div>
@@ -255,18 +403,37 @@ export default function AnalyticsPage() {
         <>
           {/* Totals */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: "Total Posts", value: data.totals.posts, icon: "✍️" },
-              { label: "Total Likes", value: data.totals.likes, icon: "❤️" },
-              { label: "Total Reach", value: data.totals.reach.toLocaleString(), icon: "👁️" },
-              { label: "Boost Spend", value: `$${data.totals.boost_spend.toFixed(2)}`, icon: "🚀" },
-            ].map(({ label, value, icon }) => (
-              <div key={label} className="bg-white border border-gray-200 rounded-xl p-5">
-                <p className="text-2xl mb-2">{icon}</p>
-                <p className="text-2xl font-bold text-gray-900">{value}</p>
-                <p className="text-gray-500 text-sm mt-1">{label}</p>
-              </div>
-            ))}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">✍️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.posts}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Posts</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">❤️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.likes}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Likes</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">👁️</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.reach.toLocaleString()}</p>
+              <p className="text-gray-500 text-sm mt-1">Total Reach</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-2xl mb-2">🚀</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">Boost Activity</p>
+              {(() => {
+                const pct = data.totals.boost_spend > 0 ? Math.min(data.totals.boost_spend * 10, 100) : 0;
+                const color = pct >= 90 ? "bg-red-500" : pct >= 60 ? "bg-yellow-500" : pct > 0 ? "bg-green-500" : "bg-gray-300";
+                return (
+                  <>
+                    <div className="w-full bg-gray-100 rounded-full h-2.5">
+                      <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${Math.max(pct, pct > 0 ? 8 : 0)}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">{pct === 0 ? "No boosts yet" : pct >= 90 ? "Boost Full" : "Boost Active"}</p>
+                  </>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Charts */}
@@ -377,6 +544,56 @@ export default function AnalyticsPage() {
               </div>
             );
           })()}
+
+          {/* Weekly AI Narrative Report */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">🤖 Weekly AI Narrative Report</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {weeklyReport ? `Week of ${weeklyReport.week_start}` : "AI-written analysis of your week's performance"}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  setGeneratingWeekly(true);
+                  try {
+                    const r = await api.post<WeeklyReport>("/analytics/weekly-report/generate");
+                    setWeeklyReport(r);
+                  } finally {
+                    setGeneratingWeekly(false);
+                  }
+                }}
+                disabled={generatingWeekly}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {generatingWeekly ? "Generating..." : "✨ Generate Now"}
+              </button>
+            </div>
+            {weeklyReport === undefined ? (
+              <p className="text-sm text-gray-400">Loading...</p>
+            ) : weeklyReport === null ? (
+              <p className="text-sm text-gray-400">No report yet. Click Generate Now to create your first AI narrative report.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  {[
+                    { label: "Posts", value: weeklyReport.stats.posts },
+                    { label: "Reach", value: weeklyReport.stats.reach?.toLocaleString() },
+                    { label: "Likes", value: weeklyReport.stats.likes },
+                    { label: "New Leads", value: weeklyReport.stats.leads },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold text-gray-900">{value}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{weeklyReport.narrative}</p>
+                <p className="text-xs text-gray-400 mt-3">Top platform: {weeklyReport.stats.top_platform} · Generated {new Date(weeklyReport.created_at).toLocaleDateString()}</p>
+              </>
+            )}
+          </div>
 
           {/* PDF Report section */}
           {reportPreview && (

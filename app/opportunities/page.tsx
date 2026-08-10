@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 
 type OppType = "COMPETITOR_INSIGHT" | "NEWS_HIJACK" | "TREND_POST";
 type OppStatus = "pending_approval" | "approved" | "rejected" | "published";
-type Tab = "trends" | "inbox" | "competitors" | "keywords";
+type Tab = "trends" | "inbox" | "competitors" | "keywords" | "adspy";
 
 interface Opportunity {
   id: number;
@@ -14,9 +14,16 @@ interface Opportunity {
   status: OppStatus;
   created_at: string;
 }
-interface TrendTopic { topic: string; relevant: boolean; }
+interface TrendTopic { topic: string; relevant: boolean; source?: string; }
 interface TrendData { trending: TrendTopic[]; last_updated: string; }
 interface Competitor { id: number; url: string; social_handle: string | null; last_scraped_at: string | null; }
+interface AdSpyAd {
+  id: string;
+  page_name: string;
+  body: string;
+  platforms: string[];
+  started_at: string;
+}
 interface Keyword { id: number; keyword: string; }
 
 const TYPE_LABELS: Record<OppType, string> = {
@@ -33,7 +40,7 @@ const STATUS_STYLES: Record<OppStatus, string> = {
 };
 
 export default function OpportunitiesPage() {
-  const [tab, setTab] = useState<Tab>("trends");
+  const [tab, setTab] = useState<Tab>("inbox");
 
   // Trends state
   const [trendData, setTrendData] = useState<TrendData | null>(null);
@@ -49,6 +56,12 @@ export default function OpportunitiesPage() {
   const [filterStatus, setFilterStatus] = useState("pending_approval");
   const [publishPlatform, setPublishPlatform] = useState("facebook");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Ad Spy state
+  const [adSpyUrl, setAdSpyUrl] = useState("");
+  const [adSpyAds, setAdSpyAds] = useState<AdSpyAd[]>([]);
+  const [adSpyLoading, setAdSpyLoading] = useState(false);
+  const [counterLoading, setCounterLoading] = useState<string | null>(null);
 
   // Competitors + keywords
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -132,6 +145,7 @@ export default function OpportunitiesPage() {
     { key: "inbox", label: "📥 Opportunity Inbox" },
     { key: "competitors", label: "🔍 Competitors" },
     { key: "keywords", label: "🏷️ Keywords" },
+    { key: "adspy", label: "🕵️ Ad Spy" },
   ];
 
   return (
@@ -224,9 +238,14 @@ export default function OpportunitiesPage() {
                     <span className="text-gray-500 text-sm font-mono w-6 flex-shrink-0">#{i + 1}</span>
                     <div className="min-w-0">
                       <p className="text-white text-sm font-medium truncate">{t.topic}</p>
-                      {t.relevant && (
-                        <span className="text-xs text-orange-400 font-medium">🔥 Relevant to your niche</span>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {t.source && (
+                          <span className="text-xs text-gray-500">{t.source}</span>
+                        )}
+                        {t.relevant && (
+                          <span className="text-xs text-orange-400 font-medium">🔥 Relevant</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -442,6 +461,95 @@ export default function OpportunitiesPage() {
             ))}
             {keywords.length === 0 && <p className="text-gray-500 text-sm py-8 w-full text-center">No keywords added yet.</p>}
           </div>
+        </div>
+      )}
+      {/* ── Ad Spy Tab ── */}
+      {tab === "adspy" && (
+        <div className="max-w-2xl">
+          <p className="text-gray-400 text-sm mb-5">See what ads your competitors are running on Facebook & Instagram right now. No setup needed — just select a competitor and spy.</p>
+
+          <div className="flex gap-2 mb-5">
+            <select
+              value={adSpyUrl}
+              onChange={(e) => setAdSpyUrl(e.target.value)}
+              className="flex-1 bg-gray-900 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Select a competitor to spy on...</option>
+              {competitors.map((c) => (
+                <option key={c.id} value={c.url}>{c.url}</option>
+              ))}
+            </select>
+            <button
+              onClick={async () => {
+                if (!adSpyUrl) return;
+                setAdSpyLoading(true);
+                setAdSpyAds([]);
+                try {
+                  const res = await api.get<{ ads: AdSpyAd[] }>(`/opportunities/ad-spy?competitor_url=${encodeURIComponent(adSpyUrl)}`);
+                  setAdSpyAds(res.ads);
+                  if (res.ads.length === 0) showToast("No active ads found for this competitor", false);
+                } catch { showToast("Ad Spy failed", false); }
+                finally { setAdSpyLoading(false); }
+              }}
+              disabled={adSpyLoading || !adSpyUrl}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition"
+            >
+              {adSpyLoading ? "Scanning..." : "🕵️ Spy Now"}
+            </button>
+          </div>
+
+          {competitors.length === 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
+              <p className="text-gray-500 text-sm">No competitors added yet. Go to the 🔍 Competitors tab and add your first competitor URL.</p>
+            </div>
+          )}
+
+          {adSpyLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4 animate-pulse h-24" />
+              ))}
+            </div>
+          ) : adSpyAds.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 mb-2">{adSpyAds.length} active ad{adSpyAds.length !== 1 ? "s" : ""} found</p>
+              {adSpyAds.map((ad) => (
+                <div key={ad.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-indigo-400">{ad.page_name}</span>
+                        {ad.platforms.map((p) => (
+                          <span key={p} className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full capitalize">{p}</span>
+                        ))}
+                        {ad.started_at && (
+                          <span className="text-xs text-gray-600">Since {ad.started_at}</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-300 leading-relaxed">{ad.body}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setCounterLoading(ad.id);
+                        try {
+                          await api.post("/opportunities/ad-spy/counter", { competitor_url: adSpyUrl, ad_body: ad.body });
+                          showToast("✅ Counter-ad generated — check Opportunity Inbox");
+                          setTab("inbox");
+                          setFilterStatus("pending_approval");
+                          fetchOpps();
+                        } catch { showToast("Generation failed", false); }
+                        finally { setCounterLoading(null); }
+                      }}
+                      disabled={counterLoading === ad.id}
+                      className="flex-shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition whitespace-nowrap"
+                    >
+                      {counterLoading === ad.id ? "Generating..." : "⚡ Counter-Ad"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -31,6 +31,8 @@ export default function SequencesPage() {
   const [steps, setSteps] = useState<Step[]>([{ day_offset: 0, subject: "", body: "" }]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [creatingRecovery, setCreatingRecovery] = useState(false);
+  const [recoveryMsg, setRecoveryMsg] = useState("");
 
   // Enroll modal
   const [enrollSeq, setEnrollSeq] = useState<Sequence | null>(null);
@@ -76,6 +78,19 @@ export default function SequencesPage() {
     if (!confirm("Delete this sequence?")) return;
     await api.delete(`/sequences/${id}`);
     await fetchSequences();
+  };
+
+  const createAbandonedRecovery = async () => {
+    setCreatingRecovery(true); setRecoveryMsg("");
+    try {
+      const r = await api.post<{ id: number; status: string }>("/sequences/create-abandoned-recovery");
+      setRecoveryMsg(r.status === "already_exists" ? "✓ Already set up" : "✓ Abandoned Recovery sequence created!");
+      await fetchSequences();
+    } catch {
+      setRecoveryMsg("Failed to create");
+    } finally {
+      setCreatingRecovery(false);
+    }
   };
 
   const openEnroll = async (seq: Sequence) => {
@@ -124,6 +139,24 @@ export default function SequencesPage() {
 
       {tab === "list" && (
         <>
+          {/* Abandoned Lead Recovery system card */}
+          <div className="bg-gray-900 border border-orange-800/40 rounded-xl p-5 mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-orange-400 mb-1">🔄 Abandoned Lead Recovery</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Auto-enroll leads who haven’t purchased within 24hrs into a 3-email recovery sequence.
+                  Day 1 check-in · Day 3 social proof · Day 7 scarcity close. Runs daily on autopilot.
+                </p>
+                {recoveryMsg && <p className="text-xs text-green-400 mt-2">{recoveryMsg}</p>}
+              </div>
+              <button onClick={createAbandonedRecovery} disabled={creatingRecovery}
+                className="shrink-0 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition">
+                {creatingRecovery ? "Setting up..." : sequences.some(s => s.name === "Abandoned Lead Recovery") ? "✓ Active" : "Activate"}
+              </button>
+            </div>
+          </div>
+
           {sequences.length === 0 ? (
             <div className="text-center py-16 text-gray-400 text-sm border border-dashed border-gray-200 rounded-xl">
               No sequences yet. Create one to start automating your lead nurturing.

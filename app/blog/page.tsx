@@ -2,6 +2,13 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 
+interface BlogSettings {
+  blog_platform: string;
+  blog_api_url: string;
+  blog_api_key_set: boolean;
+  shopify_blog_id: string;
+}
+
 interface BlogPost {
   id: number;
   title: string;
@@ -24,6 +31,11 @@ export default function BlogPage() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<BlogPost | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<BlogSettings | null>(null);
+  const [settingsForm, setSettingsForm] = useState({ blog_platform: "wordpress", blog_api_url: "", blog_api_key: "", shopify_blog_id: "" });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState("");
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -35,7 +47,24 @@ export default function BlogPage() {
     }
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => {
+    fetchPosts();
+    api.get<BlogSettings>("/blog/settings").then((s) => {
+      setSettings(s);
+      setSettingsForm((f) => ({ ...f, blog_platform: s.blog_platform || "wordpress", blog_api_url: s.blog_api_url || "", shopify_blog_id: s.shopify_blog_id || "" }));
+    }).catch(() => {});
+  }, []);
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    setSettingsMsg("");
+    try {
+      await api.post("/blog/settings", settingsForm);
+      setSettingsMsg("✅ Saved!");
+      setSettings((s) => s ? { ...s, blog_platform: settingsForm.blog_platform, blog_api_url: settingsForm.blog_api_url, blog_api_key_set: !!settingsForm.blog_api_key || (s?.blog_api_key_set ?? false), shopify_blog_id: settingsForm.shopify_blog_id } : null);
+    } catch { setSettingsMsg("❌ Save failed"); }
+    finally { setSavingSettings(false); }
+  };
 
   const generate = async () => {
     setGenerating(true);
@@ -89,7 +118,61 @@ export default function BlogPage() {
     <div className="flex gap-6 h-full">
       {/* Left panel — list */}
       <div className="w-72 flex-shrink-0">
-        <h1 className="text-2xl font-bold mb-4">Blog</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Blog</h1>
+          <button onClick={() => setShowSettings(!showSettings)} className="text-xs text-gray-400 hover:text-white transition">⚙️ Settings</button>
+        </div>
+
+        {/* Blog Settings Panel */}
+        {showSettings && (
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
+            <p className="text-sm font-semibold text-white mb-3">Blog Publisher Settings</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Platform</label>
+                <select value={settingsForm.blog_platform} onChange={(e) => setSettingsForm((f) => ({ ...f, blog_platform: e.target.value }))}
+                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
+                  <option value="wordpress">WordPress</option>
+                  <option value="shopify">Shopify</option>
+                  <option value="custom">Custom / Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">
+                  {settingsForm.blog_platform === "wordpress" ? "WordPress Site URL" : settingsForm.blog_platform === "shopify" ? "Shopify Store URL (e.g. mystore.myshopify.com)" : "API Endpoint URL"}
+                </label>
+                <input value={settingsForm.blog_api_url} onChange={(e) => setSettingsForm((f) => ({ ...f, blog_api_url: e.target.value }))}
+                  placeholder={settingsForm.blog_platform === "wordpress" ? "https://yourblog.com" : settingsForm.blog_platform === "shopify" ? "https://mystore.myshopify.com" : "https://api.yourblog.com/posts"}
+                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">
+                  {settingsForm.blog_platform === "wordpress" ? "Application Password (user:password)" : settingsForm.blog_platform === "shopify" ? "Shopify Admin API Access Token" : "API Key / Bearer Token"}
+                </label>
+                <input type="password" value={settingsForm.blog_api_key} onChange={(e) => setSettingsForm((f) => ({ ...f, blog_api_key: e.target.value }))}
+                  placeholder={settings?.blog_api_key_set ? "••••••••  (set — enter new to change)" : "Paste your key here"}
+                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
+              </div>
+              {settingsForm.blog_platform === "shopify" && (
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Shopify Blog ID (from Admin → Online Store → Blog Posts)</label>
+                  <input value={settingsForm.shopify_blog_id} onChange={(e) => setSettingsForm((f) => ({ ...f, shopify_blog_id: e.target.value }))}
+                    placeholder="e.g. 241253187" className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
+                </div>
+              )}
+              {settingsForm.blog_platform === "wordpress" && (
+                <p className="text-xs text-gray-500">In WordPress: Users → Your Profile → Application Passwords → Add New. Format: <span className="text-gray-400">username:xxxx xxxx xxxx</span></p>
+              )}
+              <div className="flex items-center gap-3">
+                <button onClick={saveSettings} disabled={savingSettings}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition">
+                  {savingSettings ? "Saving..." : "Save Settings"}
+                </button>
+                {settingsMsg && <span className="text-sm">{settingsMsg}</span>}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Generate */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
@@ -185,7 +268,7 @@ export default function BlogPage() {
                     disabled={publishing}
                     className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition"
                   >
-                    {publishing ? "Publishing..." : "Publish"}
+                    {publishing ? "Publishing..." : `Publish${settings?.blog_platform && settings.blog_platform !== "custom" ? ` to ${settings.blog_platform.charAt(0).toUpperCase() + settings.blog_platform.slice(1)}` : ""}`}
                   </button>
                 )}
                 {selected.remote_url && (

@@ -82,6 +82,31 @@ export default function ContentStudio() {
   const [insights, setInsights] = useState<ContentInsight[]>([]);
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
+  const [tab, setTab] = useState<"generate" | "repurpose" | "offer">("generate");
+  // Offer Creator state
+  const [offerProduct, setOfferProduct] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerCustomer, setOfferCustomer] = useState("");
+  const [offerBenefit, setOfferBenefit] = useState("");
+  const [offerCurrency, setOfferCurrency] = useState("NGN");
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [offerError, setOfferError] = useState("");
+  const [offerResult, setOfferResult] = useState<null | {
+    headline: string; value_stack: string[]; price_anchor: string;
+    guarantee: string; cta: string; social_post: string;
+    email_subject: string; email_body: string;
+    landing_page_html: string; landing_page_slug: string; social_content_id: number;
+  }>(null);
+  const [offerTab, setOfferTab] = useState<"landing" | "social" | "email">("landing");
+  const [offerCopied, setOfferCopied] = useState("");
+
+  const [repurposeSource, setRepurposeSource] = useState("");
+  const [repurposeUrl, setRepurposeUrl] = useState("");
+  const [repurposeLang, setRepurposeLang] = useState("en");
+  const [repurposeResults, setRepurposeResults] = useState<ContentItem[]>([]);
+  const [repurposeLoading, setRepurposeLoading] = useState(false);
+  const [repurposeError, setRepurposeError] = useState("");
+
   const availablePlatforms = PLAN_PLATFORMS[plan] ?? PLAN_PLATFORMS.solo;
   const dailyLimit = PLAN_DAILY_LIMIT[plan];
   const maxCount = dailyLimit ? Math.min(10, dailyLimit) : 10;
@@ -105,6 +130,53 @@ export default function ContentStudio() {
 
   const getText = (item: ContentItem) =>
     editText[item.id] !== undefined ? editText[item.id] : item.text;
+
+  const createOffer = async () => {
+    if (!offerProduct.trim() || !offerPrice || !offerCustomer.trim() || !offerBenefit.trim()) {
+      setOfferError("All 4 fields are required."); return;
+    }
+    setOfferError(""); setOfferLoading(true); setOfferResult(null);
+    try {
+      const data = await api.post<typeof offerResult>("/content/create-offer", {
+        product_name: offerProduct.trim(),
+        price: parseFloat(offerPrice),
+        target_customer: offerCustomer.trim(),
+        main_benefit: offerBenefit.trim(),
+        currency: offerCurrency,
+      });
+      setOfferResult(data);
+      setOfferTab("landing");
+    } catch (e: unknown) {
+      setOfferError(e instanceof Error ? e.message : "Generation failed");
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+
+  const offerCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setOfferCopied(key);
+    setTimeout(() => setOfferCopied(""), 2000);
+  };
+
+  const runRepurpose = async () => {
+    if (!repurposeSource.trim() && !repurposeUrl.trim()) {
+      setRepurposeError("Paste some text or enter a URL."); return;
+    }
+    setRepurposeLoading(true); setRepurposeError(""); setRepurposeResults([]);
+    try {
+      const data = await api.post<ContentItem[]>("/content/repurpose", {
+        source_text: repurposeSource.trim(),
+        source_url: repurposeUrl.trim(),
+        language: repurposeLang,
+      });
+      setRepurposeResults(data);
+    } catch (err: unknown) {
+      setRepurposeError(err instanceof Error ? err.message : "Repurpose failed");
+    } finally {
+      setRepurposeLoading(false);
+    }
+  };
 
   const generate = async () => {
     if (!newsMode && !angle.trim()) { setGenError("Please enter a topic or angle."); return; }
@@ -214,7 +286,86 @@ export default function ContentStudio() {
         {dailyLimit && <span className="ml-1 text-indigo-400">{dailyLimit} generations/day on {plan} plan.</span>}
       </p>
 
-        {/* Story generator — growth/agency only */}
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-6">
+        {(["generate", "repurpose", "offer"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              tab === t ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}>
+            {t === "generate" ? "✨ Generate" : t === "repurpose" ? "♻️ Repurpose" : "🎯 Offer Creator"}
+          </button>
+        ))}
+      </div>
+
+      {/* Repurpose tab */}
+      {tab === "repurpose" && (
+        <div className="space-y-5">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p className="text-sm text-gray-400">Paste any text or URL — AI rewrites it for all your platforms simultaneously.</p>
+            <div>
+              <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Paste Text</label>
+              <textarea value={repurposeSource} onChange={(e) => setRepurposeSource(e.target.value)}
+                rows={5} placeholder="Paste a blog post, article, product description, idea..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Or URL</label>
+                <input value={repurposeUrl} onChange={(e) => setRepurposeUrl(e.target.value)}
+                  placeholder="https://yourblog.com/article"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Language</label>
+                <select value={repurposeLang} onChange={(e) => setRepurposeLang(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                  {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                </select>
+              </div>
+            </div>
+            {repurposeError && <p className="text-red-400 text-sm">{repurposeError}</p>}
+            <button onClick={runRepurpose} disabled={repurposeLoading}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition">
+              {repurposeLoading ? "Repurposing for all platforms..." : "♻️ Repurpose for All Platforms →"}
+            </button>
+          </div>
+
+          {repurposeResults.length > 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">{repurposeResults.length} platform versions generated — add to queue or post now.</p>
+              {repurposeResults.map((item) => (
+                <div key={item.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                  <div className="flex gap-4 p-4">
+                    {item.image_url && (
+                      <img src={item.image_url} alt="" className="w-20 h-20 object-cover rounded-lg shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-indigo-400 font-semibold mb-1">
+                        {PLATFORM_CONFIG[item.platform]?.emoji} {item.platform}
+                      </p>
+                      <textarea
+                        defaultValue={item.text} rows={3}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 resize-none focus:outline-none focus:border-indigo-500" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 px-4 pb-4">
+                    <button onClick={() => postTo(item, item.platform)}
+                      disabled={postStatus[item.id] === "posting" || postStatus[item.id] === "posted"}
+                      className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                      {postStatus[item.id] === "posted" ? "✓ Posted" : postStatus[item.id] === "posting" ? "Posting..." : `Post to ${item.platform}`}
+                    </button>
+                    <button onClick={() => navigator.clipboard.writeText(item.text)}
+                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition">Copy</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "generate" && (<>
         {(plan === "growth" || plan === "agency" || plan === "admin") && (
           <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-4 mb-6 flex items-center gap-4 flex-wrap">
             <span className="text-sm font-medium text-purple-300">📱 Story Generator</span>
@@ -456,6 +607,161 @@ export default function ContentStudio() {
               </div>
             );
           })}
+        </div>
+      )}
+      </>
+      )}
+      {tab === "offer" && (
+        <div className="space-y-6">
+          {/* Form */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p className="text-sm text-gray-400">Answer 4 questions — AI writes your complete offer: landing page, social post, and email.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Product / Service Name</label>
+                <input value={offerProduct} onChange={(e) => setOfferProduct(e.target.value)}
+                  placeholder="e.g. 6-Week Business Bootcamp"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Currency</label>
+                  <select value={offerCurrency} onChange={(e) => setOfferCurrency(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                    {["NGN","USD","GHS","KES","ZAR"].map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Price</label>
+                  <input type="number" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)}
+                    placeholder="45000"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Target Customer</label>
+                <input value={offerCustomer} onChange={(e) => setOfferCustomer(e.target.value)}
+                  placeholder="e.g. Small business owners in Lagos"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Main Benefit</label>
+                <input value={offerBenefit} onChange={(e) => setOfferBenefit(e.target.value)}
+                  placeholder="e.g. Double their revenue in 6 weeks"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+            {offerError && <p className="text-red-400 text-sm">{offerError}</p>}
+            <button onClick={createOffer} disabled={offerLoading}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition">
+              {offerLoading ? "Building your offer..." : "🎯 Create Irresistible Offer →"}
+            </button>
+          </div>
+
+          {/* Results */}
+          {offerResult && (
+            <div className="space-y-4">
+              {/* Headline + value stack summary */}
+              <div className="bg-gray-900 border border-indigo-800 rounded-xl p-5">
+                <p className="text-xs text-indigo-400 uppercase tracking-wide mb-2">Your Offer</p>
+                <h2 className="text-xl font-bold text-white mb-3">{offerResult.headline}</h2>
+                <ul className="space-y-1 mb-3">
+                  {offerResult.value_stack.map((b, i) => (
+                    <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                      <span className="text-green-400 mt-0.5">✓</span>{b}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <span className="text-gray-400">💰 {offerResult.price_anchor}</span>
+                  <span className="text-green-400">🛡️ {offerResult.guarantee}</span>
+                  <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg font-semibold text-xs">{offerResult.cta}</span>
+                </div>
+              </div>
+
+              {/* Output tabs */}
+              <div className="flex gap-2">
+                {(["landing", "social", "email"] as const).map((t) => (
+                  <button key={t} onClick={() => setOfferTab(t)}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                      offerTab === t ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                    }`}>
+                    {t === "landing" ? "🌐 Landing Page" : t === "social" ? "📱 Social Post" : "📧 Email"}
+                  </button>
+                ))}
+              </div>
+
+              {offerTab === "landing" && (
+                <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                    <span className="text-xs text-gray-400">Landing page saved · slug: <code className="text-indigo-400">{offerResult.landing_page_slug}</code></span>
+                    <a href={`/offer/${offerResult.landing_page_slug}`} target="_blank"
+                      className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition font-medium">Open Page ↗</a>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Headline:</span> {offerResult.headline}</p>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Value Stack</p>
+                      <ul className="space-y-1">
+                        {offerResult.value_stack.map((b, i) => (
+                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                            <span className="text-green-400">✓</span>{b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Price anchor:</span> {offerResult.price_anchor}</p>
+                    <p className="text-sm text-gray-300"><span className="text-gray-500">Guarantee:</span> {offerResult.guarantee}</p>
+                  </div>
+                </div>
+              )}
+
+              {offerTab === "social" && (
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">Social Post · saved to Content Studio</p>
+                    <button onClick={() => offerCopy(offerResult.social_post, "social")}
+                      className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition">
+                      {offerCopied === "social" ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <p className="text-gray-200 text-sm whitespace-pre-wrap">{offerResult.social_post}</p>
+                </div>
+              )}
+
+              {offerTab === "email" && (
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">Email</p>
+                    <button onClick={() => offerCopy(`Subject: ${offerResult.email_subject}\n\n${offerResult.email_body}`, "email")}
+                      className="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition">
+                      {offerCopied === "email" ? "✓ Copied" : "Copy All"}
+                    </button>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg px-4 py-3">
+                    <p className="text-xs text-gray-500 mb-1">Subject</p>
+                    <p className="text-white font-semibold text-sm">{offerResult.email_subject}</p>
+                  </div>
+                  <p className="text-gray-300 text-sm whitespace-pre-wrap">{offerResult.email_body}</p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await api.post("/leads/broadcast/send", {
+                          subject: offerResult.email_subject,
+                          body: offerResult.email_body,
+                        });
+                        alert("✓ Sent to all leads");
+                      } catch (e: unknown) {
+                        alert(e instanceof Error ? e.message : "Send failed");
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition">
+                    📨 Send to All Leads
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

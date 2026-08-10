@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
 
-  const showShell = !NO_SHELL.some((p) => pathname.startsWith(p)) && !pathname.startsWith("/p/");
+  const showShell = !NO_SHELL.some((p) => pathname.startsWith(p)) && !pathname.startsWith("/p/") && !pathname.startsWith("/bio/") && !pathname.startsWith("/review/") && !pathname.startsWith("/team/accept") && !pathname.startsWith("/offer/");
 
   useEffect(() => {
     if (loaded && showShell && !client) {
