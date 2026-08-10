@@ -31,7 +31,7 @@ function RegisterContent() {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, plan, billing }),
+        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");
