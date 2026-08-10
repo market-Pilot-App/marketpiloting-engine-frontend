@@ -24,7 +24,6 @@ const NAV = [
   { href: "/referrals", label: "Referrals", icon: "🔗" },
   { href: "/auto-reply", label: "Auto-Reply", icon: "💬" },
   { href: "/catalog", label: "Catalog", icon: "🛍️" },
-  { href: "/newsletter", label: "Newsletter", icon: "📬" },
   { href: "/bio-settings", label: "Link-in-Bio", icon: "🔗" },
   { href: "/testimonials", label: "Testimonials", icon: "⭐" },
   { href: "/ads", label: "Ad Generator", icon: "🎯" },

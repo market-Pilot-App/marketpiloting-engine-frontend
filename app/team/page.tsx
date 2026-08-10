@@ -66,7 +66,7 @@ export default function TeamPage() {
   const remove = async (id: number, memberEmail: string) => {
     if (!confirm(`Remove ${memberEmail} from your workspace?`)) return;
     try {
-      await api.delete(`/team/${id}`);
+      await api.del(`/team/${id}`);
       setMembers((m) => m.filter((x) => x.id !== id));
     } catch (err: any) {
       alert(err.message || "Failed to remove member");
