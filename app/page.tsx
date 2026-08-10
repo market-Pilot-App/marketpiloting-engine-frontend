@@ -38,7 +38,7 @@ interface ReferralStats { total_clicks: number; top_links: { code: string; angle
 interface RevenueData { total_revenue: number; total_sales: number; by_platform: { platform: string; sales: number; revenue: number }[]; chart: { date: string; revenue: number }[]; top_posts: { post_id: number; platform: string; sales: number; revenue: number; preview: string }[]; }
 interface CampaignSummary { id: number; name: string; niche: string; platforms: string[]; active: boolean; }
 interface BrandDNA { consistency_score: number; business_name: string; }
-interface OnboardingItem { key: string; label: string; href: string; done: boolean; }
+interface OnboardingItem { key: string; label: string; href: string; done: boolean; partial?: boolean; }
 interface OnboardingHealth { score: number; max: number; items: OnboardingItem[]; }
 
 const PLATFORM_ICONS: Record<string, string> = {
@@ -227,21 +227,34 @@ export default function DashboardPage() {
               </div>
               {/* Checklist */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {onboarding.items.map((item) => (
-                  <Link
-                    key={item.key}
-                    href={item.done ? "#" : item.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
-                      item.done
-                        ? "bg-green-500/10 text-green-400 cursor-default"
-                        : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-base flex-shrink-0">{item.done ? "✅" : "⬜"}</span>
-                    <span>{item.label}</span>
-                    {!item.done && <span className="ml-auto text-xs text-indigo-400">→</span>}
-                  </Link>
-                ))}
+                {onboarding.items.map((item) => {
+                  // Platforms item: partial if connected > 0 but < 8
+                  const platformMatch = item.key === "platform_connected"
+                    ? item.label.match(/(\d+)\/8/)
+                    : null;
+                  const connectedCount = platformMatch ? parseInt(platformMatch[1]) : 0;
+                  const isPartial = item.key === "platform_connected" && connectedCount > 0 && connectedCount < 8;
+                  const isFullDone = item.done && !isPartial;
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+                        isFullDone
+                          ? "bg-green-500/10 text-green-400 cursor-default"
+                          : isPartial
+                          ? "bg-yellow-500/10 text-yellow-300 hover:bg-yellow-500/20"
+                          : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-base flex-shrink-0">
+                        {isFullDone ? "✅" : isPartial ? "⚠️" : "⬜"}
+                      </span>
+                      <span>{item.label}</span>
+                      {!isFullDone && <span className={`ml-auto text-xs ${isPartial ? "text-yellow-400" : "text-indigo-400"}`}>→</span>}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}
