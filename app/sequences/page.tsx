@@ -76,7 +76,7 @@ export default function SequencesPage() {
 
   const deleteSequence = async (id: number) => {
     if (!confirm("Delete this sequence?")) return;
-    await api.delete(`/sequences/${id}`);
+    await api.del(`/sequences/${id}`);
     await fetchSequences();
   };
 
