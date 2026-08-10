@@ -62,7 +62,7 @@ export default function AdsPage() {
   };
 
   const deleteAd = async (id: number) => {
-    await api.delete(`/ads/${id}`);
+    await api.del(`/ads/${id}`);
     setAds((prev) => prev.filter((a) => a.id !== id));
   };
 

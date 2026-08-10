@@ -110,7 +110,7 @@ export default function CatalogPage() {
   const toggle = async (id: number) => { await api.post(`/catalog/${id}/toggle`); await load(); };
   const del = async (id: number) => {
     if (!confirm("Delete this item?")) return;
-    await api.delete(`/catalog/${id}`);
+    await api.del(`/catalog/${id}`);
     await load();
   };
 
