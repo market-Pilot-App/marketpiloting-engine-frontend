@@ -194,24 +194,6 @@ function RegisterContent() {
               />
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setStep("plan")}
-                className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition text-sm"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleRegister}
-                disabled={!form.name || !form.email || !form.password || !form.business_name || !form.niche || !form.target_audience || !agreedToTos}
-                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition"
-              >
-                Create Account & Pay →
-              </button>
-            </div>
-
             {/* ToS Checkbox */}
             <label className="flex items-start gap-3 cursor-pointer mt-1">
               <input
@@ -228,6 +210,27 @@ function RegisterContent() {
                 . I understand the 7-day guarantee and refund policy.
               </span>
             </label>
+
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {!agreedToTos && form.name && form.email && form.password && form.business_name && form.niche && form.target_audience && (
+              <p className="text-yellow-400 text-xs">Please tick the checkbox above to continue.</p>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setStep("plan")}
+                className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition text-sm"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={handleRegister}
+                disabled={!form.name || !form.email || !form.password || !form.business_name || !form.niche || !form.target_audience || !agreedToTos}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition"
+              >
+                Create Account & Pay →
+              </button>
+            </div>
           </div>
         )}
       </div>
