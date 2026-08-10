@@ -251,6 +251,14 @@ export default function SettingsPage() {
   const [arSaved, setArSaved] = useState(false);
   const [kwInput, setKwInput] = useState("");
   const canAutoReply = ["starter", "growth", "agency", "admin"].includes(plan);
+  // WhatsApp state
+  const [waSettings, setWaSettings] = useState({ whatsapp_phone_number_id: "", whatsapp_access_token: "", whatsapp_business_account_id: "", whatsapp_enabled: false });
+  const [waTokenHint, setWaTokenHint] = useState("");
+  const [waConnected, setWaConnected] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+  const [waSaved, setWaSaved] = useState(false);
+  const [waError, setWaError] = useState("");
+  const canWhatsApp = ["starter", "growth", "agency", "admin"].includes(plan);
 
   // Delete account state
   const [deleteStep, setDeleteStep] = useState(0); // 0=hidden, 1=warn, 2=password, 3=confirm-text
@@ -282,6 +290,12 @@ export default function SettingsPage() {
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
+    api.get<{ whatsapp_phone_number_id: string; whatsapp_access_token_hint: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
+      .then((d) => {
+        setWaSettings((s) => ({ ...s, whatsapp_phone_number_id: d.whatsapp_phone_number_id, whatsapp_business_account_id: d.whatsapp_business_account_id, whatsapp_enabled: d.whatsapp_enabled }));
+        setWaTokenHint(d.whatsapp_access_token_hint);
+        setWaConnected(d.connected);
+      }).catch(() => {});
     api.get<{ paystack_secret_key_set: boolean; paystack_secret_key_hint: string }>("/revenue/settings")
       .then((d) => { setRevKeySet(d.paystack_secret_key_set); setRevKeyHint(d.paystack_secret_key_hint); })
       .catch(() => {});
@@ -720,6 +734,71 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+      {/* WhatsApp Business */}
+      <div className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">📱 WhatsApp Business</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Connect your WhatsApp Business account to auto-reply to messages and broadcast to leads.
+        </p>
+        {!canWhatsApp ? (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-center">
+            <p className="text-gray-400 text-sm">🔒 WhatsApp integration is available on Starter plan and above.</p>
+          </div>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium text-sm">Enable WhatsApp Auto-Reply</p>
+                <p className="text-gray-500 text-xs mt-0.5">AI will reply to incoming WhatsApp messages in your brand voice</p>
+              </div>
+              <button onClick={() => setWaSettings((s) => ({ ...s, whatsapp_enabled: !s.whatsapp_enabled }))}
+                className={`relative w-12 h-6 rounded-full transition-colors ${waSettings.whatsapp_enabled ? "bg-indigo-600" : "bg-gray-700"}`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${waSettings.whatsapp_enabled ? "translate-x-6" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Phone Number ID</label>
+              <input value={waSettings.whatsapp_phone_number_id}
+                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_phone_number_id: e.target.value }))}
+                placeholder="e.g. 123456789012345"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Access Token {waTokenHint && <span className="text-gray-600 ml-1">current: ...{waTokenHint}</span>}
+              </label>
+              <input type="password" value={waSettings.whatsapp_access_token}
+                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_access_token: e.target.value }))}
+                placeholder="Paste new token to update"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Business Account ID</label>
+              <input value={waSettings.whatsapp_business_account_id}
+                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_business_account_id: e.target.value }))}
+                placeholder="e.g. 987654321098765"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+            </div>
+            <p className="text-xs text-gray-600">Get these from Meta Business Suite → WhatsApp → API Setup. Webhook URL: <span className="text-indigo-400 break-all">https://marketpiloting-engine-backend.onrender.com/whatsapp/webhook</span></p>
+            {waConnected && <p className="text-xs text-green-400">✅ WhatsApp connected</p>}
+            {waError && <p className="text-red-400 text-xs">{waError}</p>}
+            <button onClick={async () => {
+              setWaSaving(true); setWaError("");
+              try {
+                await api.post("/whatsapp/settings", waSettings);
+                setWaSaved(true); setWaConnected(true);
+                setTimeout(() => setWaSaved(false), 3000);
+              } catch (e: unknown) { setWaError(e instanceof Error ? e.message : "Save failed"); }
+              finally { setWaSaving(false); }
+            }} disabled={waSaving}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition">
+              {waSaving ? "Saving..." : waSaved ? "✓ Saved" : "Save WhatsApp Settings"}
+            </button>
+          </div>
+        )}
+      </div>
+
+
 
       {/* ── Content Recycling ── */}
       <div className="mt-10">
