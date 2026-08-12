@@ -30,6 +30,14 @@ interface PaymentForm {
   payment_instructions: string;
 }
 
+interface BillingInfo {
+  plan: string;
+  billing_period: string;
+  subscription_status: string;
+  subscription_expires_at: string | null;
+  paystack_subscription_code: string | null;
+}
+
 interface PlatformForm {
   fb_access_token?: string;
   fb_page_id?: string;
@@ -234,6 +242,7 @@ function RecyclingSettings() {
 export default function SettingsPage() {
   const [plan, setPlan] = useState("solo");
   const [connections, setConnections] = useState<Connections | null>(null);
+  const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [forms, setForms] = useState<Record<string, PlatformForm>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -312,6 +321,7 @@ export default function SettingsPage() {
     const stored = localStorage.getItem("mp_client");
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
+    api.get<BillingInfo>("/auth/billing").then(setBilling).catch(() => {});
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
     api.get<{ whatsapp_phone_number_id: string; whatsapp_access_token_hint: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
       .then((d) => {
@@ -464,6 +474,63 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl">
+      {/* ── Billing & Subscription ── */}
+      <div className="mb-10">
+        <h1 className="text-2xl font-bold mb-2">💳 Billing & Subscription</h1>
+        <p className="text-gray-400 text-sm mb-6">Your current plan, billing cycle, and renewal date.</p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+          {billing ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Current Plan</p>
+                  <p className="text-white font-bold text-lg capitalize">{billing.plan}</p>
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  billing.subscription_status === "active" ? "bg-green-900 text-green-400"
+                  : billing.subscription_status === "expired" ? "bg-red-900 text-red-400"
+                  : billing.subscription_status === "cancelled" ? "bg-yellow-900 text-yellow-400"
+                  : "bg-gray-800 text-gray-400"
+                }`}>
+                  {billing.subscription_status === "active" ? "✅ Active"
+                    : billing.subscription_status === "expired" ? "❌ Expired"
+                    : billing.subscription_status === "cancelled" ? "⚠️ Cancelled"
+                    : billing.subscription_status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-800">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Billing Cycle</p>
+                  <p className="text-white text-sm capitalize">{billing.billing_period}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Next Renewal</p>
+                  <p className="text-white text-sm">
+                    {billing.subscription_expires_at
+                      ? new Date(billing.subscription_expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+              {billing.subscription_status !== "active" && (
+                <a href="/upgrade"
+                  className="block w-full text-center py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition">
+                  Reactivate Subscription →
+                </a>
+              )}
+              {billing.subscription_status === "active" && (
+                <a href="/upgrade"
+                  className="block w-full text-center py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition">
+                  Upgrade Plan →
+                </a>
+              )}
+            </>
+          ) : (
+            <p className="text-gray-500 text-sm">Loading billing info...</p>
+          )}
+        </div>
+      </div>
+
       <h1 className="text-2xl font-bold mb-2">Social Connections</h1>
       <p className="text-gray-400 text-sm mb-8">
         Connect your social media accounts so MarketPilot can post automatically on your behalf.
