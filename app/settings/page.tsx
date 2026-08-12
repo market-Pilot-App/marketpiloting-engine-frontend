@@ -261,11 +261,34 @@ export default function SettingsPage() {
   const canWhatsApp = ["starter", "growth", "agency", "admin"].includes(plan);
 
   // Delete account state
-  const [deleteStep, setDeleteStep] = useState(0); // 0=hidden, 1=warn, 2=password, 3=confirm-text
+  const [deleteStep, setDeleteStep] = useState(0);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Change password state
+  const [cpCurrent, setCpCurrent] = useState("");
+  const [cpNew, setCpNew] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpSaving, setCpSaving] = useState(false);
+  const [cpError, setCpError] = useState("");
+  const [cpSaved, setCpSaved] = useState(false);
+
+  const changePassword = async () => {
+    setCpError("");
+    if (cpNew.length < 8) { setCpError("New password must be at least 8 characters"); return; }
+    if (cpNew !== cpConfirm) { setCpError("Passwords do not match"); return; }
+    setCpSaving(true);
+    try {
+      await api.post("/auth/change-password", { current_password: cpCurrent, new_password: cpNew });
+      setCpSaved(true);
+      setCpCurrent(""); setCpNew(""); setCpConfirm("");
+      setTimeout(() => setCpSaved(false), 3000);
+    } catch (e: unknown) {
+      setCpError(e instanceof Error ? e.message : "Failed to update password");
+    } finally { setCpSaving(false); }
+  };
 
   // Payment state
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
@@ -807,6 +830,37 @@ export default function SettingsPage() {
           Automatically re-queue top-performing posts after a set interval. Enable recycling per post from the Scheduler page.
         </p>
         <RecyclingSettings />
+      </div>
+
+      {/* ── Change Password ── */}
+      <div className="mt-10">
+        <h1 className="text-2xl font-bold mb-2">🔑 Change Password</h1>
+        <p className="text-gray-400 text-sm mb-6">Update your login password. You'll need your current password to confirm.</p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Current Password</label>
+            <input type="password" value={cpCurrent} onChange={(e) => setCpCurrent(e.target.value)}
+              placeholder="Enter current password"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">New Password</label>
+            <input type="password" value={cpNew} onChange={(e) => setCpNew(e.target.value)}
+              placeholder="At least 8 characters"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Confirm New Password</label>
+            <input type="password" value={cpConfirm} onChange={(e) => setCpConfirm(e.target.value)}
+              placeholder="Repeat new password"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+          </div>
+          {cpError && <p className="text-red-400 text-xs">{cpError}</p>}
+          <button onClick={changePassword} disabled={cpSaving || !cpCurrent || !cpNew || !cpConfirm}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition">
+            {cpSaving ? "Updating..." : cpSaved ? "✓ Password Updated" : "Update Password"}
+          </button>
+        </div>
       </div>
 
       {/* ── Danger Zone ── */}}
