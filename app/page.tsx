@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { useRef } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Onboarding Health Widget — hidden when fully complete */}
+          <ErrorBoundary label="Engine Setup">
           {onboarding && onboarding.score < onboarding.max && (
             <div className="bg-gray-900 border border-indigo-500/30 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-3">
@@ -258,9 +260,10 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </ErrorBoundary>
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             {statCards.map((c) => (
               <div key={c.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
@@ -273,6 +276,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Platform Activity + Telegram */}
+          <ErrorBoundary label="Platform Activity">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
               <h3 className="font-semibold mb-4">Platform Activity</h3>
@@ -315,8 +319,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          </ErrorBoundary>
 
           {/* 7-Day Chart */}
+          <ErrorBoundary label="7-Day Chart">
           {overview?.chart && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -338,8 +344,10 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </ErrorBoundary>
 
           {/* Trending Now */}
+          <ErrorBoundary label="Trending Now">
           {trends && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -381,8 +389,10 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </ErrorBoundary>
 
           {/* Angle Performance */}
+          <ErrorBoundary label="Angle Performance">
           {anglePerf.length > 0 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -413,8 +423,10 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </ErrorBoundary>
 
           {/* Referral Links */}
+          <ErrorBoundary label="Referral Performance">
           {referrals && referrals.top_links.length > 0 && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -452,6 +464,7 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </ErrorBoundary>
 
           {/* Quick Actions */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">

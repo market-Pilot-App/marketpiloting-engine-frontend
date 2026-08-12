@@ -473,7 +473,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl w-full">
       {/* ── Billing & Subscription ── */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold mb-2">💳 Billing & Subscription</h1>
