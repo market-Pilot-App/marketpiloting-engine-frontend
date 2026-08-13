@@ -3,7 +3,8 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { API_URL } from "@/lib/api";
 
-const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram", "youtube", "website"];
+const PLATFORMS = ["facebook", "instagram", "linkedin", "telegram", "youtube"];
+const CAPTION_ONLY_PLATFORMS = ["twitter", "tiktok"]; // no auto-post — caption saved for manual use
 
 type PostResult = {
   platform: string;
@@ -139,7 +140,7 @@ export default function VideoPage() {
           <div>
             <p className="text-4xl mb-2">📹</p>
             <p className="text-gray-300">Drag & drop your video here or click to browse</p>
-            <p className="text-gray-500 text-sm mt-1">MP4, MOV, AVI, MKV, WebM — max 100MB</p>
+            <p className="text-gray-500 text-sm mt-1">MP4, MOV, AVI, MKV, WebM — max 50MB</p>
           </div>
         )}
       </div>
@@ -161,7 +162,21 @@ export default function VideoPage() {
               {p}
             </button>
           ))}
+          {CAPTION_ONLY_PLATFORMS.map((p) => (
+            <div key={p} className="relative group">
+              <button
+                disabled
+                className="px-4 py-1.5 rounded-full text-sm font-medium capitalize bg-gray-800/50 text-gray-600 cursor-not-allowed"
+              >
+                {p}
+              </button>
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                Caption generated for manual posting
+              </span>
+            </div>
+          ))}
         </div>
+        <p className="text-xs text-gray-600 mt-1">*X/Twitter &amp; TikTok: caption generated for manual posting only</p>
       </div>
 
       {/* Submit / Progress */}
