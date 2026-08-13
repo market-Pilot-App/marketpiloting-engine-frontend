@@ -5,11 +5,11 @@ export async function GET() {
     `${process.env.NEXT_PUBLIC_API_URL}/admin/cron/purge-deleted`,
     {
       method: "POST",
-      headers: {
-        "X-Cron-Secret": process.env.CRON_SECRET ?? "",
-      },
+      headers: { "X-Cron-Secret": process.env.CRON_SECRET ?? "" },
     }
   );
-  const data = await res.json();
-  return NextResponse.json(data);
+  const text = await res.text();
+  let data: unknown;
+  try { data = JSON.parse(text); } catch { data = { status: "ok", raw: text.slice(0, 200) }; }
+  return NextResponse.json(data, { status: res.ok ? 200 : res.status });
 }
