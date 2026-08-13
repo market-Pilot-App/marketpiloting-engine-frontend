@@ -9,6 +9,7 @@ interface Connections {
   twitter: boolean;
   telegram: boolean;
   whatsapp: boolean;
+  tiktok: boolean;
   blog: boolean;
   youtube: boolean;
   website: boolean;
@@ -50,6 +51,7 @@ interface PlatformForm {
   twitter_access_secret?: string;
   telegram_bot_token?: string;
   telegram_channel_id?: string;
+  tiktok_profile_url?: string;
   blog_api_url?: string;
   blog_api_key?: string;
   youtube_client_id?: string;
@@ -66,6 +68,7 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
   linkedin: "growth",
   twitter: "growth",
   telegram: "starter",
+  tiktok: "starter",
   blog: "starter",
   youtube: "growth",
   website: "growth",
@@ -106,12 +109,21 @@ const PLATFORMS = [
     key: "twitter",
     label: "X / Twitter",
     icon: "🐦",
-    hint: "Requires API Key, API Secret, Access Token, and Access Secret from developer.x.com.",
+    hint: "X/Twitter API access requires a paid developer account ($100/month from developer.x.com). If connected, MarketPilot will post and auto-boost your tweets. Without credentials, AI-generated captions are saved to your Content Library for manual posting.",
     fields: [
       { name: "twitter_api_key", label: "API Key", placeholder: "xvz1evFS..." },
       { name: "twitter_api_secret", label: "API Secret", placeholder: "L8qq9PZy...", secret: true },
       { name: "twitter_access_token", label: "Access Token", placeholder: "1234567890-..." },
       { name: "twitter_access_secret", label: "Access Secret", placeholder: "garHmw...", secret: true },
+    ],
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    icon: "🎵",
+    hint: "Enter your TikTok profile URL. MarketPilot generates AI captions saved to your Content Library for manual posting, and automatically boosts your profile with views, likes, and followers.",
+    fields: [
+      { name: "tiktok_profile_url", label: "TikTok Profile URL", placeholder: "https://tiktok.com/@yourbrand" },
     ],
   },
   {
