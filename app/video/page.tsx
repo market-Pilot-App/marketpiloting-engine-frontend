@@ -30,7 +30,7 @@ export default function VideoPage() {
   const [result, setResult] = useState<VideoResult | null>(null);
   const [error, setError] = useState("");
 
-  const isPlanAllowed = client?.plan === "growth" || client?.plan === "agency" || client?.plan === "admin";
+  const isPlanAllowed = ["solo", "starter", "growth", "pro", "agency", "admin"].includes(client?.plan ?? "");
 
   if (!isPlanAllowed) {
     return (
@@ -39,7 +39,10 @@ export default function VideoPage() {
         <h2 className="text-2xl font-bold text-white mb-2">Video Posting</h2>
         <p className="text-gray-400 mb-6">
           Video posting is available on{" "}
-          <span className="text-indigo-400 font-semibold">Growth</span> and{" "}
+          <span className="text-indigo-400 font-semibold">Solo</span>,{" "}
+          <span className="text-indigo-400 font-semibold">Starter</span>,{" "}
+          <span className="text-indigo-400 font-semibold">Growth</span>,{" "}
+          <span className="text-indigo-400 font-semibold">Pro</span> and{" "}
           <span className="text-indigo-400 font-semibold">Agency</span> plans.
         </p>
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
@@ -221,9 +224,11 @@ export default function VideoPage() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         r.status === "posted"
                           ? "bg-green-900 text-green-400"
+                          : r.status === "caption_saved"
+                          ? "bg-yellow-900 text-yellow-400"
                           : "bg-red-900 text-red-400"
                       }`}>
-                        {r.status}
+                        {r.status === "caption_saved" ? "caption saved" : r.status}
                       </span>
                     </td>
                     <td className="px-4 py-3">
