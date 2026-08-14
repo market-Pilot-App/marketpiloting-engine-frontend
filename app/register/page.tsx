@@ -7,7 +7,7 @@ const PLANS = [
   { id: "solo",    label: "Solo",    price: "₦29,999/mo",  yearlyPrice: "₦20,999/mo", features: ["2 platforms", "3 posts/day", "AI content", "Basic boost", "1 blog/week"] },
   { id: "starter", label: "Starter", price: "₦75,000/mo",  yearlyPrice: "₦52,500/mo", features: ["3 platforms", "5 posts/day", "AI content", "Auto boost", "2 blogs/week"] },
   { id: "growth",  label: "Growth",  price: "₦150,000/mo", yearlyPrice: "₦105,000/mo", features: ["6 platforms", "8 posts/day", "Video posting", "Full boost", "3 blogs/week"], popular: true },
-  { id: "pro",     label: "Pro",     price: "₦250,000/mo", yearlyPrice: "₦175,000/mo", features: ["8 platforms", "12 posts/day", "All features", "$60 boost budget", "Daily blog"] },
+  { id: "pro",     label: "Pro",     price: "₦250,000/mo", yearlyPrice: "₦175,000/mo", features: ["9 platforms", "12 posts/day", "All features", "$60 boost budget", "Daily blog"] },
   { id: "agency",  label: "Agency",  price: "₦450,000/mo", yearlyPrice: "₦315,000/mo", features: ["11 brands", "12 posts/day", "Unlimited video", "Max boost", "Daily blog"] },
 ];
 

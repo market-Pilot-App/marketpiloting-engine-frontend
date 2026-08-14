@@ -57,7 +57,7 @@ interface PlatformForm {
   website_url?: string;
 }
 
-const PLAN_RANK: Record<string, number> = { solo: 1, starter: 2, growth: 3, agency: 4, admin: 4 };
+const PLAN_RANK: Record<string, number> = { solo: 1, starter: 2, growth: 3, pro: 4, agency: 5, admin: 5 };
 
 const PLATFORM_MIN_PLAN: Record<string, string> = {
   facebook: "solo",
@@ -67,8 +67,8 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
   telegram: "starter",
   tiktok: "starter",
   blog: "starter",
-  youtube: "growth",
-  website: "growth",
+  youtube: "pro",
+  website: "pro",
 };
 
 const TUTORIAL_LINKS: Record<string, string> = {
@@ -260,7 +260,7 @@ export default function SettingsPage() {
   const [arSaving, setArSaving] = useState(false);
   const [arSaved, setArSaved] = useState(false);
   const [kwInput, setKwInput] = useState("");
-  const canAutoReply = ["starter", "growth", "agency", "admin"].includes(plan);
+  const canAutoReply = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
   // WhatsApp state
   const [waSettings, setWaSettings] = useState({ whatsapp_phone_number_id: "", whatsapp_access_token: "", whatsapp_business_account_id: "", whatsapp_enabled: false });
   const [waTokenHint, setWaTokenHint] = useState("");
@@ -268,7 +268,7 @@ export default function SettingsPage() {
   const [waSaving, setWaSaving] = useState(false);
   const [waSaved, setWaSaved] = useState(false);
   const [waError, setWaError] = useState("");
-  const canWhatsApp = ["starter", "growth", "agency", "admin"].includes(plan);
+  const canWhatsApp = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
 
   // Delete account state
   const [deleteStep, setDeleteStep] = useState(0);

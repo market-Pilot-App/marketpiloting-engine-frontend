@@ -40,7 +40,7 @@ const PLATFORM_EMOJI: Record<string, string> = {
   youtube: "▶️", website: "🌐",
 };
 
-const TWITTER_BOOST_PLANS = new Set(["growth", "agency", "admin"]);
+const TWITTER_BOOST_PLANS = new Set(["growth", "pro", "agency", "admin"]);
 
 export default function BoostsPage() {
   const { isAdmin, client } = useAuth();

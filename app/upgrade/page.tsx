@@ -7,10 +7,11 @@ const PLANS = [
   { key: "solo",    label: "Solo",    monthly: "₦29,999", yearly: "₦20,999", desc: "1 brand, core features" },
   { key: "starter", label: "Starter", monthly: "₦75,000", yearly: "₦52,500", desc: "1 brand, full features" },
   { key: "growth",  label: "Growth",  monthly: "₦150,000", yearly: "₦105,000", desc: "1 brand + video + Twitter boost" },
+  { key: "pro",     label: "Pro",     monthly: "₦250,000", yearly: "₦175,000", desc: "1 brand, all 9 platforms + max boost" },
   { key: "agency",  label: "Agency",  monthly: "₦450,000", yearly: "₦315,000", desc: "11 brands, everything" },
 ];
 
-const PLAN_ORDER = ["solo", "starter", "growth", "agency"];
+const PLAN_ORDER = ["solo", "starter", "growth", "pro", "agency"];
 
 export default function UpgradePage() {
   const { client } = useAuth();

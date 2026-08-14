@@ -49,8 +49,8 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const pathname = usePathname();
   const { client, isAdmin, logout, switchBrand } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
-  const isVideoAllowed = ["growth", "agency", "admin"].includes(client?.plan || "");
-  const showUpgrade = !isAdmin && client?.plan !== "agency";
+  const isVideoAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
+  const showUpgrade = !isAdmin && client?.plan !== "agency" && client?.plan !== "pro";
 
   const [collapsed, setCollapsed] = useState(false);
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
