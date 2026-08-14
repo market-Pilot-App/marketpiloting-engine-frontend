@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import VideoModal from "@/components/VideoModal";
 
 const TUTORIALS = [
   {
@@ -85,7 +84,6 @@ const FAQS = [
 ];
 
 export default function HelpPage() {
-  const [activeVideo, setActiveVideo] = useState<{ videoId: string; title: string } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -107,12 +105,14 @@ export default function HelpPage() {
               </div>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed">{t.description}</p>
-            <button
-              onClick={() => setActiveVideo({ videoId: t.videoId, title: `How to connect ${t.label}` })}
+            <a
+              href={`https://www.youtube.com/watch?v=${t.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition"
             >
               ▶ Watch Tutorial
-            </button>
+            </a>
           </div>
         ))}
       </div>
@@ -140,13 +140,7 @@ export default function HelpPage() {
         </div>
       </div>
 
-      {activeVideo && (
-        <VideoModal
-          videoId={activeVideo.videoId}
-          title={activeVideo.title}
-          onClose={() => setActiveVideo(null)}
-        />
-      )}
+
     </div>
   );
 }
