@@ -218,6 +218,16 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           </Link>
         )}
         <Link
+          href="/help"
+          title={collapsed ? "Help" : undefined}
+          className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
+            collapsed ? "justify-center" : ""
+          } ${pathname === "/help" ? "bg-indigo-600 text-white" : ""}`}
+        >
+          <span className="text-base">❓</span>
+          {!collapsed && "Help"}
+        </Link>
+        <Link
           href="/settings"
           title={collapsed ? "Settings" : undefined}
           className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${

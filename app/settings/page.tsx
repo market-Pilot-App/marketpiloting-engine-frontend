@@ -71,6 +71,16 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
   website: "growth",
 };
 
+const TUTORIAL_LINKS: Record<string, string> = {
+  facebook: "facebook",
+  instagram: "instagram",
+  linkedin: "linkedin",
+  telegram: "telegram",
+  youtube: "youtube",
+  whatsapp: "whatsapp",
+  blog: "blog",
+};
+
 const PLATFORMS = [
   {
     key: "facebook",
@@ -560,7 +570,12 @@ export default function SettingsPage() {
               {/* Expandable form */}
               {!locked && isOpen && (
                 <div className="px-5 pb-5 border-t border-gray-800">
-                  <p className="text-xs text-gray-400 mt-4 mb-4 leading-relaxed">{p.hint}</p>
+                  <p className="text-xs text-gray-400 mt-4 mb-2 leading-relaxed">{p.hint}</p>
+                  {TUTORIAL_LINKS[p.key] && (
+                    <p className="text-xs mb-4">
+                      <a href={`/help#${TUTORIAL_LINKS[p.key]}`} className="text-indigo-400 hover:underline">📺 Watch tutorial →</a>
+                    </p>
+                  )}
                   {p.key === "twitter" ? (
                     <button
                       onClick={async () => {
