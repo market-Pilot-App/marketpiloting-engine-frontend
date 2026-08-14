@@ -45,10 +45,7 @@ interface PlatformForm {
   instagram_account_id?: string;
   linkedin_access_token?: string;
   linkedin_person_id?: string;
-  twitter_api_key?: string;
-  twitter_api_secret?: string;
-  twitter_access_token?: string;
-  twitter_access_secret?: string;
+
   telegram_bot_token?: string;
   telegram_channel_id?: string;
   tiktok_profile_url?: string;
@@ -66,7 +63,7 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
   facebook: "solo",
   instagram: "starter",
   linkedin: "growth",
-  twitter: "growth",
+  twitter: "solo",
   telegram: "starter",
   tiktok: "starter",
   blog: "starter",
@@ -109,13 +106,8 @@ const PLATFORMS = [
     key: "twitter",
     label: "X / Twitter",
     icon: "🐦",
-    hint: "X/Twitter API access requires a paid developer account ($100/month from developer.x.com). If connected, MarketPilot will post and auto-boost your tweets. Without credentials, AI-generated captions are saved to your Content Library for manual posting.",
-    fields: [
-      { name: "twitter_api_key", label: "API Key", placeholder: "xvz1evFS..." },
-      { name: "twitter_api_secret", label: "API Secret", placeholder: "L8qq9PZy...", secret: true },
-      { name: "twitter_access_token", label: "Access Token", placeholder: "1234567890-..." },
-      { name: "twitter_access_secret", label: "Access Secret", placeholder: "garHmw...", secret: true },
-    ],
+    hint: "Connect your X/Twitter account via OAuth. MarketPilot will post and auto-boost your tweets automatically.",
+    fields: [],
   },
   {
     key: "tiktok",
@@ -569,28 +561,56 @@ export default function SettingsPage() {
               {!locked && isOpen && (
                 <div className="px-5 pb-5 border-t border-gray-800">
                   <p className="text-xs text-gray-400 mt-4 mb-4 leading-relaxed">{p.hint}</p>
-                  <div className="space-y-3">
-                    {p.fields.map((f) => (
-                      <div key={f.name}>
-                        <label className="block text-xs text-gray-400 mb-1">{f.label}</label>
-                        <input
-                          type={f.secret ? "password" : "text"}
-                          placeholder={f.placeholder}
-                          value={forms[p.key]?.[f.name as keyof PlatformForm] || ""}
-                          onChange={(e) => setField(p.key, f.name, e.target.value)}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
-                        />
+                  {p.key === "twitter" ? (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
+                          const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
+                          const handler = (e: MessageEvent) => {
+                            if (e.data === "twitter_connected") {
+                              window.removeEventListener("message", handler);
+                              popup?.close();
+                              api.get<Connections>("/campaigns/me/connections").then(setConnections);
+                            }
+                          };
+                          window.addEventListener("message", handler);
+                        } catch (err: unknown) {
+                          setErrors((e) => ({ ...e, twitter: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                        }
+                      }}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition"
+                    >
+                      🐦 Connect X / Twitter Account
+                    </button>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {p.fields.map((f) => (
+                          <div key={f.name}>
+                            <label className="block text-xs text-gray-400 mb-1">{f.label}</label>
+                            <input
+                              type={f.secret ? "password" : "text"}
+                              placeholder={f.placeholder}
+                              value={forms[p.key]?.[f.name as keyof PlatformForm] || ""}
+                              onChange={(e) => setField(p.key, f.name, e.target.value)}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
-                  <button
-                    onClick={() => save(p.key)}
-                    disabled={saving[p.key]}
-                    className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
-                  >
-                    {saving[p.key] ? "Saving..." : saved[p.key] ? "✓ Saved" : "Save"}
-                  </button>
+                      {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
+                      <button
+                        onClick={() => save(p.key)}
+                        disabled={saving[p.key]}
+                        className="mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition"
+                      >
+                        {saving[p.key] ? "Saving..." : saved[p.key] ? "✓ Saved" : "Save"}
+                      </button>
+                    </>
+                  )}
+                  {p.key !== "twitter" && errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
+                  {p.key === "twitter" && errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
                 </div>
               )}
             </div>
