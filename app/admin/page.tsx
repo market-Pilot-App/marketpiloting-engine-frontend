@@ -54,7 +54,11 @@ export default function AdminPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals">("clients");
+  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup">("clients");
+  const [backups, setBackups] = useState<{ filename: string; size_kb: number; created_at: string }[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupStatus, setBackupStatus] = useState("");
+  const [restoreStatus, setRestoreStatus] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [editBudget, setEditBudget] = useState<Record<number, string>>({});
   const [editBoost, setEditBoost] = useState<Record<number, string>>({});
@@ -115,6 +119,39 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === "audit") fetchAuditLog();
   }, [tab, fetchAuditLog]);
+
+  useEffect(() => {
+    if (tab === "backup") {
+      api.get<{ backups: typeof backups }>("/admin/list-backups").then((d) => setBackups(d.backups)).catch(() => {});
+    }
+  }, [tab]);
+
+  const runBackupNow = async () => {
+    setBackupLoading(true);
+    setBackupStatus("");
+    try {
+      const r = await api.post<{ filename: string; size_kb: number; tables_backed_up: string[] }>("/cron/daily-backup", {});
+      setBackupStatus(`✅ Backup created: ${r.filename} (${r.size_kb} KB)`);
+      const d = await api.get<{ backups: typeof backups }>("/admin/list-backups");
+      setBackups(d.backups);
+    } catch (e: unknown) {
+      setBackupStatus(`❌ ${e instanceof Error ? e.message : "Backup failed"}`);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const restoreBackup = async (filename: string) => {
+    if (!confirm(`Restore from ${filename}? This will overwrite current data.`)) return;
+    if (!confirm("Are you absolutely sure? This cannot be undone.")) return;
+    setRestoreStatus((s) => ({ ...s, [filename]: "restoring" }));
+    try {
+      await api.post("/admin/restore-backup", { filename });
+      setRestoreStatus((s) => ({ ...s, [filename]: "done" }));
+    } catch (e: unknown) {
+      setRestoreStatus((s) => ({ ...s, [filename]: "failed" }));
+    }
+  };
 
   const sendReport = async (clientId: number) => {
     setReportStatus((s) => ({ ...s, [clientId]: "sending" }));
@@ -260,7 +297,7 @@ const saveBudget = async (clientId: number) => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(["clients", "audit", "leads", "approvals"] as const).map((t) => (
+        {(["clients", "audit", "leads", "approvals", "backup"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -268,7 +305,7 @@ const saveBudget = async (clientId: number) => {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : "Approvals"}
+            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : "🗄️ Backup"}
           </button>
         ))}
       </div>
@@ -545,6 +582,73 @@ const saveBudget = async (clientId: number) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Backup Tab */}
+      {tab === "backup" && (
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Database Backup</p>
+              <p className="text-xs text-gray-400 mt-0.5">Automatic daily backups at 1AM UTC · last 7 days retained</p>
+            </div>
+            <button
+              onClick={runBackupNow}
+              disabled={backupLoading}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+            >
+              {backupLoading ? "Running…" : "⚡ Run Backup Now"}
+            </button>
+          </div>
+          {backupStatus && (
+            <p className={`text-sm px-4 py-2 rounded-lg ${
+              backupStatus.startsWith("✅") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+            }`}>{backupStatus}</p>
+          )}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-700">Available Backups</p>
+            </div>
+            {backups.length === 0 ? (
+              <p className="text-center py-10 text-gray-400 text-sm">No backups yet. First backup runs tonight at 1AM UTC.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Filename</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Size</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Created</th>
+                    <th className="text-right px-5 py-3 text-gray-500 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {backups.map((b) => (
+                    <tr key={b.filename} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 font-mono text-xs text-gray-700">{b.filename}</td>
+                      <td className="px-5 py-3 text-gray-600">{b.size_kb} KB</td>
+                      <td className="px-5 py-3 text-gray-400 text-xs">{new Date(b.created_at).toLocaleString()}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => restoreBackup(b.filename)}
+                          disabled={restoreStatus[b.filename] === "restoring"}
+                          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition disabled:opacity-50 ${
+                            restoreStatus[b.filename] === "done"
+                              ? "bg-green-100 text-green-700"
+                              : restoreStatus[b.filename] === "failed"
+                              ? "bg-red-100 text-red-600"
+                              : "bg-orange-100 hover:bg-orange-200 text-orange-700"
+                          }`}
+                        >
+                          {restoreStatus[b.filename] === "restoring" ? "Restoring…" : restoreStatus[b.filename] === "done" ? "✓ Restored" : restoreStatus[b.filename] === "failed" ? "✗ Failed" : "Restore"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
