@@ -29,8 +29,7 @@ const NAV = [
   { href: "/ads", label: "Ad Generator", icon: "🎯" },
 ];
 
-const VIDEO_NAV = { href: "/video", label: "Video Studio", icon: "🎬" };
-const VIDEO_QUEUE_NAV = { href: "/video-queue", label: "Video Queue", icon: "📹" };
+const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
 const AGENCY_NAV = [
   { href: "/approval-queue", label: "Approval Queue", icon: "✅" },
   { href: "/agency-settings", label: "Agency Branding", icon: "🎨" },
@@ -68,7 +67,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
 
   const allNav = [
     ...NAV,
-    ...(isVideoAllowed ? [VIDEO_NAV, VIDEO_QUEUE_NAV] : []),
+    ...(isVideoAllowed ? [VIDEO_NAV] : []),
     ...(isAgency ? AGENCY_NAV : []),
   ];
 
