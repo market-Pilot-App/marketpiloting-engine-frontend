@@ -114,6 +114,8 @@ export default function SupportChat() {
             <div className="flex gap-2">
               <a
                 href="mailto:support@marketpiloting.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-medium px-3 py-2 rounded-lg transition"
               >
                 📧 Email
