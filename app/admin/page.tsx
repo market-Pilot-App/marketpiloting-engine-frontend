@@ -54,7 +54,15 @@ export default function AdminPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup">("clients");
+  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup" | "revenue">("clients");
+  const [revenueData, setRevenueData] = useState<{
+    total_mrr: number; arr: number; active_clients: number;
+    new_this_month_count: number; churned_count: number;
+    by_plan: { plan: string; clients: number; mrr: number; mrr_pct: number }[];
+    new_this_month: { id: number; name: string; email: string; plan: string; billing: string; first_payment_at: string; monthly_value: number }[];
+    churned: { id: number; name: string; email: string; plan: string; status: string; expires_at: string | null; monthly_value: number }[];
+    per_client: { id: number; name: string; email: string; plan: string; billing: string; status: string; active: boolean; subscription_expires_at: string | null; first_payment_at: string | null; monthly_value: number }[];
+  } | null>(null);
   const [backups, setBackups] = useState<{ filename: string; size_kb: number; created_at: string }[]>([]);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupStatus, setBackupStatus] = useState("");
@@ -123,6 +131,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === "backup") {
       api.get<{ backups: typeof backups }>("/admin/list-backups").then((d) => setBackups(d.backups)).catch(() => {});
+    }
+    if (tab === "revenue") {
+      api.get<typeof revenueData>("/admin/revenue-overview").then(setRevenueData).catch(() => {});
     }
   }, [tab]);
 
@@ -297,7 +308,7 @@ const saveBudget = async (clientId: number) => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(["clients", "audit", "leads", "approvals", "backup"] as const).map((t) => (
+        {(["clients", "audit", "leads", "approvals", "backup", "revenue"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -305,7 +316,7 @@ const saveBudget = async (clientId: number) => {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : "🗄️ Backup"}
+            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : t === "backup" ? "🗄️ Backup" : "💰 Revenue"}
           </button>
         ))}
       </div>
@@ -582,6 +593,172 @@ const saveBudget = async (clientId: number) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Revenue Tab */}
+      {tab === "revenue" && (
+        <div className="space-y-6">
+          {!revenueData ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Monthly Recurring Revenue", value: `₦${revenueData.total_mrr.toLocaleString()}`, sub: "MRR" },
+                  { label: "Annual Run Rate", value: `₦${revenueData.arr.toLocaleString()}`, sub: "ARR" },
+                  { label: "New This Month", value: revenueData.new_this_month_count, sub: "paying clients" },
+                  { label: "Churned", value: revenueData.churned_count, sub: "expired / cancelled" },
+                ].map(({ label, value, sub }) => (
+                  <div key={label} className="bg-white border border-gray-200 rounded-xl p-5">
+                    <p className="text-2xl font-bold text-gray-900">{value}</p>
+                    <p className="text-sm font-medium text-gray-700 mt-1">{label}</p>
+                    <p className="text-xs text-gray-400">{sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Plan breakdown */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-700">Revenue by Plan</p>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="text-left px-5 py-3 text-gray-500 font-medium">Plan</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">Clients</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">MRR</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">% of MRR</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {revenueData.by_plan.map((p) => (
+                      <tr key={p.plan} className="hover:bg-gray-50">
+                        <td className="px-5 py-3 font-medium capitalize text-gray-800">{p.plan}</td>
+                        <td className="px-5 py-3 text-right text-gray-600">{p.clients}</td>
+                        <td className="px-5 py-3 text-right font-semibold text-gray-900">₦{p.mrr.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-20 bg-gray-100 rounded-full h-1.5">
+                              <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${p.mrr_pct}%` }} />
+                            </div>
+                            <span className="text-gray-500 text-xs w-10 text-right">{p.mrr_pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {revenueData.by_plan.length === 0 && (
+                      <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-sm">No active paying clients yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* New this month */}
+              {revenueData.new_this_month.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-700">🆕 New Paying Clients This Month</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Client</th>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Plan</th>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Billing</th>
+                        <th className="text-right px-5 py-3 text-gray-500 font-medium">Joined</th>
+                        <th className="text-right px-5 py-3 text-gray-500 font-medium">Monthly Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {revenueData.new_this_month.map((c) => (
+                        <tr key={c.id} className="hover:bg-gray-50">
+                          <td className="px-5 py-3"><p className="font-medium text-gray-900">{c.name}</p><p className="text-xs text-gray-400">{c.email}</p></td>
+                          <td className="px-5 py-3 capitalize text-gray-700">{c.plan}</td>
+                          <td className="px-5 py-3 capitalize text-gray-500">{c.billing}</td>
+                          <td className="px-5 py-3 text-right text-xs text-gray-400">{new Date(c.first_payment_at).toLocaleDateString()}</td>
+                          <td className="px-5 py-3 text-right font-semibold text-emerald-600">₦{c.monthly_value.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Churned */}
+              {revenueData.churned.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-700">⚠️ Churned Clients</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Client</th>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Plan</th>
+                        <th className="text-left px-5 py-3 text-gray-500 font-medium">Status</th>
+                        <th className="text-right px-5 py-3 text-gray-500 font-medium">Expired</th>
+                        <th className="text-right px-5 py-3 text-gray-500 font-medium">Lost MRR</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {revenueData.churned.map((c) => (
+                        <tr key={c.id} className="hover:bg-gray-50">
+                          <td className="px-5 py-3"><p className="font-medium text-gray-900">{c.name}</p><p className="text-xs text-gray-400">{c.email}</p></td>
+                          <td className="px-5 py-3 capitalize text-gray-700">{c.plan}</td>
+                          <td className="px-5 py-3"><span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-600 capitalize">{c.status}</span></td>
+                          <td className="px-5 py-3 text-right text-xs text-gray-400">{c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "—"}</td>
+                          <td className="px-5 py-3 text-right font-semibold text-red-400">₦{c.monthly_value.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Per-client full list */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-700">All Clients — Payment Overview</p>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="text-left px-5 py-3 text-gray-500 font-medium">Client</th>
+                      <th className="text-left px-5 py-3 text-gray-500 font-medium">Plan</th>
+                      <th className="text-left px-5 py-3 text-gray-500 font-medium">Billing</th>
+                      <th className="text-left px-5 py-3 text-gray-500 font-medium">Status</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">First Payment</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">Renews</th>
+                      <th className="text-right px-5 py-3 text-gray-500 font-medium">Monthly Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {revenueData.per_client.map((c) => (
+                      <tr key={c.id} className={`hover:bg-gray-50 ${!c.active ? "opacity-50" : ""}`}>
+                        <td className="px-5 py-3"><p className="font-medium text-gray-900">{c.name}</p><p className="text-xs text-gray-400">{c.email}</p></td>
+                        <td className="px-5 py-3 capitalize text-gray-700">{c.plan}</td>
+                        <td className="px-5 py-3 capitalize text-gray-500">{c.billing}</td>
+                        <td className="px-5 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-full capitalize ${
+                            c.status === "active" ? "bg-green-50 text-green-700" :
+                            c.status === "expired" ? "bg-red-50 text-red-600" :
+                            c.status === "suspended" ? "bg-yellow-50 text-yellow-700" :
+                            "bg-gray-100 text-gray-500"
+                          }`}>{c.status}</span>
+                        </td>
+                        <td className="px-5 py-3 text-right text-xs text-gray-400">{c.first_payment_at ? new Date(c.first_payment_at).toLocaleDateString() : "—"}</td>
+                        <td className="px-5 py-3 text-right text-xs text-gray-400">{c.subscription_expires_at ? new Date(c.subscription_expires_at).toLocaleDateString() : "—"}</td>
+                        <td className="px-5 py-3 text-right font-semibold text-gray-900">₦{c.monthly_value.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
 
