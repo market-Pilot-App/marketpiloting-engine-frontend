@@ -82,6 +82,7 @@ export default function ContentStudio() {
   const [insights, setInsights] = useState<ContentInsight[]>([]);
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
+  const [hasPerformanceData, setHasPerformanceData] = useState(false);
   const [tab, setTab] = useState<"generate" | "repurpose" | "offer">("generate");
   // Offer Creator state
   const [offerProduct, setOfferProduct] = useState("");
@@ -124,6 +125,8 @@ export default function ContentStudio() {
     setPlatform(platforms[0]);
     // Load campaign niche for hashtag suggestions
     api.get<{ niche?: string }>("/campaigns/me").then((d) => { if (d.niche) setNiche(d.niche); }).catch(() => {});
+    // Check if performance data exists for closed-loop badge
+    api.get<{ has_data: boolean }>("/content/has-performance-data").then((d) => { if (d.has_data) setHasPerformanceData(true); }).catch(() => {});
     // Load conversation insights
     api.get<ContentInsight[]>("/insights/").then(setInsights).catch(() => {});
   }, []);
@@ -285,6 +288,11 @@ export default function ContentStudio() {
         Generate AI posts in your brand voice and publish instantly.
         {dailyLimit && <span className="ml-1 text-indigo-400">{dailyLimit} generations/day on {plan} plan.</span>}
       </p>
+      {hasPerformanceData && (
+        <div className="inline-flex items-center gap-1.5 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full mb-5">
+          ✨ AI optimised based on your last 30 days
+        </div>
+      )}
 
       {/* Tab switcher */}
       <div className="flex gap-2 mb-6">
