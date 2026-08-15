@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import Sidebar from "@/components/Sidebar";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import SupportChat from "@/components/SupportChat";
 
 const NO_SHELL = ["/login", "/subscribe", "/register", "/forgot-password", "/reset-password", "/upgrade/success"];
 
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ImpersonationBanner />
         <main className="flex-1 p-4 md:p-6 text-white overflow-y-auto">{children}</main>
       </div>
+      <SupportChat />
     </div>
   );
 }
