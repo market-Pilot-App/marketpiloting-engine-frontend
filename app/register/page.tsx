@@ -22,6 +22,28 @@ function RegisterContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTos, setAgreedToTos] = useState(false);
   const [error, setError] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ valid: boolean; message: string; discounted_amount_kobo?: number; original_amount_kobo?: number } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+
+  const validatePromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoStatus(null);
+    try {
+      const res = await fetch(`${API_URL}/promo/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCode.trim(), plan, billing }),
+      });
+      const data = await res.json();
+      setPromoStatus(data);
+    } catch {
+      setPromoStatus({ valid: false, message: "Could not validate code" });
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -32,7 +54,7 @@ function RegisterContent() {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos }),
+        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos, promo_code: promoCode.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");
@@ -193,6 +215,39 @@ function RegisterContent() {
                 placeholder="https://yourbusiness.com"
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-2.5 border border-gray-700 focus:outline-none focus:border-indigo-500"
               />
+            </div>
+
+            {/* Promo Code */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Promo Code <span className="text-gray-600">(optional)</span></label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoStatus(null); }}
+                  onBlur={validatePromo}
+                  placeholder="e.g. LAUNCH50"
+                  className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2.5 border border-gray-700 focus:outline-none focus:border-indigo-500 uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={validatePromo}
+                  disabled={!promoCode.trim() || promoLoading}
+                  className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white text-sm rounded-lg transition"
+                >
+                  {promoLoading ? "…" : "Apply"}
+                </button>
+              </div>
+              {promoStatus && (
+                <p className={`text-xs mt-1.5 ${promoStatus.valid ? "text-green-400" : "text-red-400"}`}>
+                  {promoStatus.valid ? "✓ " : "✗ "}{promoStatus.message}
+                  {promoStatus.valid && promoStatus.original_amount_kobo && promoStatus.discounted_amount_kobo && (
+                    <span className="ml-1 text-gray-400">
+                      (₦{(promoStatus.original_amount_kobo / 100).toLocaleString()} → <strong className="text-green-400">₦{(promoStatus.discounted_amount_kobo / 100).toLocaleString()}</strong>)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
 
             {/* ToS Checkbox */}

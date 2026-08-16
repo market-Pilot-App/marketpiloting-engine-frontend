@@ -54,7 +54,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup" | "revenue">("clients");
+  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup" | "revenue" | "promo">("clients");
   const [revenueData, setRevenueData] = useState<{
     total_mrr: number; arr: number; active_clients: number;
     new_this_month_count: number; churned_count: number;
@@ -79,7 +79,15 @@ export default function AdminPage() {
   const [actionStatus, setActionStatus] = useState<Record<number, string>>({});
   const [usageModal, setUsageModal] = useState<null | { name: string; email: string; plan: string; created_at: string | null; first_payment_at: string | null; ai_posts: number; published: number; refund_eligible: boolean; refund_note: string }>(null);
 
-  const [leadMagnetCount, setLeadMagnetCount] = useState<number | null>(null);
+  const [promoCodes, setPromoCodes] = useState<{
+    id: number; code: string; discount_type: string; discount_value: number;
+    applicable_plans: string[] | null; applicable_billing: string | null;
+    max_uses: number | null; uses_count: number; expires_at: string | null; active: boolean;
+  }[]>([]);
+  const [promoModal, setPromoModal] = useState(false);
+  const [promoForm, setPromoForm] = useState({ code: "", discount_type: "percentage", discount_value: "", applicable_plans: "", applicable_billing: "", max_uses: "", expires_at: "" });
+  const [promoSaving, setPromoSaving] = useState(false);
+  const [promoError, setPromoError] = useState("");
   const [pendingPosts, setPendingPosts] = useState<{ id: number; client_name: string; platform: string; scheduled_time: string; text: string; image_url: string | null }[]>([]);
   const [peakerrBalance, setPeakerrBalance] = useState<{ balance: string; currency: string } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
@@ -102,7 +110,40 @@ export default function AdminPage() {
     setLoading(false);
   }, []);
 
-  const fetchAuditLog = useCallback(async () => {
+  useEffect(() => {
+    if (tab === "promo") {
+      api.get<typeof promoCodes>("/admin/promo-codes").then(setPromoCodes).catch(() => {});
+    }
+  }, [tab]);
+
+  const createPromoCode = async () => {
+    setPromoSaving(true);
+    setPromoError("");
+    try {
+      await api.post("/admin/promo-codes", {
+        code: promoForm.code.trim().toUpperCase(),
+        discount_type: promoForm.discount_type,
+        discount_value: parseFloat(promoForm.discount_value),
+        applicable_plans: promoForm.applicable_plans ? promoForm.applicable_plans.split(",").map((s) => s.trim()).filter(Boolean) : null,
+        applicable_billing: promoForm.applicable_billing || null,
+        max_uses: promoForm.max_uses ? parseInt(promoForm.max_uses) : null,
+        expires_at: promoForm.expires_at || null,
+      });
+      setPromoModal(false);
+      setPromoForm({ code: "", discount_type: "percentage", discount_value: "", applicable_plans: "", applicable_billing: "", max_uses: "", expires_at: "" });
+      const data = await api.get<typeof promoCodes>("/admin/promo-codes");
+      setPromoCodes(data);
+    } catch (e: any) {
+      setPromoError(e.message || "Failed to create promo code");
+    } finally {
+      setPromoSaving(false);
+    }
+  };
+
+  const togglePromo = async (id: number, active: boolean) => {
+    await api.patch(`/admin/promo-codes/${id}`, { active: !active });
+    setPromoCodes((prev) => prev.map((p) => p.id === id ? { ...p, active: !active } : p));
+  };
     const data = await api.get("/admin/audit-log");
     setLogs(data);
   }, []);
@@ -308,7 +349,7 @@ const saveBudget = async (clientId: number) => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(["clients", "audit", "leads", "approvals", "backup", "revenue"] as const).map((t) => (
+        {(["clients", "audit", "leads", "approvals", "backup", "revenue", "promo"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -316,7 +357,7 @@ const saveBudget = async (clientId: number) => {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : t === "backup" ? "🗄️ Backup" : "💰 Revenue"}
+            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : t === "backup" ? "🗄️ Backup" : t === "revenue" ? "💰 Revenue" : "🎟️ Promo Codes"}
           </button>
         ))}
       </div>
@@ -880,6 +921,190 @@ const saveBudget = async (clientId: number) => {
               </div>
             </div>
             <button onClick={() => setUsageModal(null)} className="mt-5 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 rounded-lg transition">Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Promo Codes Tab */}
+      {tab === "promo" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">{promoCodes.length} promo code{promoCodes.length !== 1 ? "s" : ""}</p>
+            <button
+              onClick={() => setPromoModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+            >
+              + Create Promo Code
+            </button>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+            {promoCodes.length === 0 ? (
+              <p className="text-center py-12 text-gray-400 text-sm">No promo codes yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Code</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Discount</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Plans</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Billing</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Uses</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Expires</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {promoCodes.map((p) => (
+                    <tr key={p.id} className={`hover:bg-gray-50 ${!p.active ? "opacity-50" : ""}`}>
+                      <td className="px-4 py-3 font-mono font-bold text-gray-900">{p.code}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {p.discount_type === "percentage"
+                          ? `${p.discount_value}% off`
+                          : `₦${(p.discount_value / 100).toLocaleString()} off`}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">
+                        {p.applicable_plans ? p.applicable_plans.join(", ") : "All plans"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs capitalize">
+                        {p.applicable_billing || "Both"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {p.uses_count}{p.max_uses !== null ? ` / ${p.max_uses}` : ""}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-400">
+                        {p.expires_at ? new Date(p.expires_at).toLocaleDateString() : "Never"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          p.active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {p.active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => togglePromo(p.id, p.active)}
+                          className={`text-xs px-3 py-1.5 rounded-lg transition font-medium ${
+                            p.active
+                              ? "bg-red-50 hover:bg-red-100 text-red-600"
+                              : "bg-green-50 hover:bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {p.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Promo Code Modal */}
+      {promoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setPromoModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Create Promo Code</h2>
+              <button onClick={() => setPromoModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            {[
+              { key: "code", label: "Code (e.g. LAUNCH50)", placeholder: "LAUNCH50" },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="text-xs text-gray-500 mb-1 block">{label}</label>
+                <input
+                  value={(promoForm as any)[key]}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, [key]: e.target.value.toUpperCase() }))}
+                  placeholder={placeholder}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Discount Type</label>
+              <select
+                value={promoForm.discount_type}
+                onChange={(e) => setPromoForm((f) => ({ ...f, discount_type: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (kobo)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">
+                {promoForm.discount_type === "percentage" ? "Discount % (e.g. 50 = 50% off)" : "Discount in kobo (e.g. 5000000 = ₦50,000 off)"}
+              </label>
+              <input
+                type="number"
+                value={promoForm.discount_value}
+                onChange={(e) => setPromoForm((f) => ({ ...f, discount_value: e.target.value }))}
+                placeholder={promoForm.discount_type === "percentage" ? "50" : "5000000"}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Applicable Plans (comma-separated, blank = all)</label>
+              <input
+                value={promoForm.applicable_plans}
+                onChange={(e) => setPromoForm((f) => ({ ...f, applicable_plans: e.target.value }))}
+                placeholder="growth, pro (blank = all plans)"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Billing (blank = both)</label>
+              <select
+                value={promoForm.applicable_billing}
+                onChange={(e) => setPromoForm((f) => ({ ...f, applicable_billing: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Both monthly & yearly</option>
+                <option value="monthly">Monthly only</option>
+                <option value="yearly">Yearly only</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Max Uses (blank = unlimited)</label>
+                <input
+                  type="number"
+                  value={promoForm.max_uses}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, max_uses: e.target.value }))}
+                  placeholder="100"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Expires At (blank = never)</label>
+                <input
+                  type="date"
+                  value={promoForm.expires_at}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, expires_at: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            {promoError && <p className="text-red-500 text-xs">{promoError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={createPromoCode}
+                disabled={promoSaving || !promoForm.code || !promoForm.discount_value}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold py-2 rounded-lg transition"
+              >
+                {promoSaving ? "Creating…" : "Create Code"}
+              </button>
+              <button
+                onClick={() => setPromoModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

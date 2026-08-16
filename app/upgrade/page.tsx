@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 
 const PLANS = [
   { key: "solo",    label: "Solo",    monthly: "₦29,999", yearly: "₦20,999", desc: "1 brand, core features" },
@@ -19,16 +19,45 @@ export default function UpgradePage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [agreedToTos, setAgreedToTos] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ valid: boolean; message: string; discounted_amount_kobo?: number; original_amount_kobo?: number; plan?: string; billing?: string } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  const validatePromo = async (planKey?: string) => {
+    if (!promoCode.trim()) return;
+    const targetPlan = planKey || selectedPlan;
+    if (!targetPlan) return;
+    setPromoLoading(true);
+    setPromoStatus(null);
+    try {
+      const res = await fetch(`${API_URL}/promo/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCode.trim(), plan: targetPlan, billing }),
+      });
+      const data = await res.json();
+      setPromoStatus({ ...data, plan: targetPlan, billing });
+    } catch {
+      setPromoStatus({ valid: false, message: "Could not validate code" });
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const currentPlanIdx = PLAN_ORDER.indexOf(client?.plan || "");
 
   const handleSelect = async (planKey: string) => {
     setError("");
+    setSelectedPlan(planKey);
     setLoading(planKey);
     try {
       const data = await api.post<{ payment_url: string; type: string }>("/auth/upgrade", {
         plan: planKey,
         billing,
+        promo_code: promoStatus?.valid && promoStatus.plan === planKey && promoStatus.billing === billing
+          ? promoCode.trim()
+          : undefined,
       });
       window.location.href = data.payment_url;
     } catch (e: any) {
@@ -72,6 +101,41 @@ export default function UpgradePage() {
           {error}
         </div>
       )}
+
+      {/* Promo Code */}
+      <div className="mb-6 max-w-sm">
+        <label className="block text-sm text-gray-400 mb-1">Promo Code <span className="text-gray-600">(optional)</span></label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={promoCode}
+            onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoStatus(null); }}
+            placeholder="e.g. LAUNCH50"
+            className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2.5 border border-gray-700 focus:outline-none focus:border-indigo-500 text-sm uppercase"
+          />
+          <button
+            type="button"
+            onClick={() => validatePromo()}
+            disabled={!promoCode.trim() || !selectedPlan || promoLoading}
+            className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white text-sm rounded-lg transition"
+          >
+            {promoLoading ? "…" : "Apply"}
+          </button>
+        </div>
+        {!selectedPlan && promoCode.trim() && (
+          <p className="text-xs text-gray-500 mt-1">Select a plan below first, then apply your code</p>
+        )}
+        {promoStatus && (
+          <p className={`text-xs mt-1.5 ${promoStatus.valid ? "text-green-400" : "text-red-400"}`}>
+            {promoStatus.valid ? "✓ " : "✗ "}{promoStatus.message}
+            {promoStatus.valid && promoStatus.original_amount_kobo && promoStatus.discounted_amount_kobo && (
+              <span className="ml-1 text-gray-400">
+                (₦{(promoStatus.original_amount_kobo / 100).toLocaleString()} → <strong className="text-green-400">₦{(promoStatus.discounted_amount_kobo / 100).toLocaleString()}</strong>)
+              </span>
+            )}
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {PLANS.map((plan, idx) => {
