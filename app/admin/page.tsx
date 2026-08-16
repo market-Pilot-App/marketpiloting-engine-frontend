@@ -88,6 +88,7 @@ export default function AdminPage() {
   const [promoForm, setPromoForm] = useState({ code: "", discount_type: "percentage", discount_value: "", applicable_plans: "", applicable_billing: "", max_uses: "", expires_at: "" });
   const [promoSaving, setPromoSaving] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [leadMagnetCount, setLeadMagnetCount] = useState<number | null>(null);
   const [pendingPosts, setPendingPosts] = useState<{ id: number; client_name: string; platform: string; scheduled_time: string; text: string; image_url: string | null }[]>([]);
   const [peakerrBalance, setPeakerrBalance] = useState<{ balance: string; currency: string } | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
@@ -144,6 +145,8 @@ export default function AdminPage() {
     await api.patch(`/admin/promo-codes/${id}`, { active: !active });
     setPromoCodes((prev) => prev.map((p) => p.id === id ? { ...p, active: !active } : p));
   };
+
+  const fetchAuditLog = useCallback(async () => {
     const data = await api.get("/admin/audit-log");
     setLogs(data);
   }, []);
