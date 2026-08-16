@@ -49,7 +49,6 @@ export default function UpgradePage() {
 
   const handleSelect = async (planKey: string) => {
     setError("");
-    setSelectedPlan(planKey);
     setLoading(planKey);
     try {
       const data = await api.post<{ payment_url: string; type: string }>("/auth/upgrade", {
@@ -142,17 +141,21 @@ export default function UpgradePage() {
           const isCurrent = plan.key === client?.plan;
           const isUpgrade = idx > currentPlanIdx;
           const isDowngrade = idx < currentPlanIdx;
+          const isSelected = selectedPlan === plan.key;
           const price = billing === "yearly" ? plan.yearly : plan.monthly;
 
           return (
             <div
               key={plan.key}
+              onClick={() => !isDowngrade && setSelectedPlan(plan.key)}
               className={`relative bg-gray-900 border rounded-2xl p-5 flex flex-col gap-4 transition ${
-                isCurrent
-                  ? "border-indigo-500 ring-1 ring-indigo-500"
-                  : isDowngrade
-                  ? "border-gray-800 opacity-40"
-                  : "border-gray-700 hover:border-indigo-400"
+                isDowngrade
+                  ? "border-gray-800 opacity-40 cursor-not-allowed"
+                  : isSelected
+                  ? "border-indigo-500 ring-2 ring-indigo-500 cursor-pointer"
+                  : isCurrent
+                  ? "border-indigo-500/50 cursor-pointer hover:border-indigo-400"
+                  : "border-gray-700 cursor-pointer hover:border-indigo-400"
               }`}
             >
               {isCurrent && (
@@ -174,18 +177,22 @@ export default function UpgradePage() {
                 <p className="text-gray-500 text-xs">/{billing === "yearly" ? "mo, billed yearly" : "month"}</p>
               </div>
               <button
-                onClick={() => !isDowngrade && handleSelect(plan.key)}
-                disabled={isDowngrade || loading === plan.key || !agreedToTos}
+                onClick={(e) => { e.stopPropagation(); !isDowngrade && agreedToTos && handleSelect(plan.key); }}
+                disabled={isDowngrade || loading === plan.key || !agreedToTos || !isSelected}
                 className={`w-full py-2 rounded-lg text-sm font-semibold transition ${
                   isDowngrade
                     ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                    : isCurrent
-                    ? "bg-indigo-900 hover:bg-indigo-800 text-indigo-300 disabled:opacity-40"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40"
+                    : isSelected
+                    ? isCurrent
+                      ? "bg-indigo-900 hover:bg-indigo-800 text-indigo-300 disabled:opacity-40"
+                      : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40"
+                    : "bg-gray-800 text-gray-500 cursor-pointer"
                 }`}
               >
                 {loading === plan.key
                   ? "Redirecting…"
+                  : !isSelected
+                  ? "Select"
                   : isCurrent
                   ? "Resubscribe"
                   : isUpgrade
