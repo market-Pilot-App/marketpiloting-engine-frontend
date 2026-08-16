@@ -32,6 +32,7 @@ export default function BrandDNAPage() {
   const [error, setError] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<Partial<BrandDNA>>({});
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
 
   const fetchDNA = async () => {
@@ -72,11 +73,12 @@ export default function BrandDNAPage() {
     }
   };
 
-  const extract = async () => {
+  const extract = async (url?: string) => {
     setExtracting(true);
     setError("");
     try {
-      const updated = await api.post<BrandDNA>("/brand-dna/extract");
+      const body = url ? { website_url: url } : {};
+      const updated = await api.post<BrandDNA>("/brand-dna/extract", body);
       setDna(updated);
       setForm(updated);
     } catch (err: unknown) {
@@ -112,7 +114,7 @@ export default function BrandDNAPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={extract}
+            onClick={() => extract()}
             disabled={extracting}
             className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition"
           >
@@ -128,15 +130,25 @@ export default function BrandDNAPage() {
       </div>
 
       {!dna ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-400 mb-4">No Brand DNA found. Extract from your website or enter manually.</p>
-          <button
-            onClick={extract}
-            disabled={extracting}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition"
-          >
-            {extracting ? "Extracting..." : "Extract from Website"}
-          </button>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
+          <p className="text-gray-400 mb-4 text-center">No Brand DNA found. Enter your website URL to extract automatically.</p>
+          {error && <p className="text-red-400 text-sm mb-3 text-center">{error}</p>}
+          <div className="flex gap-2 mb-3">
+            <input
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://yourwebsite.com"
+              className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              onClick={() => extract(websiteUrl || undefined)}
+              disabled={extracting}
+              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition whitespace-nowrap"
+            >
+              {extracting ? "Extracting..." : "Extract from Website"}
+            </button>
+          </div>
         </div>
       ) : (
         <>
