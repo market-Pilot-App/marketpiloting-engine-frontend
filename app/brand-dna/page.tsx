@@ -33,6 +33,9 @@ export default function BrandDNAPage() {
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<Partial<BrandDNA>>({});
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [manualMode, setManualMode] = useState(false);
+  const [manualForm, setManualForm] = useState({ business_name: "", description: "", tone_of_voice: "", target_audience: "", value_proposition: "", brand_keywords: "", avoid_words: "" });
+  const [submittingManual, setSubmittingManual] = useState(false);
 
 
   const fetchDNA = async () => {
@@ -131,24 +134,115 @@ export default function BrandDNAPage() {
 
       {!dna ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
-          <p className="text-gray-400 mb-4 text-center">No Brand DNA found. Enter your website URL to extract automatically.</p>
-          {error && <p className="text-red-400 text-sm mb-3 text-center">{error}</p>}
-          <div className="flex gap-2 mb-3">
-            <input
-              type="url"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              placeholder="https://yourwebsite.com"
-              className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
-            />
-            <button
-              onClick={() => extract(websiteUrl || undefined)}
-              disabled={extracting}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition whitespace-nowrap"
-            >
-              {extracting ? "Extracting..." : "Extract from Website"}
-            </button>
-          </div>
+          {!manualMode ? (
+            <>
+              <p className="text-gray-400 mb-4 text-center">No Brand DNA found. Extract from your website or enter manually.</p>
+              {error && <p className="text-red-400 text-sm mb-3 text-center">{error}</p>}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="url"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  placeholder="https://yourwebsite.com"
+                  className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={() => extract(websiteUrl || undefined)}
+                  disabled={extracting}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition whitespace-nowrap"
+                >
+                  {extracting ? "Extracting..." : "Extract from Website"}
+                </button>
+              </div>
+              <p className="text-center text-gray-500 text-sm">
+                No website?{" "}
+                <button onClick={() => setManualMode(true)} className="text-indigo-400 hover:text-indigo-300 underline">
+                  Enter Brand DNA manually
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-semibold text-white">Enter Brand DNA Manually</h2>
+                <button onClick={() => setManualMode(false)} className="text-gray-400 hover:text-white text-sm">← Back</button>
+              </div>
+              {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+              <div className="space-y-3">
+                {([
+                  ["Business Name", "business_name", "e.g. Mama Titi Kitchen"],
+                  ["Tone of Voice", "tone_of_voice", "e.g. Friendly, warm, local"],
+                  ["Target Audience", "target_audience", "e.g. Lagos families who love home-cooked meals"],
+                  ["Value Proposition", "value_proposition", "e.g. Fresh, affordable meals delivered in 30 mins"],
+                ] as [string, keyof typeof manualForm, string][]).map(([label, key, placeholder]) => (
+                  <div key={key}>
+                    <p className="text-xs text-gray-500 mb-1">{label}</p>
+                    <input
+                      value={manualForm[key]}
+                      onChange={(e) => setManualForm((f) => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Description</p>
+                  <textarea
+                    value={manualForm.description}
+                    onChange={(e) => setManualForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Brief description of your business"
+                    rows={3}
+                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">✅ Keywords to always use</p>
+                    <input
+                      value={manualForm.brand_keywords}
+                      onChange={(e) => setManualForm((f) => ({ ...f, brand_keywords: e.target.value }))}
+                      placeholder="fresh, local, affordable"
+                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">🚫 Words to never use</p>
+                    <input
+                      value={manualForm.avoid_words}
+                      onChange={(e) => setManualForm((f) => ({ ...f, avoid_words: e.target.value }))}
+                      placeholder="cheap, slow, bad"
+                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              <button
+                disabled={submittingManual}
+                onClick={async () => {
+                  setSubmittingManual(true);
+                  setError("");
+                  try {
+                    const payload = {
+                      ...manualForm,
+                      brand_keywords: manualForm.brand_keywords.split(",").map((s) => s.trim()).filter(Boolean),
+                      avoid_words: manualForm.avoid_words.split(",").map((s) => s.trim()).filter(Boolean),
+                    };
+                    const created = await api.post<BrandDNA>("/brand-dna/manual", payload);
+                    setDna(created);
+                    setForm(created);
+                    setManualMode(false);
+                  } catch (err: unknown) {
+                    setError(err instanceof Error ? err.message : "Failed to save");
+                  } finally {
+                    setSubmittingManual(false);
+                  }
+                }}
+                className="mt-5 w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition"
+              >
+                {submittingManual ? "Saving..." : "Save Brand DNA"}
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <>
