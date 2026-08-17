@@ -792,8 +792,9 @@ export default function SettingsPage() {
                 {[
                   { key: "telegram", label: "✈️ Telegram", available: true },
                   { key: "whatsapp", label: "💬 WhatsApp", available: true },
-                  { key: "facebook", label: "📘 Facebook", available: false },
-                  { key: "instagram", label: "📸 Instagram", available: false },
+                  { key: "facebook", label: "📘 Facebook", available: true },
+                  { key: "instagram", label: "📸 Instagram", available: true },
+                  { key: "twitter", label: "🐦 Twitter/X", available: true },
                 ].map((p) => (
                   <button key={p.key}
                     onClick={() => p.available && toggleArPlatform(p.key)}
@@ -806,7 +807,6 @@ export default function SettingsPage() {
                         : "border-gray-700 text-gray-400 hover:border-gray-600"
                     }`}>
                     {p.label}
-                    {!p.available && <span className="ml-1 text-xs text-gray-600">Pending Meta</span>}
                   </button>
                 ))}
               </div>
