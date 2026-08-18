@@ -331,7 +331,6 @@ function ScheduleTab({ token }: { token: string | null }) {
   const handleSubmit = async () => {
     if (!file || platforms.length === 0) return;
     setError("");
-    setUploadProgress(0);
     try {
       setStage("uploading");
       const formData = new FormData();
@@ -354,7 +353,6 @@ function ScheduleTab({ token }: { token: string | null }) {
       setFile(null);
       setYoutubeTitle("");
       setScheduledTime("");
-      setUploadProgress(0);
       await fetchJobs();
     } catch (e: any) {
       setError(e.message);
