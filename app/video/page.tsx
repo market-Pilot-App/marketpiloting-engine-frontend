@@ -292,8 +292,7 @@ function ScheduleTab({ token }: { token: string | null }) {
   const [youtubeTitle, setYoutubeTitle] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [stage, setStage] = useState<"idle" | "uploading" | "scheduling" | "done" | "error">("idle");
+  const [stage, setStage] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [error, setError] = useState("");
   const [jobs, setJobs] = useState<VideoJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
@@ -335,46 +334,26 @@ function ScheduleTab({ token }: { token: string | null }) {
     setUploadProgress(0);
     try {
       setStage("uploading");
-      const presignRes = await fetch(
-        `${API_URL}/video-queue/presign?filename=${encodeURIComponent(file.name)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!presignRes.ok) {
-        const err = await presignRes.json();
-        throw new Error(err.detail || "Failed to get upload URL");
-      }
-      const { presign_url, r2_key } = await presignRes.json();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("platforms", platforms.join(","));
+      if (scheduledTime) formData.append("scheduled_time", scheduledTime);
+      if (youtubeTitle) formData.append("youtube_title", youtubeTitle);
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-        xhr.onerror = () => reject(new Error("Upload failed — check your connection"));
-        xhr.open("PUT", presign_url);
-        xhr.send(file);
-      });
-
-      setStage("scheduling");
-      const scheduleRes = await fetch(`${API_URL}/video-queue/schedule`, {
+      const res = await fetch(`${API_URL}/video-queue/upload-and-schedule`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          r2_key,
-          platforms,
-          youtube_title: youtubeTitle || null,
-          scheduled_time: scheduledTime || null,
-        }),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
-      if (!scheduleRes.ok) {
-        const err = await scheduleRes.json();
-        throw new Error(err.detail || "Failed to schedule video");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Upload failed");
       }
 
       setStage("done");
       setFile(null);
       setYoutubeTitle("");
+      setScheduledTime("");
       setUploadProgress(0);
       await fetchJobs();
     } catch (e: any) {
@@ -459,18 +438,7 @@ function ScheduleTab({ token }: { token: string | null }) {
           <p className="text-xs text-gray-600 mt-1">Leave blank to post within ~2 minutes</p>
         </div>
 
-        {/* Progress */}
-        {stage === "uploading" && (
-          <div>
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Uploading to storage...</span><span>{uploadProgress}%</span>
-            </div>
-            <div className="w-full bg-gray-800 rounded-full h-2">
-              <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
-            </div>
-          </div>
-        )}
-        {stage === "scheduling" && <p className="text-indigo-400 text-sm animate-pulse">Scheduling job...</p>}
+        {stage === "uploading" && <p className="text-indigo-400 text-sm animate-pulse">Uploading & scheduling...</p>}
         {stage === "done" && <p className="text-green-400 text-sm">✅ Video scheduled successfully!</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
