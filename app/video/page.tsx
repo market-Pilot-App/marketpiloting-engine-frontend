@@ -336,7 +336,11 @@ function ScheduleTab({ token }: { token: string | null }) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("platforms", platforms.join(","));
-      if (scheduledTime) formData.append("scheduled_time", scheduledTime);
+      if (scheduledTime) {
+        // Convert local datetime to ISO string with timezone offset
+        const localDate = new Date(scheduledTime);
+        formData.append("scheduled_time", localDate.toISOString());
+      }
       if (youtubeTitle) formData.append("youtube_title", youtubeTitle);
 
       const res = await fetch(`${API_URL}/video-queue/upload-and-schedule`, {
@@ -433,7 +437,7 @@ function ScheduleTab({ token }: { token: string | null }) {
           <p className="text-sm text-gray-400 mb-2">Schedule for:</p>
           <input type="datetime-local" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)}
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
-          <p className="text-xs text-gray-600 mt-1">Leave blank to post within ~2 minutes</p>
+          <p className="text-xs text-gray-600 mt-1">Leave blank to post within ~2 minutes. Times are in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
         </div>
 
         {stage === "uploading" && <p className="text-indigo-400 text-sm animate-pulse">Uploading & scheduling...</p>}
