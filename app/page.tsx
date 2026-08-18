@@ -181,12 +181,15 @@ export default function DashboardPage() {
 
   const cronActions = [
     { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",        msg: "Posts triggered!" },
-    { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
     { label: "🔥 Newsjack Now",           endpoint: "/opportunities/hijack-news",  msg: "Newsjack generated!" },
     { label: "📝 Auto Blog",             endpoint: "/blog/generate",              msg: "Blog post generated!" },
     { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news", msg: "News posts generated!" },
     { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report", msg: "Report sent!" },
     { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",         msg: "Schedule filled!" },
+  ];
+
+  const adminCronActions = [
+    { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
   ];
 
   return (
@@ -481,6 +484,14 @@ export default function DashboardPage() {
                   onClick={() => runAction(a.label, a.endpoint, a.msg)}
                   disabled={actionLoading === a.label}
                   className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-xs text-white transition">
+                  {actionLoading === a.label ? "Running..." : a.label}
+                </button>
+              ))}
+              {isAdmin && adminCronActions.map((a) => (
+                <button key={a.label}
+                  onClick={() => runAction(a.label, a.endpoint, a.msg)}
+                  disabled={actionLoading === a.label}
+                  className="px-3 py-2 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 rounded-lg text-xs text-white transition">
                   {actionLoading === a.label ? "Running..." : a.label}
                 </button>
               ))}
