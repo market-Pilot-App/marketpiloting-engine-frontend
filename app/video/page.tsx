@@ -343,7 +343,7 @@ function ScheduleTab({ token }: { token: string | null }) {
         const err = await presignRes.json();
         throw new Error(err.detail || "Failed to get upload URL");
       }
-      const { presign_url, r2_key, content_type } = await presignRes.json();
+      const { presign_url, r2_key } = await presignRes.json();
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -353,7 +353,6 @@ function ScheduleTab({ token }: { token: string | null }) {
         xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
         xhr.onerror = () => reject(new Error("Upload failed — check your connection"));
         xhr.open("PUT", presign_url);
-        xhr.setRequestHeader("Content-Type", content_type);
         xhr.send(file);
       });
 
