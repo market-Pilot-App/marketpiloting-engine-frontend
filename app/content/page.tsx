@@ -79,6 +79,10 @@ export default function ContentStudio() {
   const [repurposing, setRepurposing] = useState<Record<number, boolean>>({});
   const [storyPlatform, setStoryPlatform] = useState<"instagram" | "facebook">("instagram");
   const [generatingStory, setGeneratingStory] = useState(false);
+  const [storyResult, setStoryResult] = useState<ContentItem | null>(null);
+  const [storySuccess, setStorySuccess] = useState(false);
+  const [storyPostStatus, setStoryPostStatus] = useState<PostStatus>("idle");
+  const [storyPostError, setStoryPostError] = useState("");
   const [insights, setInsights] = useState<ContentInsight[]>([]);
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
@@ -223,13 +227,40 @@ export default function ContentStudio() {
   const generateStory = async () => {
     setGeneratingStory(true);
     setGenError("");
+    setStoryResult(null);
+    setStorySuccess(false);
+    setStoryPostStatus("idle");
+    setStoryPostError("");
     try {
       const item = await api.post<ContentItem>("/content/generate-story", { platform: storyPlatform });
-      setResults((prev) => [item, ...prev]);
+      setStoryResult(item);
+      setStorySuccess(true);
+      setTimeout(() => setStorySuccess(false), 3000);
     } catch (err: unknown) {
       setGenError(err instanceof Error ? err.message : "Story generation failed");
     } finally {
       setGeneratingStory(false);
+    }
+  };
+
+  const postStory = async () => {
+    if (!storyResult) return;
+    setStoryPostStatus("posting");
+    setStoryPostError("");
+    try {
+      const res = await api.post<{ results: Record<string, { status: string; error?: string }> }>(
+        `/content/post-now/${storyResult.id}?platform=${storyResult.platform}`
+      );
+      const allFailed = Object.values(res.results).every((r) => r.status === "failed");
+      if (allFailed) {
+        setStoryPostStatus("failed");
+        setStoryPostError(Object.values(res.results)[0]?.error ?? "Post failed");
+      } else {
+        setStoryPostStatus("posted");
+      }
+    } catch (err: unknown) {
+      setStoryPostStatus("failed");
+      setStoryPostError(err instanceof Error ? err.message : "Post failed");
     }
   };
 
@@ -392,7 +423,34 @@ export default function ContentStudio() {
             >
               {generatingStory ? "Generating..." : "✨ Generate Story"}
             </button>
+            {storySuccess && <span className="text-xs text-green-400 font-medium">✓ Story generated!</span>}
             <span className="text-xs text-gray-500">Vertical format · max 8 words · auto-scheduled at 7 AM</span>
+          </div>
+        )}
+        {storyResult && (plan === "growth" || plan === "agency" || plan === "admin") && (
+          <div className="bg-gray-900 border border-purple-700 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs text-purple-400 font-semibold uppercase tracking-wide">📱 {storyResult.platform} Story</span>
+              {storyResult.image_url && (
+                <img src={storyResult.image_url} alt="" className="w-10 h-10 object-cover rounded-lg ml-auto" />
+              )}
+            </div>
+            <p className="text-sm text-white whitespace-pre-wrap mb-3">{storyResult.text}</p>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={postStory}
+                disabled={storyPostStatus === "posting" || storyPostStatus === "posted"}
+                className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+              >
+                {storyPostStatus === "posted" ? "✓ Posted" : storyPostStatus === "posting" ? "Posting..." : `Post to ${PLATFORM_CONFIG[storyResult.platform]?.emoji} ${storyResult.platform}`}
+              </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(storyResult.text)}
+                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition"
+              >Copy</button>
+              {storyPostStatus === "failed" && <span className="text-xs text-red-400">{storyPostError}</span>}
+              {storyPostStatus === "posted" && <span className="text-xs text-green-400">✓ Live</span>}
+            </div>
           </div>
         )}
 
@@ -535,7 +593,8 @@ export default function ContentStudio() {
         <div className="space-y-4">
           {results.map((item) => {
             const text = getText(item);
-            const over = text.length > charLimit;
+            const itemCharLimit = item.is_story ? (PLATFORM_CONFIG[item.platform]?.limit ?? 500) : charLimit;
+            const over = text.length > itemCharLimit;
             const status = postStatus[item.id] ?? "idle";
             return (
               <div key={item.id} className={`bg-gray-900 border rounded-xl overflow-hidden transition ${
@@ -559,7 +618,7 @@ export default function ContentStudio() {
                     />
                     <div className="flex items-center justify-between mt-1">
                       <span className={`text-xs ${over ? "text-red-400" : "text-gray-500"}`}>
-                        {text.length} / {charLimit} chars{over ? " — over limit" : ""}
+                        {text.length} / {itemCharLimit} chars{over ? " — over limit" : ""}
                       </span>
                       <span className="text-xs text-gray-600">
                         {item.is_story && <span className="text-purple-400 mr-2">📱 Story</span>}
