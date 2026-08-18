@@ -262,7 +262,7 @@ function PostNowTab({ token }: { token: string | null }) {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {r.post_url ? (
+                      {r.post_url && r.status === "posted" ? (
                         <a href={r.post_url} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline text-xs">View post →</a>
                       ) : r.error ? (
                         <span className="text-red-400 text-xs">{r.error}</span>
@@ -290,7 +290,6 @@ function ScheduleTab({ token }: { token: string | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [platforms, setPlatforms] = useState<string[]>(["facebook"]);
   const [youtubeTitle, setYoutubeTitle] = useState("");
-  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
   const [scheduledTime, setScheduledTime] = useState("");
   const [dragging, setDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -344,7 +343,7 @@ function ScheduleTab({ token }: { token: string | null }) {
         const err = await presignRes.json();
         throw new Error(err.detail || "Failed to get upload URL");
       }
-      const { presign_url, r2_key } = await presignRes.json();
+      const { presign_url, r2_key, content_type } = await presignRes.json();
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -354,7 +353,7 @@ function ScheduleTab({ token }: { token: string | null }) {
         xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
         xhr.onerror = () => reject(new Error("Upload failed — check your connection"));
         xhr.open("PUT", presign_url);
-        xhr.setRequestHeader("Content-Type", "video/*");
+        xhr.setRequestHeader("Content-Type", content_type);
         xhr.send(file);
       });
 
@@ -366,7 +365,7 @@ function ScheduleTab({ token }: { token: string | null }) {
           r2_key,
           platforms,
           youtube_title: youtubeTitle || null,
-          scheduled_time: scheduleMode === "later" && scheduledTime ? scheduledTime : null,
+          scheduled_time: scheduledTime || null,
         }),
       });
       if (!scheduleRes.ok) {
@@ -455,21 +454,10 @@ function ScheduleTab({ token }: { token: string | null }) {
 
         {/* Schedule time */}
         <div>
-          <p className="text-sm text-gray-400 mb-2">When to post:</p>
-          <div className="flex gap-3">
-            {(["now", "later"] as const).map((m) => (
-              <button key={m} onClick={() => setScheduleMode(m)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                  scheduleMode === m ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}>
-                {m === "now" ? "Post Now" : "Schedule for Later"}
-              </button>
-            ))}
-          </div>
-          {scheduleMode === "later" && (
-            <input type="datetime-local" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)}
-              className="mt-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
-          )}
+          <p className="text-sm text-gray-400 mb-2">Schedule for:</p>
+          <input type="datetime-local" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+          <p className="text-xs text-gray-600 mt-1">Leave blank to post within ~2 minutes</p>
         </div>
 
         {/* Progress */}
