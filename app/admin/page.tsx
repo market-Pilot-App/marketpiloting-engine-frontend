@@ -71,6 +71,7 @@ export default function AdminPage() {
   const [editBudget, setEditBudget] = useState<Record<number, string>>({});
   const [editBoost, setEditBoost] = useState<Record<number, string>>({});
   const [reportStatus, setReportStatus] = useState<Record<number, string>>({});
+  const [boostStatus, setBoostStatus] = useState<Record<number, string>>({});
   const [renewStatus, setRenewStatus] = useState<Record<number, string>>({});
   const [search, setSearch] = useState("");
   const [grantModal, setGrantModal] = useState<number | null>(null);
@@ -213,6 +214,17 @@ export default function AdminPage() {
     const data = await api.post(`/admin/reports/send/${clientId}`, {});
     setReportStatus((s) => ({ ...s, [clientId]: data.sent ? "sent" : "error" }));
     setTimeout(() => setReportStatus((s) => ({ ...s, [clientId]: "" })), 3000);
+  };
+
+  const runBoosts = async (clientId: number) => {
+    setBoostStatus((s) => ({ ...s, [clientId]: "running" }));
+    try {
+      await api.post(`/admin/clients/${clientId}/run-boosts`, {});
+      setBoostStatus((s) => ({ ...s, [clientId]: "done" }));
+    } catch {
+      setBoostStatus((s) => ({ ...s, [clientId]: "error" }));
+    }
+    setTimeout(() => setBoostStatus((s) => ({ ...s, [clientId]: "" })), 3000);
   };
 
 const saveBudget = async (clientId: number) => {
@@ -491,6 +503,13 @@ const saveBudget = async (clientId: number) => {
                             className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50"
                           >
                             {reportStatus[client.id] === "sending" ? "Sending…" : reportStatus[client.id] === "sent" ? "✓ Sent" : reportStatus[client.id] === "error" ? "✗ Error" : "Report"}
+                          </button>
+                          <button
+                            onClick={() => runBoosts(client.id)}
+                            disabled={boostStatus[client.id] === "running"}
+                            className="bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50"
+                          >
+                            {boostStatus[client.id] === "running" ? "Boosting…" : boostStatus[client.id] === "done" ? "✓ Boosted" : boostStatus[client.id] === "error" ? "✗ Error" : "🚀 Boost"}
                           </button>
                           {!client.active && (
                             <button
