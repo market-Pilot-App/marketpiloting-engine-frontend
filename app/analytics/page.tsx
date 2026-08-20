@@ -75,6 +75,13 @@ interface HeatmapData {
   has_data: boolean;
 }
 
+interface BenchmarkData {
+  own: { posts_30d: number; likes_30d: number; reach_30d: number };
+  industry_avg_posts_30d: number | null;
+  niche: string;
+  competitors: { id: number; url: string; social_handle: string | null; last_scraped_at: string | null }[];
+}
+
 interface RevenueData {
   total_revenue: number;
   total_sales: number;
@@ -86,7 +93,7 @@ interface RevenueData {
 export default function AnalyticsPage() {
   const [data, setData] = useState<Summary | null>(null);
   const [days, setDays] = useState(30);
-  const [activeTab, setActiveTab] = useState<"engagement" | "revenue" | "heatmap">("engagement");
+  const [activeTab, setActiveTab] = useState<"engagement" | "revenue" | "heatmap" | "benchmark" | "hashtags">("engagement");
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [aggregating, setAggregating] = useState(false);
@@ -94,6 +101,8 @@ export default function AnalyticsPage() {
   const [generating, setGenerating] = useState(false);
   const [reportReady, setReportReady] = useState(false);
   const [reportError, setReportError] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [sharing, setSharing] = useState(false);
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null | undefined>(undefined);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
@@ -101,6 +110,11 @@ export default function AnalyticsPage() {
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
   const [applyingSchedule, setApplyingSchedule] = useState(false);
+  const [benchmark, setBenchmark] = useState<BenchmarkData | null>(null);
+  const [newCompetitor, setNewCompetitor] = useState({ url: "", social_handle: "" });
+  const [addingComp, setAddingComp] = useState(false);
+  const [hashtagStats, setHashtagStats] = useState<{ hashtag: string; platform: string; uses: number }[]>([]);
+  const [hashtagPlatform, setHashtagPlatform] = useState("all");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -177,7 +191,30 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (activeTab === "heatmap") loadHeatmap(heatmapPlatform);
+    if (activeTab === "benchmark") {
+      api.get<BenchmarkData>("/analytics/competitor-benchmark").then(setBenchmark).catch(() => {});
+    }
+    if (activeTab === "hashtags") {
+      api.get<{ hashtag: string; platform: string; uses: number }[]>(`/hashtags/stats?platform=${hashtagPlatform}&limit=30`)
+        .then(setHashtagStats).catch(() => {});
+    }
   }, [activeTab, heatmapPlatform, loadHeatmap]);
+
+  const addCompetitor = async () => {
+    if (!newCompetitor.url.trim()) return;
+    setAddingComp(true);
+    try {
+      const r = await api.post<{ id: number; url: string; social_handle: string | null }>("/analytics/competitors", newCompetitor);
+      setBenchmark((b) => b ? { ...b, competitors: [...b.competitors, { ...r, last_scraped_at: null }] } : b);
+      setNewCompetitor({ url: "", social_handle: "" });
+    } catch {}
+    finally { setAddingComp(false); }
+  };
+
+  const removeCompetitor = async (id: number) => {
+    await api.del(`/analytics/competitors/${id}`);
+    setBenchmark((b) => b ? { ...b, competitors: b.competitors.filter((c) => c.id !== id) } : b);
+  };
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -189,12 +226,12 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3">
           {/* Tab switcher */}
           <div className="flex bg-gray-100 rounded-lg p-1">
-            {(["engagement", "revenue", "heatmap"] as const).map((t) => (
+            {(["engagement", "revenue", "heatmap", "benchmark", "hashtags"] as const).map((t) => (
               <button key={t} onClick={() => setActiveTab(t)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
                   activeTab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                 }`}>
-                {t === "engagement" ? "Engagement" : t === "revenue" ? "Revenue 💵" : "🔥 Heat Map"}
+                {t === "engagement" ? "Engagement" : t === "revenue" ? "Revenue 💵" : t === "heatmap" ? "🔥 Heat Map" : t === "benchmark" ? "🏆 Benchmark" : "#️⃣ Hashtags"}
               </button>
             ))}
           </div>
@@ -329,6 +366,144 @@ export default function AnalyticsPage() {
               </div>
             </>
           )}
+        </div>
+      ) : activeTab === "hashtags" ? (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">Most-used hashtags across your posts</p>
+            <select
+              value={hashtagPlatform}
+              onChange={(e) => {
+                setHashtagPlatform(e.target.value);
+                api.get<{ hashtag: string; platform: string; uses: number }[]>(`/hashtags/stats?platform=${e.target.value}&limit=30`)
+                  .then(setHashtagStats).catch(() => {});
+              }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
+            >
+              {["all", "instagram", "facebook", "twitter", "linkedin", "telegram", "tiktok"].map((p) => (
+                <option key={p} value={p} className="capitalize">{p === "all" ? "All Platforms" : p}</option>
+              ))}
+            </select>
+          </div>
+          {hashtagStats.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+              <p className="text-4xl mb-3">#️⃣</p>
+              <p className="font-semibold text-gray-900 mb-1">No hashtag data yet</p>
+              <p className="text-sm text-gray-500">Hashtags are tracked automatically when you post content. Start posting to see your top hashtags here.</p>
+            </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="space-y-2">
+                {hashtagStats.map((h, i) => {
+                  const maxUses = hashtagStats[0]?.uses || 1;
+                  const pct = Math.round((h.uses / maxUses) * 100);
+                  return (
+                    <div key={`${h.hashtag}-${h.platform}`} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400 w-5">{i + 1}</span>
+                      <span className="text-sm font-mono text-indigo-600 w-36 truncate">{h.hashtag}</span>
+                      <span className="text-xs text-gray-400 capitalize w-20">{h.platform}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-2">
+                        <div className="h-2 bg-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-600 w-12 text-right">{h.uses}x</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : activeTab === "benchmark" ? (
+        <div>
+          {/* Own stats vs industry */}
+          {benchmark && (
+            <>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {[
+                  { label: "Your Posts (30d)", value: benchmark.own.posts_30d, icon: "✍️" },
+                  { label: "Your Likes (30d)", value: benchmark.own.likes_30d, icon: "❤️" },
+                  { label: "Your Reach (30d)", value: benchmark.own.reach_30d.toLocaleString(), icon: "👁️" },
+                ].map(({ label, value, icon }) => (
+                  <div key={label} className="bg-white border border-gray-200 rounded-xl p-5">
+                    <p className="text-2xl mb-2">{icon}</p>
+                    <p className="text-2xl font-bold text-gray-900">{value}</p>
+                    <p className="text-gray-500 text-sm mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {benchmark.industry_avg_posts_30d !== null && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+                  <h2 className="font-semibold text-gray-900 mb-3">📊 Industry Comparison — {benchmark.niche}</h2>
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-indigo-600">{benchmark.own.posts_30d}</p>
+                      <p className="text-xs text-gray-500 mt-1">Your posts</p>
+                    </div>
+                    <div className="flex-1 relative h-4 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full"
+                        style={{ width: `${Math.min((benchmark.own.posts_30d / Math.max(benchmark.industry_avg_posts_30d * 2, 1)) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-gray-400">{benchmark.industry_avg_posts_30d}</p>
+                      <p className="text-xs text-gray-500 mt-1">Industry avg</p>
+                    </div>
+                  </div>
+                  <p className={`text-sm mt-3 font-medium ${
+                    benchmark.own.posts_30d >= benchmark.industry_avg_posts_30d ? "text-green-600" : "text-orange-500"
+                  }`}>
+                    {benchmark.own.posts_30d >= benchmark.industry_avg_posts_30d
+                      ? `✅ You're posting ${(benchmark.own.posts_30d - benchmark.industry_avg_posts_30d).toFixed(1)} more posts than average`
+                      : `⚠️ You're posting ${(benchmark.industry_avg_posts_30d - benchmark.own.posts_30d).toFixed(1)} fewer posts than average`}
+                  </p>
+                </div>
+              )}
+
+              {/* Competitors list */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <h2 className="font-semibold text-gray-900 mb-4">🏁 Tracked Competitors</h2>
+                {benchmark.competitors.length === 0 ? (
+                  <p className="text-sm text-gray-400 mb-4">No competitors tracked yet. Add one below.</p>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    {benchmark.competitors.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{c.url}</p>
+                          {c.social_handle && <p className="text-xs text-gray-500">{c.social_handle}</p>}
+                        </div>
+                        <button onClick={() => removeCompetitor(c.id)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={newCompetitor.url}
+                    onChange={(e) => setNewCompetitor((p) => ({ ...p, url: e.target.value }))}
+                    placeholder="Competitor website URL"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-indigo-400"
+                  />
+                  <input
+                    value={newCompetitor.social_handle}
+                    onChange={(e) => setNewCompetitor((p) => ({ ...p, social_handle: e.target.value }))}
+                    placeholder="@handle (optional)"
+                    className="w-40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    onClick={addCompetitor}
+                    disabled={addingComp || !newCompetitor.url.trim()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {addingComp ? "Adding..." : "Add"}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          {!benchmark && <p className="text-sm text-gray-400">Loading benchmark data...</p>}
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading analytics…</div>
@@ -609,6 +784,22 @@ export default function AnalyticsPage() {
                     className="text-sm text-indigo-600 hover:underline font-medium"
                   >
                     ⬇ Download PDF
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setSharing(true);
+                      try {
+                        const r = await api.post<{ url: string }>("/analytics/report/share");
+                        setShareUrl(r.url);
+                        await navigator.clipboard.writeText(r.url);
+                        alert("✅ Share link copied to clipboard!");
+                      } catch { alert("Failed to generate share link"); }
+                      finally { setSharing(false); }
+                    }}
+                    disabled={sharing}
+                    className="text-sm text-green-600 hover:underline font-medium disabled:opacity-50"
+                  >
+                    {sharing ? "Generating..." : "🔗 Share Report"}
                   </button>
                   <button
                     onClick={generateReport}

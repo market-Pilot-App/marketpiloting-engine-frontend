@@ -52,6 +52,10 @@ export default function CatalogPage() {
   const [postNowPlatforms, setPostNowPlatforms] = useState<string[]>([]);
   const [postingNow, setPostingNow] = useState(false);
   const [postNowMsg, setPostNowMsg] = useState("");
+  const [captionItem, setCaptionItem] = useState<Item | null>(null);
+  const [captionPlatform, setCaptionPlatform] = useState("instagram");
+  const [caption, setCaption] = useState("");
+  const [generatingCaption, setGeneratingCaption] = useState(false);
 
   const load = async () => {
     try { setItems(await api.get<Item[]>("/catalog/")); }
@@ -457,6 +461,12 @@ export default function CatalogPage() {
                   >
                     📤 Post Now
                   </button>
+                  <button
+                    onClick={() => { setCaptionItem(p); setCaption(""); setCaptionPlatform("instagram"); }}
+                    className="text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 px-3 py-1 rounded-lg transition"
+                  >
+                    ✨ Caption
+                  </button>
                   <button onClick={() => del(p.id)} className="text-xs text-red-500 hover:text-red-400 px-2 py-1 rounded transition">Delete</button>
                 </div>
               </div>
@@ -496,6 +506,54 @@ export default function CatalogPage() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* AI Caption Modal */}
+      {captionItem && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="font-semibold mb-1">✨ AI Caption Generator</h3>
+            <p className="text-gray-400 text-xs mb-4">Generate a caption for <span className="text-white">{captionItem.name}</span></p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {["instagram", "facebook", "twitter", "linkedin", "telegram"].map((pl) => (
+                <button key={pl}
+                  onClick={() => setCaptionPlatform(pl)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition capitalize ${
+                    captionPlatform === pl
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+                  }`}
+                >{pl}</button>
+              ))}
+            </div>
+            <button
+              onClick={async () => {
+                setGeneratingCaption(true); setCaption("");
+                try {
+                  const r = await api.post<{ caption: string }>(`/catalog/${captionItem.id}/generate-caption`, { platform: captionPlatform });
+                  setCaption(r.caption);
+                } catch { setCaption("Failed to generate caption."); }
+                finally { setGeneratingCaption(false); }
+              }}
+              disabled={generatingCaption}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm rounded-lg transition mb-3"
+            >
+              {generatingCaption ? "Generating..." : "✨ Generate Caption"}
+            </button>
+            {caption && (
+              <div className="bg-gray-800 rounded-lg p-3 mb-3">
+                <p className="text-sm text-gray-200 whitespace-pre-wrap">{caption}</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(caption); }}
+                  className="mt-2 text-xs text-indigo-400 hover:text-indigo-300"
+                >📋 Copy</button>
+              </div>
+            )}
+            <button onClick={() => { setCaptionItem(null); setCaption(""); }}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded-lg transition">
+              Close
+            </button>
           </div>
         </div>
       )}

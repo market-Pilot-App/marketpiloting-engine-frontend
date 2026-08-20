@@ -44,6 +44,24 @@ export default function SchedulerPage() {
   const [fillResult, setFillResult] = useState<string>("");
   const [recycleModal, setRecycleModal] = useState<{ postId: number; enabled: boolean; interval: number } | null>(null);
   const [recycleSaving, setRecycleSaving] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [approvalSaving, setApprovalSaving] = useState(false);
+
+  useEffect(() => {
+    api.get<{ require_post_approval: boolean }>("/campaigns/me/approval")
+      .then((d) => setApprovalRequired(d.require_post_approval))
+      .catch(() => {});
+  }, []);
+
+  const toggleApproval = async () => {
+    setApprovalSaving(true);
+    try {
+      const next = !approvalRequired;
+      await api.patch("/campaigns/me/approval", { require_post_approval: next });
+      setApprovalRequired(next);
+    } catch {}
+    finally { setApprovalSaving(false); }
+  };
 
   const fetchQueue = async (status?: string) => {
     setLoading(true);
@@ -181,7 +199,24 @@ export default function SchedulerPage() {
         <p className="text-sm text-green-400 mb-4">{fillResult}</p>
       )}
 
-      {/* Filter tabs */}
+      {/* Approval toggle */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 mb-5 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-white">Require Post Approval</p>
+          <p className="text-xs text-gray-400 mt-0.5">When on, new scheduled posts wait for your approval before going live</p>
+        </div>
+        <button
+          onClick={toggleApproval}
+          disabled={approvalSaving}
+          className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${
+            approvalRequired ? "bg-indigo-600" : "bg-gray-700"
+          }`}
+        >
+          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+            approvalRequired ? "translate-x-5" : "translate-x-0.5"
+          }`} />
+        </button>
+      </div>
       <div className="flex gap-2 mb-5">
         {["all", "queued", "posted", "failed"].map((f) => (
           <button

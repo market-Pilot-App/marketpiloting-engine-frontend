@@ -27,6 +27,7 @@ const NAV = [
   { href: "/bio-settings", label: "Link-in-Bio", icon: "🔗" },
   { href: "/testimonials", label: "Testimonials", icon: "⭐" },
   { href: "/ads", label: "Ad Generator", icon: "🎯" },
+  { href: "/whatsapp", label: "WA Broadcast", icon: "📲" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
