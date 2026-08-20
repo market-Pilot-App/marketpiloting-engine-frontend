@@ -17,6 +17,8 @@ interface Item {
   service_area: string | null;
   booking_cta: string | null;
   image_url: string | null;
+  images: string[];
+  video_url: string | null;
   auto_post: boolean;
   auto_boost: boolean;
   last_promoted_at: string | null;
@@ -30,7 +32,7 @@ const emptyForm = {
   item_type: "product",
   name: "", description: "", price: "", currency: "NGN",
   unit: "", promo_price: "", promo_starts_at: "", promo_ends_at: "",
-  service_area: "", booking_cta: "",
+  service_area: "", booking_cta: "", video_url: "",
 };
 
 export default function CatalogPage() {
@@ -46,6 +48,10 @@ export default function CatalogPage() {
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadId, setPendingUploadId] = useState<number | null>(null);
+  const [postNowItem, setPostNowItem] = useState<Item | null>(null);
+  const [postNowPlatforms, setPostNowPlatforms] = useState<string[]>([]);
+  const [postingNow, setPostingNow] = useState(false);
+  const [postNowMsg, setPostNowMsg] = useState("");
 
   const load = async () => {
     try { setItems(await api.get<Item[]>("/catalog/")); }
@@ -67,6 +73,7 @@ export default function CatalogPage() {
       promo_ends_at: p.promo_ends_at ? p.promo_ends_at.slice(0, 16) : "",
       service_area: p.service_area || "",
       booking_cta: p.booking_cta || "",
+      video_url: p.video_url || "",
     });
     setShowForm(true);
     setError("");
@@ -92,6 +99,7 @@ export default function CatalogPage() {
         payload.service_area = form.service_area || null;
         payload.booking_cta = form.booking_cta || null;
       }
+      payload.video_url = form.video_url || null;
       if (editId) await api.patch(`/catalog/${editId}`, payload);
       else await api.post("/catalog/", payload);
       setShowForm(false);
@@ -139,6 +147,24 @@ export default function CatalogPage() {
       setUploadingId(null);
       setPendingUploadId(null);
     }
+  };
+
+  const deleteImage = async (id: number, index: number) => {
+    await api.del(`/catalog/${id}/images/${index}`);
+    await load();
+  };
+
+  const postNow = async () => {
+    if (!postNowItem || postNowPlatforms.length === 0) return;
+    setPostingNow(true); setPostNowMsg("");
+    try {
+      const r = await api.post(`/catalog/${postNowItem.id}/post-now`, { platforms: postNowPlatforms }) as { posts_queued?: number };
+      setPostNowMsg(`✓ Queued for ${r.posts_queued} platform${(r.posts_queued ?? 0) > 1 ? "s" : ""}`);
+      setTimeout(() => { setPostNowItem(null); setPostNowMsg(""); setPostNowPlatforms([]); }, 3000);
+      await load();
+    } catch (e: unknown) {
+      setPostNowMsg(e instanceof Error ? e.message : "Failed");
+    } finally { setPostingNow(false); }
   };
 
   const toggleAutoPost = async (item: Item) => {
@@ -271,6 +297,13 @@ export default function CatalogPage() {
               </div>
             )}
 
+            <div className="border-t border-gray-800 pt-3">
+              <p className="text-xs text-gray-500 mb-1">🎥 Video URL <span className="text-gray-600">(optional — Cloudinary or direct link)</span></p>
+              <input value={form.video_url} onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
+                placeholder="https://res.cloudinary.com/..."
+                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-700 text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+
             <div className="flex gap-2 pt-1">
               <button onClick={save} disabled={saving}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
@@ -309,23 +342,35 @@ export default function CatalogPage() {
               p.available ? "border-gray-800" : "border-gray-800 opacity-50"
             }${ (p.auto_post || p.auto_boost) ? " ring-1 ring-indigo-500/40" : ""}`}>
               <div className="flex gap-4 p-4">
-                {/* Product image */}
-                <div className="shrink-0">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name}
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-700" />
-                  ) : (
-                    <div className="w-20 h-20 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center text-gray-600 text-xs text-center px-1">
-                      No image
-                    </div>
+                {/* Product images — up to 4 */}
+                <div className="shrink-0 w-20">
+                  <div className="grid grid-cols-2 gap-1">
+                    {(p.images && p.images.length > 0 ? p.images : p.image_url ? [p.image_url] : []).map((url, i) => (
+                      <div key={i} className="relative group">
+                        <img src={url} alt={`${p.name} ${i + 1}`}
+                          className="w-9 h-9 object-cover rounded border border-gray-700" />
+                        <button
+                          onClick={() => deleteImage(p.id, i)}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center leading-none"
+                        >×</button>
+                      </div>
+                    ))}
+                    {((p.images?.length ?? (p.image_url ? 1 : 0)) < 4) && (
+                      <button
+                        onClick={() => { setPendingUploadId(p.id); fileInputRef.current?.click(); }}
+                        disabled={uploadingId === p.id}
+                        className="w-9 h-9 bg-gray-800 border border-dashed border-gray-600 rounded flex items-center justify-center text-gray-500 text-lg hover:border-indigo-500 hover:text-indigo-400 disabled:opacity-50 transition"
+                      >
+                        {uploadingId === p.id ? <span className="text-xs">...</span> : "+"}
+                      </button>
+                    )}
+                  </div>
+                  {p.video_url && (
+                    <a href={p.video_url} target="_blank" rel="noreferrer"
+                      className="mt-1 block text-xs text-center text-purple-400 hover:text-purple-300 truncate">
+                      🎥 Video
+                    </a>
                   )}
-                  <button
-                    onClick={() => { setPendingUploadId(p.id); fileInputRef.current?.click(); }}
-                    disabled={uploadingId === p.id}
-                    className="mt-1 w-20 text-xs text-center text-indigo-400 hover:text-indigo-300 disabled:opacity-50 transition"
-                  >
-                    {uploadingId === p.id ? "Uploading..." : p.image_url ? "Change" : "+ Image"}
-                  </button>
                 </div>
 
                 {/* Info */}
@@ -406,11 +451,52 @@ export default function CatalogPage() {
                   >
                     {promoting === p.id ? "Promoting..." : "🚀 Promote"}
                   </button>
+                  <button
+                    onClick={() => { setPostNowItem(p); setPostNowPlatforms([]); setPostNowMsg(""); }}
+                    className="text-xs bg-green-600/20 hover:bg-green-600/40 text-green-400 px-3 py-1 rounded-lg transition"
+                  >
+                    📤 Post Now
+                  </button>
                   <button onClick={() => del(p.id)} className="text-xs text-red-500 hover:text-red-400 px-2 py-1 rounded transition">Delete</button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Self-Post Modal */}
+      {postNowItem && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="font-semibold mb-1">📤 Post Now</h3>
+            <p className="text-gray-400 text-xs mb-4">Select platforms to post <span className="text-white">{postNowItem.name}</span> immediately</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {["facebook", "instagram", "linkedin", "telegram", "twitter"].map((pl) => (
+                <button key={pl}
+                  onClick={() => setPostNowPlatforms((prev) =>
+                    prev.includes(pl) ? prev.filter((x) => x !== pl) : [...prev, pl]
+                  )}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition capitalize ${
+                    postNowPlatforms.includes(pl)
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+                  }`}
+                >{pl}</button>
+              ))}
+            </div>
+            {postNowMsg && <p className={`text-xs mb-3 ${postNowMsg.startsWith("✓") ? "text-green-400" : "text-red-400"}`}>{postNowMsg}</p>}
+            <div className="flex gap-2">
+              <button onClick={postNow} disabled={postingNow || postNowPlatforms.length === 0}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm py-2 rounded-lg transition">
+                {postingNow ? "Posting..." : `Post to ${postNowPlatforms.length || ""} platform${postNowPlatforms.length !== 1 ? "s" : ""}`}
+              </button>
+              <button onClick={() => { setPostNowItem(null); setPostNowPlatforms([]); setPostNowMsg(""); }}
+                className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
