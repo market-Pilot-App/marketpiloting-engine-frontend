@@ -36,6 +36,7 @@ const AGENCY_NAV = [
   { href: "/agency-settings", label: "Agency Branding", icon: "🎨" },
   { href: "/team", label: "Team", icon: "👥" },
 ];
+const LOCATIONS_NAV = { href: "/locations", label: "Locations", icon: "📍" };
 const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
 interface CampaignSummary { id: number; name: string; niche: string; }
@@ -51,6 +52,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const { client, isAdmin, logout, switchBrand } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
   const isVideoAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
+  const isLocationAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
   const showUpgrade = !isAdmin && client?.plan !== "agency" && client?.plan !== "pro";
 
   const [collapsed, setCollapsed] = useState(false);
@@ -69,6 +71,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const allNav = [
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
+    ...(isLocationAllowed ? [LOCATIONS_NAV] : []),
     ...(isAgency ? AGENCY_NAV : []),
   ];
 
