@@ -87,7 +87,6 @@ interface ROIData {
   business_name: string;
   plan: string;
   subscription_cost: number;
-  boost_spend_ngn: number;
   total_spend: number;
   direct_revenue: number;
   reach_value: number;
@@ -105,7 +104,6 @@ interface ROIData {
     like_value_ngn: number;
     comment_value_ngn: number;
     click_value_ngn: number;
-    usd_to_ngn_rate: number;
   };
 }
 
@@ -432,18 +430,14 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Spend breakdown */}
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <h2 className="font-semibold text-gray-900 mb-4">💸 What You Spent</h2>
+                    <h2 className="font-semibold text-gray-900 mb-4">💸 Your Investment This Month</h2>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">{roi.plan.charAt(0).toUpperCase() + roi.plan.slice(1)} Plan (monthly)</span>
+                        <span className="text-sm text-gray-600">{roi.plan.charAt(0).toUpperCase() + roi.plan.slice(1)} Plan subscription</span>
                         <span className="font-semibold text-gray-900">₦{roi.subscription_cost.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Boost spend</span>
-                        <span className="font-semibold text-gray-900">₦{roi.boost_spend_ngn.toLocaleString()}</span>
-                      </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-bold text-gray-900">Total Spend</span>
+                        <span className="text-sm font-bold text-gray-900">Total Investment</span>
                         <span className="text-lg font-black text-gray-900">₦{roi.total_spend.toLocaleString()}</span>
                       </div>
                     </div>
@@ -507,7 +501,6 @@ export default function AnalyticsPage() {
                       <p>• <strong>Like value</strong>: ₦{roi.methodology.like_value_ngn} per like (cost to buy equivalent engagement)</p>
                       <p>• <strong>Comment value</strong>: ₦{roi.methodology.comment_value_ngn} per comment</p>
                       <p>• <strong>Click value</strong>: ₦{roi.methodology.click_value_ngn} per click</p>
-                      <p>• <strong>Boost spend conversion</strong>: USD × ₦{roi.methodology.usd_to_ngn_rate} exchange rate</p>
                       <p>• <strong>Direct revenue</strong>: only counted if you have Paystack revenue tracking connected in Settings</p>
                       <p className="text-gray-400 pt-2">Estimated values are based on Nigerian digital marketing benchmarks. Actual results may vary.</p>
                     </div>
