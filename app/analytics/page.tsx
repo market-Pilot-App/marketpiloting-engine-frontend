@@ -89,21 +89,19 @@ interface ROIData {
   subscription_cost: number;
   total_spend: number;
   direct_revenue: number;
-  reach_value: number;
-  engagement_value: number;
+  boost_engagement_value: number;
+  boost_value_breakdown: Record<string, { quantity: number; value_ngn: number }>;
   total_estimated_value: number;
   roi_multiplier: number;
   posts_count: number;
-  reach: number;
-  likes: number;
-  comments: number;
-  clicks: number;
+  total_boosted_likes: number;
+  total_boosted_views: number;
+  total_boosted_followers: number;
   narrative: string;
   methodology: {
-    reach_cpm_ngn: number;
-    like_value_ngn: number;
-    comment_value_ngn: number;
-    click_value_ngn: number;
+    likes_value_ngn: number;
+    views_value_ngn: number;
+    followers_value_ngn: number;
   };
 }
 
@@ -405,104 +403,123 @@ export default function AnalyticsPage() {
       ) : activeTab === "roi" ? (
         <div>
           {roiLoading ? (
-            <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Calculating your ROI…</div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-500">Calculating your ROI…</p>
+              </div>
+            </div>
           ) : !roiData ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-              <p className="text-4xl mb-3">📈</p>
+            <div className="bg-white border border-gray-100 rounded-2xl p-16 text-center">
+              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">📈</span>
+              </div>
               <p className="font-semibold text-gray-900 mb-1">No ROI data yet</p>
-              <p className="text-sm text-gray-500">Post content and let MarketPilot track engagement. Your ROI will appear once posts go live.</p>
+              <p className="text-sm text-gray-400 max-w-xs mx-auto">Your ROI will appear once MarketPilot starts boosting your posts.</p>
             </div>
           ) : (() => {
             const roi = roiData;
-            const multiplierColor = roi.roi_multiplier >= 3 ? "text-green-600" : roi.roi_multiplier >= 1 ? "text-yellow-600" : "text-red-500";
-            const multiplierBg = roi.roi_multiplier >= 3 ? "bg-green-50 border-green-200" : roi.roi_multiplier >= 1 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200";
+            const isGood = roi.roi_multiplier >= 2;
+            const isOk = roi.roi_multiplier >= 1;
+            const multiplierColor = isGood ? "text-emerald-600" : isOk ? "text-amber-500" : "text-red-500";
+            const heroBg = isGood ? "from-emerald-50 to-white border-emerald-100" : isOk ? "from-amber-50 to-white border-amber-100" : "from-red-50 to-white border-red-100";
+            const badge = isGood ? "bg-emerald-100 text-emerald-700" : isOk ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+            const badgeText = isGood ? "Strong ROI" : isOk ? "Positive ROI" : "Building up";
             return (
               <div className="space-y-4">
-                {/* Hero ROI number */}
-                <div className={`border rounded-2xl p-8 text-center ${multiplierBg}`}>
-                  <p className="text-sm font-medium text-gray-500 mb-1">{roi.month} · {roi.business_name}</p>
-                  <p className={`text-7xl font-black mb-2 ${multiplierColor}`}>{roi.roi_multiplier}x</p>
-                  <p className="text-lg font-semibold text-gray-700">Return on Investment</p>
-                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">{roi.narrative}</p>
-                </div>
-
-                {/* Spend vs Value cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Spend breakdown */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <h2 className="font-semibold text-gray-900 mb-4">💸 Your Investment This Month</h2>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">{roi.plan.charAt(0).toUpperCase() + roi.plan.slice(1)} Plan subscription</span>
-                        <span className="font-semibold text-gray-900">₦{roi.subscription_cost.toLocaleString()}</span>
+                {/* Hero banner */}
+                <div className={`bg-gradient-to-br ${heroBg} border rounded-2xl p-8`}>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge}`}>{badgeText}</span>
+                        <span className="text-xs text-gray-400">{roi.month} · {roi.business_name}</span>
                       </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-bold text-gray-900">Total Investment</span>
-                        <span className="text-lg font-black text-gray-900">₦{roi.total_spend.toLocaleString()}</span>
-                      </div>
+                      <p className={`text-6xl font-black tracking-tight ${multiplierColor}`}>{roi.roi_multiplier}x</p>
+                      <p className="text-base font-medium text-gray-600 mt-1">Return on Investment</p>
+                      <p className="text-sm text-gray-500 mt-3 max-w-lg leading-relaxed">{roi.narrative}</p>
                     </div>
-                  </div>
-
-                  {/* Value breakdown */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <h2 className="font-semibold text-gray-900 mb-4">💰 Estimated Value Generated</h2>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Direct revenue (Paystack)</span>
-                        <span className="font-semibold text-gray-900">₦{roi.direct_revenue.toLocaleString()}</span>
+                    <div className="flex flex-col gap-3 md:items-end shrink-0">
+                      <div className="bg-white border border-gray-100 rounded-xl px-5 py-3 text-center shadow-sm">
+                        <p className="text-xs text-gray-400 mb-0.5">You invested</p>
+                        <p className="text-xl font-bold text-gray-900">₦{roi.total_spend.toLocaleString()}</p>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Organic reach value ({roi.reach.toLocaleString()} reach)</span>
-                        <span className="font-semibold text-gray-900">₦{roi.reach_value.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Engagement value ({roi.likes} likes, {roi.comments} comments)</span>
-                        <span className="font-semibold text-gray-900">₦{roi.engagement_value.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-bold text-gray-900">Total Estimated Value</span>
-                        <span className="text-lg font-black text-green-600">₦{roi.total_estimated_value.toLocaleString()}</span>
+                      <div className="bg-white border border-gray-100 rounded-xl px-5 py-3 text-center shadow-sm">
+                        <p className="text-xs text-gray-400 mb-0.5">Estimated value</p>
+                        <p className="text-xl font-bold text-emerald-600">₦{roi.total_estimated_value.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Activity summary */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5">
-                  <h2 className="font-semibold text-gray-900 mb-4">📊 This Month's Activity</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                      { label: "Posts Published", value: roi.posts_count, icon: "✍️" },
-                      { label: "Organic Reach",   value: roi.reach.toLocaleString(), icon: "👁️" },
-                      { label: "Total Likes",     value: roi.likes.toLocaleString(), icon: "❤️" },
-                      { label: "Total Comments",  value: roi.comments.toLocaleString(), icon: "💬" },
-                    ].map(({ label, value, icon }) => (
-                      <div key={label} className="bg-gray-50 rounded-lg p-4 text-center">
-                        <p className="text-xl mb-1">{icon}</p>
-                        <p className="text-xl font-bold text-gray-900">{value}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                {/* Value breakdown */}
+                <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Value Breakdown</h3>
+                  <div className="space-y-3">
+                    {/* Boost delivered value per service type */}
+                    {Object.entries(roi.boost_value_breakdown).map(([stype, data]) => (
+                      <div key={stype} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-sm">
+                            {stype === "likes" ? "❤️" : stype === "views" ? "👁️" : stype === "followers" ? "👥" : stype === "subscribers" ? "🔔" : "🌐"}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800 capitalize">{stype} delivered</p>
+                            <p className="text-xs text-gray-400">{data.quantity.toLocaleString()} {stype} × ₦{roi.methodology[`${stype}_value_ngn` as keyof typeof roi.methodology] ?? "—"} each</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">₦{data.value_ngn.toLocaleString()}</span>
                       </div>
                     ))}
+                    {roi.direct_revenue > 0 && (
+                      <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-sm">💳</div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Direct revenue</p>
+                            <p className="text-xs text-gray-400">Via Paystack</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">₦{roi.direct_revenue.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-3">
+                      <span className="text-sm font-bold text-gray-900">Total Estimated Value</span>
+                      <span className="text-lg font-black text-emerald-600">₦{roi.total_estimated_value.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Methodology explainer */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-                  <button
-                    onClick={() => setRoiMethodologyOpen((o) => !o)}
-                    className="flex items-center justify-between w-full text-left"
-                  >
-                    <span className="text-sm font-semibold text-gray-700">🔍 How is this calculated?</span>
-                    <span className="text-gray-400 text-sm">{roiMethodologyOpen ? "▲ Hide" : "▼ Show"}</span>
+                {/* Activity stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Posts Published",   value: roi.posts_count.toLocaleString(),            icon: "✍️",  color: "bg-indigo-50" },
+                    { label: "Likes Delivered",   value: roi.total_boosted_likes.toLocaleString(),    icon: "❤️",  color: "bg-pink-50" },
+                    { label: "Views Delivered",   value: roi.total_boosted_views.toLocaleString(),    icon: "👁️",  color: "bg-blue-50" },
+                    { label: "Followers Gained",  value: roi.total_boosted_followers.toLocaleString(), icon: "👥",  color: "bg-emerald-50" },
+                  ].map(({ label, value, icon, color }) => (
+                    <div key={label} className="bg-white border border-gray-100 rounded-xl p-4">
+                      <div className={`w-9 h-9 ${color} rounded-lg flex items-center justify-center text-base mb-3`}>{icon}</div>
+                      <p className="text-2xl font-bold text-gray-900">{value}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Methodology */}
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                  <button onClick={() => setRoiMethodologyOpen((o) => !o)}
+                    className="flex items-center justify-between w-full text-left">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">How is this calculated?</span>
+                    <span className="text-gray-400 text-xs">{roiMethodologyOpen ? "Hide ▲" : "Show ▼"}</span>
                   </button>
                   {roiMethodologyOpen && (
-                    <div className="mt-4 space-y-2 text-sm text-gray-600">
-                      <p>• <strong>Organic reach value</strong>: reach ÷ 1,000 × ₦{roi.methodology.reach_cpm_ngn} CPM (Nigerian paid ad equivalent)</p>
-                      <p>• <strong>Like value</strong>: ₦{roi.methodology.like_value_ngn} per like (cost to buy equivalent engagement)</p>
-                      <p>• <strong>Comment value</strong>: ₦{roi.methodology.comment_value_ngn} per comment</p>
-                      <p>• <strong>Click value</strong>: ₦{roi.methodology.click_value_ngn} per click</p>
-                      <p>• <strong>Direct revenue</strong>: only counted if you have Paystack revenue tracking connected in Settings</p>
-                      <p className="text-gray-400 pt-2">Estimated values are based on Nigerian digital marketing benchmarks. Actual results may vary.</p>
+                    <div className="mt-3 space-y-1.5 text-xs text-gray-500">
+                      <p>• <strong>Likes</strong>: ₦{roi.methodology.likes_value_ngn} per like (Nigerian agency retail rate)</p>
+                      <p>• <strong>Views</strong>: ₦{roi.methodology.views_value_ngn} per view</p>
+                      <p>• <strong>Followers</strong>: ₦{roi.methodology.followers_value_ngn} per follower</p>
+                      <p>• <strong>Direct revenue</strong>: counted only if Paystack revenue tracking is connected in Settings</p>
+                      <p className="text-gray-400 pt-1">Values reflect standard Nigerian social media agency pricing benchmarks.</p>
                     </div>
                   )}
                 </div>
