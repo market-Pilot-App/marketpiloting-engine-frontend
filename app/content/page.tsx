@@ -629,6 +629,18 @@ export default function ContentStudio() {
                 </div>
 
                 <div className="flex items-center gap-2 px-4 pb-4 flex-wrap">
+                  {platform === "tiktok" ? (
+                    // TikTok: copy-only — no posting integration
+                    <>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(text)}
+                        className="px-3 py-1.5 bg-pink-700 hover:bg-pink-600 text-white text-xs font-semibold rounded-lg transition">
+                        📋 Copy for TikTok
+                      </button>
+                      <span className="text-xs text-gray-500">TikTok captions are copy-only — paste directly into the TikTok app</span>
+                    </>
+                  ) : (
+                    <>
                   <button
                     onClick={() => postTo(item, platform)}
                     disabled={status === "posting" || status === "posted"}
@@ -646,6 +658,8 @@ export default function ContentStudio() {
                     className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition">
                     Copy
                   </button>
+                    </>
+                  )}
                   {/* Repurpose */}
                   <div className="flex items-center gap-1 ml-auto">
                     <select
