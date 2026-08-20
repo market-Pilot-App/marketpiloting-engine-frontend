@@ -87,7 +87,17 @@ export default function ContentStudio() {
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
 
   const [hasPerformanceData, setHasPerformanceData] = useState(false);
-  const [tab, setTab] = useState<"generate" | "repurpose" | "offer">("generate");
+  const [tab, setTab] = useState<"generate" | "repurpose" | "offer" | "templates">("generate");
+
+  // Templates state
+  interface TemplateAngle { key: string; label: string; }
+  interface IndustryTemplate { industry: string; display_name: string; emoji: string; angles: TemplateAngle[]; sample_post: string; }
+  const [templates, setTemplates] = useState<IndustryTemplate[]>([]);
+  const [selectedIndustry, setSelectedIndustry] = useState<IndustryTemplate | null>(null);
+  const [templatePlatform, setTemplatePlatform] = useState("facebook");
+  const [templateLang, setTemplateLang] = useState("en");
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateError, setTemplateError] = useState("");
   // Offer Creator state
   const [offerProduct, setOfferProduct] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
@@ -131,6 +141,7 @@ export default function ContentStudio() {
     api.get<{ niche?: string }>("/campaigns/me").then((d) => { if (d.niche) setNiche(d.niche); }).catch(() => {});
     // Check if performance data exists for closed-loop badge
     api.get<{ has_data: boolean }>("/content/has-performance-data").then((d) => { if (d.has_data) setHasPerformanceData(true); }).catch(() => {});
+    api.get<IndustryTemplate[]>("/content/templates").then(setTemplates).catch(() => {});
     // Load conversation insights
     api.get<ContentInsight[]>("/insights/").then(setInsights).catch(() => {});
   }, []);
@@ -327,15 +338,109 @@ export default function ContentStudio() {
 
       {/* Tab switcher */}
       <div className="flex gap-2 mb-6">
-        {(["generate", "repurpose", "offer"] as const).map((t) => (
+        {(["generate", "templates", "repurpose", "offer"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
               tab === t ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
             }`}>
-            {t === "generate" ? "✨ Generate" : t === "repurpose" ? "♻️ Repurpose" : "🎯 Offer Creator"}
+            {t === "generate" ? "✨ Generate" : t === "templates" ? "🏭 Templates" : t === "repurpose" ? "♻️ Repurpose" : "🎯 Offer Creator"}
           </button>
         ))}
       </div>
+
+      {/* Templates tab */}
+      {tab === "templates" && (
+        <div className="space-y-6">
+          {!selectedIndustry ? (
+            <>
+              <p className="text-sm text-gray-400">Pick your industry — we'll generate one post per content angle, pre-tuned for your brand.</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {templates.map((t) => (
+                  <button key={t.industry} onClick={() => { setSelectedIndustry(t); setTemplateError(""); }}
+                    className="bg-gray-900 border border-gray-800 hover:border-indigo-600 rounded-xl p-4 text-left transition group">
+                    <div className="text-3xl mb-2">{t.emoji}</div>
+                    <p className="text-sm font-semibold text-white group-hover:text-indigo-300">{t.display_name}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t.angles.length} angles</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSelectedIndustry(null)} className="text-gray-400 hover:text-white text-sm transition">← Back</button>
+                <span className="text-lg">{selectedIndustry.emoji}</span>
+                <h2 className="text-white font-bold">{selectedIndustry.display_name}</h2>
+              </div>
+
+              {/* Sample post preview */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Sample post style</p>
+                <p className="text-sm text-gray-300">{selectedIndustry.sample_post}</p>
+              </div>
+
+              {/* Angles list */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Content angles in this pack</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedIndustry.angles.map((a) => (
+                    <span key={a.key} className="px-3 py-1.5 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs rounded-full">{a.label}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Platform + language selectors */}
+              <div className="flex gap-4 flex-wrap">
+                <div>
+                  <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Platform</label>
+                  <div className="flex flex-wrap gap-2">
+                    {availablePlatforms.map((p) => (
+                      <button key={p} onClick={() => setTemplatePlatform(p)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                          templatePlatform === p ? "border-indigo-500 bg-indigo-900 text-indigo-300" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                        }`}>
+                        {PLATFORM_CONFIG[p]?.emoji} {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Language</label>
+                  <select value={templateLang} onChange={(e) => setTemplateLang(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                    {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {templateError && <p className="text-red-400 text-sm">{templateError}</p>}
+
+              <button
+                onClick={async () => {
+                  setTemplateLoading(true); setTemplateError("");
+                  try {
+                    const data = await api.post<ContentItem[]>("/content/generate-from-template", {
+                      industry: selectedIndustry.industry,
+                      platform: templatePlatform,
+                      language: templateLang,
+                    });
+                    setResults(data);
+                    setPostStatus({}); setEditText({});
+                    setTab("generate"); // switch to generate tab to show results
+                  } catch (err: unknown) {
+                    setTemplateError(err instanceof Error ? err.message : "Generation failed");
+                  } finally {
+                    setTemplateLoading(false);
+                  }
+                }}
+                disabled={templateLoading}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition">
+                {templateLoading ? `Generating ${selectedIndustry.angles.length} posts...` : `🚀 Generate ${selectedIndustry.angles.length}-Post Pack →`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Repurpose tab */}
       {tab === "repurpose" && (
