@@ -4,14 +4,15 @@ import { useAuth } from "@/lib/auth-context";
 import { api, API_URL } from "@/lib/api";
 
 const PLANS = [
-  { key: "solo",    label: "Solo",    monthly: "₦29,999", yearly: "₦20,999", desc: "1 brand, core features" },
-  { key: "starter", label: "Starter", monthly: "₦75,000", yearly: "₦52,500", desc: "1 brand, full features" },
-  { key: "growth",  label: "Growth",  monthly: "₦150,000", yearly: "₦105,000", desc: "1 brand + video + Twitter boost" },
-  { key: "pro",     label: "Pro",     monthly: "₦250,000", yearly: "₦175,000", desc: "1 brand, all 9 platforms + max boost" },
-  { key: "agency",  label: "Agency",  monthly: "₦450,000", yearly: "₦315,000", desc: "11 brands, everything" },
+  { key: "micro",   label: "Micro",   monthly: "₦5,999",   yearly: "₦4,199",   desc: "1 brand, Facebook only, 2 posts/day" },
+  { key: "solo",    label: "Solo",    monthly: "₦15,000",  yearly: "₦10,499",  desc: "2 platforms (Facebook + X), 3 posts/day" },
+  { key: "starter", label: "Starter", monthly: "₦35,000",  yearly: "₦24,499",  desc: "6 platforms, 5 posts/day + followers boost" },
+  { key: "growth",  label: "Growth",  monthly: "₦75,000",  yearly: "₦52,499",  desc: "7 platforms, 8 posts/day + full automation" },
+  { key: "pro",     label: "Pro",     monthly: "₦185,000", yearly: "₦129,499", desc: "9 platforms, 12 posts/day + max boost" },
+  { key: "agency",  label: "Agency",  monthly: "₦495,000", yearly: "₦346,499", desc: "11 brands, everything included" },
 ];
 
-const PLAN_ORDER = ["solo", "starter", "growth", "pro", "agency"];
+const PLAN_ORDER = ["micro", "solo", "starter", "growth", "pro", "agency"];
 
 export default function UpgradePage() {
   const { client } = useAuth();

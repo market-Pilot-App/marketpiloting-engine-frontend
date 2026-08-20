@@ -4,11 +4,12 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 
 const PLANS = [
-  { id: "solo",    label: "Solo",    price: "₦29,999/mo",  yearlyPrice: "₦20,999/mo", features: ["2 platforms", "3 posts/day", "AI content", "Basic boost", "1 blog/week"] },
-  { id: "starter", label: "Starter", price: "₦75,000/mo",  yearlyPrice: "₦52,500/mo", features: ["3 platforms", "5 posts/day", "AI content", "Auto boost", "2 blogs/week"] },
-  { id: "growth",  label: "Growth",  price: "₦150,000/mo", yearlyPrice: "₦105,000/mo", features: ["6 platforms", "8 posts/day", "Video posting", "Full boost", "3 blogs/week"], popular: true },
-  { id: "pro",     label: "Pro",     price: "₦250,000/mo", yearlyPrice: "₦175,000/mo", features: ["9 platforms", "12 posts/day", "All features", "$60 boost budget", "Daily blog"] },
-  { id: "agency",  label: "Agency",  price: "₦450,000/mo", yearlyPrice: "₦315,000/mo", features: ["11 brands", "12 posts/day", "Unlimited video", "Max boost", "Daily blog"] },
+  { id: "micro",   label: "Micro",   price: "₦5,999/mo",   yearlyPrice: "₦4,199/mo",   features: ["1 platform (Facebook)", "2 posts/day", "🤖 AI content", "🚀 Basic boost", "📊 Analytics"] },
+  { id: "solo",    label: "Solo",    price: "₦15,000/mo",  yearlyPrice: "₦10,499/mo",  features: ["2 platforms (Facebook + X)", "3 posts/day", "🤖 AI content", "🚀 Organic boost", "🎬 4 videos/month", "📰 1 blog/week"] },
+  { id: "starter", label: "Starter", price: "₦35,000/mo",  yearlyPrice: "₦24,499/mo",  features: ["6 platforms", "5 posts/day", "🤖 AI content", "👥 Followers boost", "🎬 8 videos/month", "📰 2 blogs/week"] },
+  { id: "growth",  label: "Growth",  price: "₦75,000/mo",  yearlyPrice: "₦52,499/mo",  features: ["7 platforms", "8 posts/day", "🤖 Brand DNA evolution", "👥 Full boost", "🎬 20 videos/month", "🔍 Competitor monitoring"], popular: true },
+  { id: "pro",     label: "Pro",     price: "₦185,000/mo", yearlyPrice: "₦129,499/mo", features: ["9 platforms", "12 posts/day", "🎬 Unlimited video", "🌍 Website traffic boost", "📰 Daily blog", "⚡ Dedicated support"] },
+  { id: "agency",  label: "Agency",  price: "₦495,000/mo", yearlyPrice: "₦346,499/mo", features: ["11 brands", "9 platforms/brand", "12 posts/day/brand", "🎬 Unlimited video", "📊 Full analytics/brand", "⚡ Dedicated support"] },
 ];
 
 function RegisterContent() {
