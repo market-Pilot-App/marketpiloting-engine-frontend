@@ -133,6 +133,11 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
             <span className="inline-block mt-1.5 text-xs font-bold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
               {client?.plan}
             </span>
+            {client?.location_name && (
+              <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium bg-amber-900/40 border border-amber-700/40 text-amber-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
+                📍 {client.location_name}
+              </span>
+            )}
           </>
         )}
       </div>

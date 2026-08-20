@@ -10,6 +10,7 @@ interface AuthClient {
   name: string;
   access_token: string;
   campaign_name?: string;
+  location_name?: string;
 }
 
 interface AuthContextType {
