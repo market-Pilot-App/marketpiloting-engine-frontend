@@ -19,6 +19,15 @@ interface QueuedPost {
   engagement_score?: number;
 }
 
+interface PendingPost {
+  id: number;
+  platform: string;
+  scheduled_time: string;
+  preview: string;
+  image_url: string | null;
+  hours_waiting: number;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   queued: "bg-yellow-900 text-yellow-300",
   posted: "bg-green-900 text-green-400",
@@ -46,12 +55,42 @@ export default function SchedulerPage() {
   const [recycleSaving, setRecycleSaving] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [approving, setApproving] = useState<Record<number, boolean>>({});
+  const [rejecting, setRejecting] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     api.get<{ require_post_approval: boolean }>("/campaigns/me/approval")
       .then((d) => setApprovalRequired(d.require_post_approval))
       .catch(() => {});
   }, []);
+
+  const loadPending = async () => {
+    setPendingLoading(true);
+    try {
+      const data = await api.get<PendingPost[]>("/scheduler/pending-approval");
+      setPendingPosts(data);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const approvePost = async (id: number) => {
+    setApproving((s) => ({ ...s, [id]: true }));
+    try {
+      await api.post(`/scheduler/${id}/approve`);
+      setPendingPosts((p) => p.filter((x) => x.id !== id));
+    } finally { setApproving((s) => ({ ...s, [id]: false })); }
+  };
+
+  const rejectPost = async (id: number) => {
+    setRejecting((s) => ({ ...s, [id]: true }));
+    try {
+      await api.post(`/scheduler/${id}/reject`);
+      setPendingPosts((p) => p.filter((x) => x.id !== id));
+    } finally { setRejecting((s) => ({ ...s, [id]: false })); }
+  };
 
   const toggleApproval = async () => {
     setApprovalSaving(true);
@@ -80,6 +119,7 @@ export default function SchedulerPage() {
 
   const handleFilter = (f: string) => {
     setFilter(f);
+    if (f === "pending") { loadPending(); return; }
     fetchQueue(f === "all" ? undefined : f);
   };
 
@@ -218,7 +258,7 @@ export default function SchedulerPage() {
         </button>
       </div>
       <div className="flex gap-2 mb-5">
-        {["all", "queued", "posted", "failed"].map((f) => (
+        {["all", "queued", "pending", "posted", "failed"].map((f) => (
           <button
             key={f}
             onClick={() => handleFilter(f)}
@@ -228,12 +268,71 @@ export default function SchedulerPage() {
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            {f}
+            {f === "pending" ? `⏳ Pending${pendingPosts.length > 0 ? ` (${pendingPosts.length})` : ""}` : f}
           </button>
         ))}
       </div>
 
-      {loading ? (
+      {filter === "pending" ? (
+        <div>
+          {!approvalRequired && (
+            <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-xl px-4 py-3 mb-4 text-sm text-yellow-300">
+              ⚠️ Post approval is currently off. Enable "Require Post Approval" above to use this queue.
+            </div>
+          )}
+          {pendingLoading ? (
+            <p className="text-gray-400 text-sm">Loading pending posts...</p>
+          ) : pendingPosts.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p className="text-4xl mb-3">✅</p>
+              <p>No posts waiting for approval.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">Posts auto-approve after 2 hours if not reviewed.</p>
+              {pendingPosts.map((post) => (
+                <div key={post.id} className="bg-gray-900 border border-yellow-800/50 rounded-xl px-5 py-4">
+                  <div className="flex gap-4">
+                    {post.image_url && (
+                      <img src={post.image_url} alt="" className="w-16 h-16 object-cover rounded-lg shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{PLATFORM_EMOJI[post.platform] || "📄"}</span>
+                        <span className="text-white text-sm font-medium capitalize">{post.platform}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900 text-yellow-300">⏳ Pending</span>
+                        {post.hours_waiting > 0 && (
+                          <span className="text-xs text-gray-500">{post.hours_waiting}h waiting</span>
+                        )}
+                      </div>
+                      <p className="text-gray-400 text-xs mb-1">{new Date(post.scheduled_time).toLocaleString()}</p>
+                      {post.preview && (
+                        <p className="text-gray-300 text-sm line-clamp-2">{post.preview}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button
+                        onClick={() => approvePost(post.id)}
+                        disabled={approving[post.id]}
+                        className="px-4 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                      >
+                        {approving[post.id] ? "..." : "✅ Approve"}
+                      </button>
+                      <button
+                        onClick={() => rejectPost(post.id)}
+                        disabled={rejecting[post.id]}
+                        className="px-4 py-1.5 bg-red-900/50 hover:bg-red-800 disabled:opacity-50 text-red-400 text-xs font-semibold rounded-lg transition"
+                      >
+                        {rejecting[post.id] ? "..." : "❌ Reject"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <p className="text-gray-400 text-sm">Loading queue...</p>
       ) : posts.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
