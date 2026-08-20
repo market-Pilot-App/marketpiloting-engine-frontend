@@ -16,7 +16,7 @@ interface Location {
 const PLAN_LIMITS: Record<string, number> = { growth: 3, pro: 5, agency: 999, admin: 999 };
 
 export default function LocationsPage() {
-  const { client, switchBrand } = useAuth();
+  const { client, setSession } = useAuth();
   const plan = client?.plan ?? "";
   const limit = PLAN_LIMITS[plan] ?? 0;
 
@@ -68,13 +68,16 @@ export default function LocationsPage() {
         access_token: string; campaign_id: number;
         campaign_name: string; location_name: string; plan: string;
       }>(`/campaigns/locations/${loc.id}/switch`);
-      localStorage.setItem("mp_token", data.access_token);
       const stored = localStorage.getItem("mp_client");
-      if (stored) {
-        const c = JSON.parse(stored);
-        localStorage.setItem("mp_client", JSON.stringify({ ...c, campaign_id: data.campaign_id }));
-      }
-      switchBrand(data.campaign_id, data.campaign_name);
+      const base = stored ? JSON.parse(stored) : {};
+      setSession({
+        ...base,
+        access_token: data.access_token,
+        campaign_id: data.campaign_id,
+        campaign_name: data.campaign_name,
+        location_name: data.location_name,
+        plan: data.plan,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Switch failed");
     } finally {

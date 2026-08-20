@@ -24,6 +24,7 @@ interface AuthContextType {
   startImpersonation: (clientId: number) => Promise<void>;
   endImpersonation: () => void;
   switchBrand: (campaignId: number, campaignName: string) => Promise<void>;
+  setSession: (data: AuthClient) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -98,12 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/admin");
   };
 
-  const switchBrand = async (campaignId: number, campaignName: string) => {
-    const data = await api.post<AuthClient>(`/campaigns/${campaignId}/switch`);
+  const setSession = (data: AuthClient) => {
     localStorage.setItem("mp_token", data.access_token);
     localStorage.setItem("mp_client", JSON.stringify(data));
     setClient(data);
     router.push("/");
+  };
+
+  const switchBrand = async (campaignId: number, campaignName: string) => {
+    const data = await api.post<AuthClient>(`/campaigns/${campaignId}/switch`);
+    setSession(data);
   };
 
   return (
@@ -119,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         startImpersonation,
         endImpersonation,
         switchBrand,
+        setSession,
       }}
     >
       {children}
