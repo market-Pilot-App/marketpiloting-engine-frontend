@@ -12,16 +12,28 @@ function clearSessionAndRedirect() {
   window.location.href = "/login";
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  }).catch(() => { throw new Error("Network error — backend may be sleeping"); });
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  } catch {
+    // Backend may be cold-starting on Render — wait 4s and retry once silently
+    await sleep(4000);
+    try {
+      res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    } catch {
+      throw new Error("Network error — backend may be sleeping");
+    }
+  }
 
   if (res.status === 401) {
     clearSessionAndRedirect();
