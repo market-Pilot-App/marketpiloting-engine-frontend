@@ -4,12 +4,12 @@ import { api, API_URL } from "@/lib/api";
 import HashtagSuggester from "@/components/HashtagSuggester";
 
 const PLATFORM_CONFIG: Record<string, { emoji: string; limit: number }> = {
-  facebook:  { emoji: "📘", limit: 500 },
-  instagram: { emoji: "📸", limit: 300 },
-  linkedin:  { emoji: "💼", limit: 700 },
+  facebook:  { emoji: "📘", limit: 5000 },
+  instagram: { emoji: "📸", limit: 2200 },
+  linkedin:  { emoji: "💼", limit: 3000 },
   twitter:   { emoji: "🐦", limit: 280 },
-  telegram:  { emoji: "✈️", limit: 1000 },
-  tiktok:    { emoji: "🎵", limit: 300 },
+  telegram:  { emoji: "✈️", limit: 4096 },
+  tiktok:    { emoji: "🎵", limit: 2200 },
 };
 
 const PLAN_PLATFORMS: Record<string, string[]> = {
