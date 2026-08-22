@@ -49,9 +49,20 @@ export default function AgencySettingsPage() {
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("platforms", JSON.stringify(["agency"]));
-      const data = await api.upload("/media/upload", form);
-      setBranding((b) => ({ ...b, agency_logo_url: data.public_url }));
+      const token = localStorage.getItem("mp_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agency/logo`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(err.detail || "Upload failed");
+      }
+      const data = await res.json();
+      setBranding((b) => ({ ...b, agency_logo_url: data.url }));
+    } catch (err: any) {
+      alert(err?.message || "Logo upload failed");
     } finally {
       setUploading(false);
     }
@@ -59,10 +70,15 @@ export default function AgencySettingsPage() {
 
   const save = async () => {
     setSaving(true);
-    await api.post("/agency/branding", branding);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      await api.post("/agency/branding", branding);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      alert(err?.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -180,6 +196,7 @@ export default function AgencySettingsPage() {
       </div>
 
       <button
+        onClick={save}
         disabled={saving}
         className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition"
       >
