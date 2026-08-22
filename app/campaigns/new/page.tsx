@@ -8,7 +8,7 @@ const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram", "
 
 export default function NewCampaignPage() {
   const router = useRouter();
-  const { client } = useAuth();
+  const { client, setSession } = useAuth();
   const [form, setForm] = useState({
     name: "",
     niche: "",
@@ -46,14 +46,38 @@ export default function NewCampaignPage() {
     setLoading(true);
     setError("");
     try {
-      await api.post("/campaigns/", {
+      // Step 1: create the brand
+      const created = await api.post<{ id: number }>("/campaigns/", {
         ...form,
         website_url: form.website_url || null,
         content_angles: [],
         social_handles: {},
         boost_monthly_budget: 5.0,
       });
-      router.push("/");
+
+      // Step 2: switch JWT context to the new brand so all subsequent
+      // API calls (Brand DNA, settings, etc.) are scoped to it
+      const switched = await api.post<{
+        access_token: string;
+        client_id: number;
+        campaign_id: number;
+        plan: string;
+        name: string;
+        campaign_name: string;
+      }>(`/campaigns/${created.id}/switch`);
+
+      // Step 3: persist new session — this updates localStorage + cookie
+      setSession({
+        access_token: switched.access_token,
+        client_id: switched.client_id,
+        campaign_id: switched.campaign_id,
+        plan: switched.plan,
+        name: switched.name,
+        campaign_name: switched.campaign_name,
+      });
+
+      // Step 4: go straight to Brand DNA so agency sets it up immediately
+      router.push("/brand-dna");
     } catch (err: any) {
       setError(err.message || "Failed to create brand");
     } finally {
