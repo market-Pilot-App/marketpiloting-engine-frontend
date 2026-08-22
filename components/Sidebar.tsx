@@ -32,6 +32,7 @@ const NAV = [
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
 const AGENCY_NAV = [
+  { href: "/brands", label: "Manage Brands", icon: "🏢" },
   { href: "/approval-queue", label: "Approval Queue", icon: "✅" },
   { href: "/agency-settings", label: "Agency Branding", icon: "🎨" },
   { href: "/team", label: "Team", icon: "👥" },
@@ -39,7 +40,7 @@ const AGENCY_NAV = [
 const LOCATIONS_NAV = { href: "/locations", label: "Locations", icon: "📍" };
 const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
-interface CampaignSummary { id: number; name: string; niche: string; }
+interface CampaignSummary { id: number; name: string; niche: string; suspended?: boolean; }
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -172,9 +173,15 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
               {brands.map((b) => (
                 <div key={b.id} className="flex items-center group/brand">
                   <button
-                    onClick={() => { switchBrand(b.id, b.name); setBrandOpen(false); }}
-                    className="flex-1 text-left px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition truncate"
+                    onClick={() => { if (!b.suspended) { switchBrand(b.id, b.name); setBrandOpen(false); } }}
+                    disabled={b.suspended}
+                    className={`flex-1 text-left px-3 py-2 rounded-lg text-sm transition truncate ${
+                      b.suspended
+                        ? "text-gray-600 cursor-not-allowed"
+                        : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                    }`}
                   >
+                    {b.suspended && <span className="mr-1">⏸</span>}
                     {b.name}
                     <span className="text-gray-600 text-xs ml-1">· {b.niche}</span>
                   </button>
