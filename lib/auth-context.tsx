@@ -47,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await api.post<AuthClient>("/auth/login", { email, password });
     localStorage.setItem("mp_token", data.access_token);
     localStorage.setItem("mp_client", JSON.stringify(data));
+    // Presence cookie for middleware auth guard — no sensitive data
+    document.cookie = "mp_session=1; path=/; SameSite=Lax; max-age=86400";
     setClient(data);
     router.push("/");
   };
@@ -56,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("mp_client");
     localStorage.removeItem("mp_admin_token");
     localStorage.removeItem("mp_admin_client");
+    // Clear presence cookie
+    document.cookie = "mp_session=; path=/; max-age=0";
     setClient(null);
     setIsImpersonating(false);
     setImpersonatedName(null);
@@ -102,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setSession = (data: AuthClient) => {
     localStorage.setItem("mp_token", data.access_token);
     localStorage.setItem("mp_client", JSON.stringify(data));
+    document.cookie = "mp_session=1; path=/; SameSite=Lax; max-age=86400";
     setClient(data);
     router.push("/");
   };
