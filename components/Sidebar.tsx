@@ -58,12 +58,27 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const [collapsed, setCollapsed] = useState(false);
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
   const [brandOpen, setBrandOpen] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     if (isAgency) {
       api.get<CampaignSummary[]>("/campaigns/").then(setBrands).catch(() => {});
     }
   }, [isAgency]);
+
+  const deleteBrand = async (e: React.MouseEvent, id: number, name: string) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    setDeleting(id);
+    try {
+      await api.del(`/campaigns/${id}`);
+      setBrands((prev) => prev.filter((b) => b.id !== id));
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete brand");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   // Close mobile drawer on route change
   useEffect(() => { onClose(); }, [pathname]);
@@ -155,14 +170,23 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           {brandOpen && (
             <div className="mt-1 space-y-0.5">
               {brands.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => { switchBrand(b.id, b.name); setBrandOpen(false); }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition truncate"
-                >
-                  {b.name}
-                  <span className="text-gray-600 text-xs ml-1">· {b.niche}</span>
-                </button>
+                <div key={b.id} className="flex items-center group/brand">
+                  <button
+                    onClick={() => { switchBrand(b.id, b.name); setBrandOpen(false); }}
+                    className="flex-1 text-left px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition truncate"
+                  >
+                    {b.name}
+                    <span className="text-gray-600 text-xs ml-1">· {b.niche}</span>
+                  </button>
+                  <button
+                    onClick={(e) => deleteBrand(e, b.id, b.name)}
+                    disabled={deleting === b.id}
+                    className="opacity-0 group-hover/brand:opacity-100 px-2 py-1 text-gray-600 hover:text-red-400 transition text-base disabled:opacity-40"
+                    title="Delete brand"
+                  >
+                    {deleting === b.id ? "…" : "×"}
+                  </button>
+                </div>
               ))}
               <Link
                 href="/campaigns/new"
