@@ -11,9 +11,9 @@ function FacebookSuccess() {
     if (window.opener) {
       window.opener.postMessage(
         error ? { type: "facebook_error", error } : "facebook_connected",
-        window.location.origin
+        "*"
       );
-      window.close();
+      setTimeout(() => window.close(), 500);
     }
   }, [error]);
 

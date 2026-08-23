@@ -12,7 +12,7 @@ function TwitterSuccessInner() {
     } else {
       window.opener?.postMessage("twitter_connected", "*");
     }
-    window.close();
+    setTimeout(() => window.close(), 500);
   }, [error]);
 
   return (
