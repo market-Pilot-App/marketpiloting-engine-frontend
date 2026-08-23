@@ -72,8 +72,6 @@ const PLATFORM_MIN_PLAN: Record<string, string> = {
 };
 
 const TUTORIAL_LINKS: Record<string, string> = {
-  facebook: "facebook",
-  instagram: "instagram",
   linkedin: "linkedin",
   telegram: "telegram",
   youtube: "youtube",
@@ -86,14 +84,14 @@ const PLATFORMS = [
     key: "facebook",
     label: "Facebook",
     icon: "📘",
-    hint: "Connect your Facebook Page via OAuth. MarketPilot will post automatically on your behalf.",
+    hint: "Click the button below to connect your Facebook Page. A popup will open — log in and authorize MarketPilot. Your Page Access Token is fetched automatically.",
     fields: [],
   },
   {
     key: "instagram",
     label: "Instagram",
     icon: "📸",
-    hint: "Instagram connects automatically when you connect Facebook — your linked Instagram Business Account is detected.",
+    hint: "Instagram connects automatically when you connect Facebook. MarketPilot detects your linked Instagram Business Account from your Facebook Page — no extra steps needed.",
     fields: [],
   },
   {

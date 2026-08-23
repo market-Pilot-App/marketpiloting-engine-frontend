@@ -3,22 +3,6 @@ import { useState } from "react";
 
 const TUTORIALS = [
   {
-    id: "facebook",
-    icon: "📘",
-    label: "Facebook",
-    description: "Get your Page Access Token and Page ID from the Facebook Developer Portal.",
-    videoId: "x9A-uD3Eb58",
-    duration: "3 min",
-  },
-  {
-    id: "instagram",
-    icon: "📸",
-    label: "Instagram",
-    description: "Find your Instagram Business Account ID and connect it using your Facebook token.",
-    videoId: "ku_Ol1Sjqfo",
-    duration: "3 min",
-  },
-  {
     id: "linkedin",
     icon: "💼",
     label: "LinkedIn",
