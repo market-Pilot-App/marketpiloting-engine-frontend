@@ -86,21 +86,15 @@ const PLATFORMS = [
     key: "facebook",
     label: "Facebook",
     icon: "📘",
-    hint: "Requires a Facebook Page Access Token and Page ID. Get these from developers.facebook.com → your app → Graph API Explorer.",
-    fields: [
-      { name: "fb_page_id", label: "Page ID", placeholder: "123456789" },
-      { name: "fb_access_token", label: "Page Access Token", placeholder: "EAABwz...", secret: true },
-    ],
+    hint: "Connect your Facebook Page via OAuth. MarketPilot will post automatically on your behalf.",
+    fields: [],
   },
   {
     key: "instagram",
     label: "Instagram",
     icon: "📸",
-    hint: "Instagram uses the same Facebook Access Token. You also need your Instagram Business Account ID (not username).",
-    fields: [
-      { name: "fb_access_token", label: "Facebook Access Token", placeholder: "EAABwz...", secret: true },
-      { name: "instagram_account_id", label: "Instagram Account ID", placeholder: "17841400..." },
-    ],
+    hint: "Instagram connects automatically when you connect Facebook — your linked Instagram Business Account is detected.",
+    fields: [],
   },
   {
     key: "linkedin",
@@ -576,28 +570,45 @@ export default function SettingsPage() {
                       <a href={`/help#${TUTORIAL_LINKS[p.key]}`} className="text-indigo-400 hover:underline">📺 Watch tutorial →</a>
                     </p>
                   )}
-                  {p.key === "twitter" ? (
-                    <button
-                      onClick={async () => {
-                        try {
-                          const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
-                          const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
-                          const handler = (e: MessageEvent) => {
-                            if (e.data === "twitter_connected") {
-                              window.removeEventListener("message", handler);
-                              popup?.close();
-                              api.get<Connections>("/campaigns/me/connections").then(setConnections);
-                            }
-                          };
-                          window.addEventListener("message", handler);
-                        } catch (err: unknown) {
-                          setErrors((e) => ({ ...e, twitter: err instanceof Error ? err.message : "Failed to start OAuth" }));
-                        }
-                      }}
-                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition"
-                    >
-                      🐦 Connect X / Twitter Account
-                    </button>
+                  {["twitter", "facebook", "instagram"].includes(p.key) ? (
+                    <>
+                      {p.key === "instagram" && !connections?.facebook && (
+                        <p className="text-xs text-yellow-500 mb-3">⚠️ Connect Facebook first — Instagram links automatically via your Facebook Page.</p>
+                      )}
+                      <button
+                        onClick={async () => {
+                          const isTwitter = p.key === "twitter";
+                          const endpoint = isTwitter ? "/auth/twitter/connect" : "/auth/facebook/connect";
+                          const msgKey = isTwitter ? "twitter_connected" : "facebook_connected";
+                          const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
+                          try {
+                            const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
+                            const popup = window.open(auth_url, popupName, "width=600,height=700");
+                            const handler = (e: MessageEvent) => {
+                              if (e.data === msgKey) {
+                                window.removeEventListener("message", handler);
+                                popup?.close();
+                                api.get<Connections>("/campaigns/me/connections").then(setConnections);
+                              } else if (e.data?.type === "facebook_error") {
+                                window.removeEventListener("message", handler);
+                                popup?.close();
+                                setErrors((err) => ({ ...err, [p.key]: e.data.error }));
+                              }
+                            };
+                            window.addEventListener("message", handler);
+                          } catch (err: unknown) {
+                            setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                          }
+                        }}
+                        disabled={p.key === "instagram" && !connections?.facebook}
+                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
+                      >
+                        {p.key === "twitter" && "🐦 Connect X / Twitter Account"}
+                        {p.key === "facebook" && "📘 Connect Facebook Page"}
+                        {p.key === "instagram" && "📸 Connect Instagram (via Facebook)"}
+                      </button>
+                      {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
+                    </>
                   ) : (
                     <>
                       <div className="space-y-3">
@@ -624,8 +635,6 @@ export default function SettingsPage() {
                       </button>
                     </>
                   )}
-                  {p.key !== "twitter" && errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
-                  {p.key === "twitter" && errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
                 </div>
               )}
             </div>
