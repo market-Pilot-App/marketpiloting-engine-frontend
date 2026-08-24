@@ -1,7 +1,9 @@
 "use client";
-import { Suspense, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import { API_URL } from "@/lib/api";
 
 const STEPS = [
   {
@@ -40,9 +42,39 @@ const STEPS = [
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const { setSession } = useAuth();
   const email = searchParams.get("email") || "";
   const [step, setStep] = useState(0);
+  const pollingRef = useRef(false);
+
+  useEffect(() => {
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+    const pendingEmail = sessionStorage.getItem("mp_pending_email");
+    const pendingPassword = sessionStorage.getItem("mp_pending_password");
+    if (!pendingEmail || !pendingPassword) return;
+    let attempts = 0;
+    const maxAttempts = 20; // 20 × 3s = 60s max
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: pendingEmail, password: pendingPassword }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          clearInterval(interval);
+          sessionStorage.removeItem("mp_pending_email");
+          sessionStorage.removeItem("mp_pending_password");
+          setSession(data);
+        }
+      } catch { /* keep polling */ }
+      if (attempts >= maxAttempts) clearInterval(interval);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [setSession]);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -50,10 +82,9 @@ function SuccessContent() {
 
   const handleAction = () => {
     if (isLast) {
-      router.push("/");
+      window.location.href = "/";
     } else {
-      // Mark step done, navigate to the page, then come back
-      router.push(current.href);
+      window.location.href = current.href;
     }
   };
 

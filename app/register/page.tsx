@@ -110,6 +110,8 @@ function RegisterContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");
+      sessionStorage.setItem("mp_pending_email", form.email.trim().toLowerCase());
+      sessionStorage.setItem("mp_pending_password", form.password);
       window.location.href = data.payment_url;
     } catch (e: any) {
       setError(e.message);
