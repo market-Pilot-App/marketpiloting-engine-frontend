@@ -16,7 +16,7 @@ function RegisterContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [step, setStep] = useState<"plan" | "details" | "processing">("plan");
+  const [step, setStep] = useState<"plan" | "details" | "verify" | "processing">("plan");
   const [plan, setPlan] = useState(searchParams.get("plan") || "growth");
   const [billing, setBilling] = useState(searchParams.get("billing") || "monthly");
   const [form, setForm] = useState({ name: "", email: "", password: "", business_name: "", niche: "", website_url: "", target_audience: "", tone: "professional" });
@@ -26,6 +26,11 @@ function RegisterContent() {
   const [promoCode, setPromoCode] = useState("");
   const [promoStatus, setPromoStatus] = useState<{ valid: boolean; message: string; discounted_amount_kobo?: number; original_amount_kobo?: number } | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [verifiedToken, setVerifiedToken] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const validatePromo = async () => {
     if (!promoCode.trim()) return;
@@ -46,20 +51,65 @@ function RegisterContent() {
     }
   };
 
+  const sendOtp = async () => {
+    setOtpError("");
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/send-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to send code");
+      setResendCooldown(60);
+      const interval = setInterval(() => {
+        setResendCooldown((c) => {
+          if (c <= 1) { clearInterval(interval); return 0; }
+          return c - 1;
+        });
+      }, 1000);
+    } catch (e: any) {
+      setOtpError(e.message);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (otp.length !== 6) return;
+    setOtpError("");
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim().toLowerCase(), otp }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Invalid code");
+      setVerifiedToken(data.verified_token);
+      setStep("processing");
+      await handleRegister(data.verified_token);
+    } catch (e: any) {
+      setOtpError(e.message);
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleRegister = async () => {
+  const handleRegister = async (vToken: string) => {
     setError("");
-    setStep("processing");
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos, promo_code: promoCode.trim() || undefined }),
+        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos, promo_code: promoCode.trim() || undefined, verified_token: vToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");
-      // Redirect to Paystack
       window.location.href = data.payment_url;
     } catch (e: any) {
       setError(e.message);
@@ -281,11 +331,72 @@ function RegisterContent() {
                 ← Back
               </button>
               <button
-                onClick={handleRegister}
+                onClick={async () => {
+                  setStep("verify");
+                  await sendOtp();
+                }}
                 disabled={!form.name || !form.email || !form.password || !form.business_name || !form.niche || !form.target_audience || !agreedToTos}
                 className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition"
               >
-                Create Account & Pay →
+                Verify Email & Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — Email Verification */}
+        {step === "verify" && (
+          <div className="bg-gray-900 rounded-2xl p-8 space-y-5">
+            <div className="text-center">
+              <div className="text-4xl mb-3">📧</div>
+              <h2 className="text-xl font-semibold text-white">Verify your email</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                We sent a 6-digit code to{" "}
+                <span className="text-indigo-400 font-medium">{form.email}</span>
+              </p>
+              <p className="text-gray-500 text-xs mt-1">Check your inbox and spam folder</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2 text-center">Enter verification code</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setOtp(val);
+                  setOtpError("");
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter" && otp.length === 6) verifyOtp(); }}
+                placeholder="000000"
+                className="w-full bg-gray-800 text-white text-center text-3xl font-bold tracking-[0.5em] rounded-xl px-4 py-4 border border-gray-700 focus:outline-none focus:border-indigo-500"
+                autoFocus
+              />
+            </div>
+            {otpError && (
+              <p className="text-red-400 text-sm text-center">{otpError}</p>
+            )}
+            <button
+              onClick={verifyOtp}
+              disabled={otp.length !== 6 || otpLoading}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition"
+            >
+              {otpLoading ? "Verifying..." : "Verify & Create Account →"}
+            </button>
+            <div className="flex items-center justify-between text-sm">
+              <button
+                onClick={() => setStep("details")}
+                className="text-gray-500 hover:text-gray-300 transition"
+              >
+                ← Change email
+              </button>
+              <button
+                onClick={sendOtp}
+                disabled={resendCooldown > 0 || otpLoading}
+                className="text-indigo-400 hover:text-indigo-300 disabled:text-gray-600 disabled:cursor-not-allowed transition"
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
               </button>
             </div>
           </div>
