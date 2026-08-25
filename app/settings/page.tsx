@@ -254,11 +254,11 @@ export default function SettingsPage() {
   const [kwInput, setKwInput] = useState("");
   const canAutoReply = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
   // WhatsApp state
-  const [waSettings, setWaSettings] = useState({ whatsapp_phone_number_id: "", whatsapp_access_token: "", whatsapp_business_account_id: "", whatsapp_enabled: false });
-  const [waTokenHint, setWaTokenHint] = useState("");
+  const [waEnabled, setWaEnabled] = useState(false);
   const [waConnected, setWaConnected] = useState(false);
-  const [waSaving, setWaSaving] = useState(false);
-  const [waSaved, setWaSaved] = useState(false);
+  const [waPhoneId, setWaPhoneId] = useState("");
+  const [waWabaId, setWaWabaId] = useState("");
+  const [waEnableSaving, setWaEnableSaving] = useState(false);
   const [waError, setWaError] = useState("");
   const canWhatsApp = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
 
@@ -316,11 +316,12 @@ export default function SettingsPage() {
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
     api.get<BillingInfo>("/auth/billing").then(setBilling).catch(() => {});
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
-    api.get<{ whatsapp_phone_number_id: string; whatsapp_access_token_hint: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
+    api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
       .then((d) => {
-        setWaSettings((s) => ({ ...s, whatsapp_phone_number_id: d.whatsapp_phone_number_id, whatsapp_business_account_id: d.whatsapp_business_account_id, whatsapp_enabled: d.whatsapp_enabled }));
-        setWaTokenHint(d.whatsapp_access_token_hint);
+        setWaEnabled(d.whatsapp_enabled);
         setWaConnected(d.connected);
+        setWaPhoneId(d.whatsapp_phone_number_id || "");
+        setWaWabaId(d.whatsapp_business_account_id || "");
       }).catch(() => {});
     api.get<{ paystack_secret_key_set: boolean; paystack_secret_key_hint: string }>("/revenue/settings")
       .then((d) => { setRevKeySet(d.paystack_secret_key_set); setRevKeyHint(d.paystack_secret_key_hint); })
@@ -882,49 +883,63 @@ export default function SettingsPage() {
                 <p className="text-white font-medium text-sm">Enable WhatsApp Auto-Reply</p>
                 <p className="text-gray-500 text-xs mt-0.5">AI will reply to incoming WhatsApp messages in your brand voice</p>
               </div>
-              <button onClick={() => setWaSettings((s) => ({ ...s, whatsapp_enabled: !s.whatsapp_enabled }))}
-                className={`relative w-12 h-6 rounded-full transition-colors ${waSettings.whatsapp_enabled ? "bg-indigo-600" : "bg-gray-700"}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${waSettings.whatsapp_enabled ? "translate-x-6" : "translate-x-0.5"}`} />
+              <button onClick={async () => {
+                setWaEnableSaving(true);
+                try {
+                  await api.post("/whatsapp/settings", { whatsapp_enabled: !waEnabled });
+                  setWaEnabled((e) => !e);
+                } catch {}
+                finally { setWaEnableSaving(false); }
+              }}
+                disabled={waEnableSaving}
+                className={`relative w-12 h-6 rounded-full transition-colors ${waEnabled ? "bg-indigo-600" : "bg-gray-700"}`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${waEnabled ? "translate-x-6" : "translate-x-0.5"}`} />
               </button>
             </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Phone Number ID</label>
-              <input value={waSettings.whatsapp_phone_number_id}
-                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_phone_number_id: e.target.value }))}
-                placeholder="e.g. 123456789012345"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Access Token {waTokenHint && <span className="text-gray-600 ml-1">current: ...{waTokenHint}</span>}
-              </label>
-              <input type="password" value={waSettings.whatsapp_access_token}
-                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_access_token: e.target.value }))}
-                placeholder="Paste new token to update"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Business Account ID</label>
-              <input value={waSettings.whatsapp_business_account_id}
-                onChange={(e) => setWaSettings((s) => ({ ...s, whatsapp_business_account_id: e.target.value }))}
-                placeholder="e.g. 987654321098765"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
-            </div>
-            <p className="text-xs text-gray-600">Get these from Meta Business Suite → WhatsApp → API Setup. Webhook URL: <span className="text-indigo-400 break-all">https://marketpiloting-engine-backend.onrender.com/whatsapp/webhook</span></p>
-            {waConnected && <p className="text-xs text-green-400">✅ WhatsApp connected</p>}
+
+            {waConnected && (
+              <div className="bg-green-950/40 border border-green-800/40 rounded-lg p-3 space-y-1">
+                <p className="text-green-400 text-xs font-semibold">✅ WhatsApp Business Connected</p>
+                {waPhoneId && <p className="text-gray-400 text-xs">Phone Number ID: <span className="text-white font-mono">{waPhoneId}</span></p>}
+                {waWabaId && <p className="text-gray-400 text-xs">WABA ID: <span className="text-white font-mono">{waWabaId}</span></p>}
+              </div>
+            )}
+
             {waError && <p className="text-red-400 text-xs">{waError}</p>}
-            <button onClick={async () => {
-              setWaSaving(true); setWaError("");
-              try {
-                await api.post("/whatsapp/settings", waSettings);
-                setWaSaved(true); setWaConnected(true);
-                setTimeout(() => setWaSaved(false), 3000);
-              } catch (e: unknown) { setWaError(e instanceof Error ? e.message : "Save failed"); }
-              finally { setWaSaving(false); }
-            }} disabled={waSaving}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition">
-              {waSaving ? "Saving..." : waSaved ? "✓ Saved" : "Save WhatsApp Settings"}
+
+            <button
+              onClick={async () => {
+                setWaError("");
+                try {
+                  const { auth_url } = await api.get<{ auth_url: string }>("/auth/whatsapp/connect");
+                  const popup = window.open(auth_url, "whatsapp_oauth", "width=600,height=700");
+                  const handler = (e: MessageEvent) => {
+                    if (e.data === "whatsapp_connected") {
+                      window.removeEventListener("message", handler);
+                      popup?.close();
+                      api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
+                        .then((d) => {
+                          setWaConnected(d.connected);
+                          setWaPhoneId(d.whatsapp_phone_number_id || "");
+                          setWaWabaId(d.whatsapp_business_account_id || "");
+                          setWaEnabled(d.whatsapp_enabled);
+                        });
+                    } else if (e.data?.type === "whatsapp_error") {
+                      window.removeEventListener("message", handler);
+                      popup?.close();
+                      setWaError(e.data.error);
+                    }
+                  };
+                  window.addEventListener("message", handler);
+                } catch (err: unknown) {
+                  setWaError(err instanceof Error ? err.message : "Failed to start WhatsApp connection");
+                }
+              }}
+              className="w-full py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition"
+            >
+              {waConnected ? "🔄 Reconnect WhatsApp Business" : "💬 Connect WhatsApp Business"}
             </button>
+            <p className="text-xs text-gray-600">A popup will open — log in with your Facebook account and authorize MarketPilot to access your WhatsApp Business account.</p>
           </div>
         )}
       </div>
