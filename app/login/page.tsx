@@ -1,11 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { api } from "@/lib/api";
 
-export default function LoginPage() {
-  const { login } = useAuth();
+interface AuthClient {
+  access_token: string;
+  client_id: number;
+  campaign_id: number | null;
+  plan: string;
+  name: string;
+  campaign_name?: string;
+}
+
+function LoginForm() {
+  const { setSession } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get("next") || "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +30,12 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      const data = await api.post<AuthClient>("/auth/login", { email, password });
+      localStorage.setItem("mp_token", data.access_token);
+      localStorage.setItem("mp_client", JSON.stringify(data));
+      document.cookie = "mp_session=1; path=/; SameSite=Lax; max-age=86400";
+      setSession(data as Parameters<typeof setSession>[0]);
+      router.push(nextUrl);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg || "Login failed — unknown error");
@@ -29,7 +47,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="w-full max-w-md bg-gray-900 rounded-2xl p-8 shadow-xl">
-        <h1 className="text-2xl font-bold text-white mb-2">Marketpiloting Engine</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">MarketPiloting</h1>
         <p className="text-gray-400 mb-8 text-sm">Sign in to your dashboard</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,5 +111,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
