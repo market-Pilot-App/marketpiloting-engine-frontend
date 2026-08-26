@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await api.get(`/analytics/summary?days=${days}`);
+      const d = await api.get<Summary>(`/analytics/summary?days=${days}`);
       setData(d);
     } finally {
       setLoading(false);

@@ -22,7 +22,7 @@ export default function ReferralsPage() {
   const [error, setError] = useState("");
 
   const fetchLinks = async () => {
-    const data = await api.get("/referrals");
+    const data = await api.get<ReferralLink[]>("/referrals");
     setLinks(data);
   };
 

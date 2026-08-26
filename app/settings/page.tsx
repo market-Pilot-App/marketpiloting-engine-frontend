@@ -443,17 +443,6 @@ export default function SettingsPage() {
     setErrors((e) => ({ ...e, [platform]: "" }));
     try {
       let body: Record<string, unknown> = { ...form };
-      // Twitter fields get merged into twitter_credentials object
-      if (platform === "twitter") {
-        body = {
-          twitter_credentials: {
-            api_key: form.twitter_api_key,
-            api_secret: form.twitter_api_secret,
-            access_token: form.twitter_access_token,
-            access_secret: form.twitter_access_secret,
-          },
-        };
-      }
       if (platform === "youtube") {
         body = {
           youtube_credentials: {

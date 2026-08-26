@@ -96,7 +96,7 @@ export default function AdminPage() {
   const [approvalToggles, setApprovalToggles] = useState<Record<number, boolean>>({});
 
   const fetchClients = useCallback(async () => {
-    const data = await api.get("/admin/clients");
+    const data = await api.get<ClientRow[]>("/admin/clients");
     setRows(data);
     // Load approval_required for each agency client
     const toggles: Record<number, boolean> = {};
@@ -148,7 +148,7 @@ export default function AdminPage() {
   };
 
   const fetchAuditLog = useCallback(async () => {
-    const data = await api.get("/admin/audit-log");
+    const data = await api.get<AuditLog[]>("/admin/audit-log");
     setLogs(data);
   }, []);
 
@@ -211,7 +211,7 @@ export default function AdminPage() {
 
   const sendReport = async (clientId: number) => {
     setReportStatus((s) => ({ ...s, [clientId]: "sending" }));
-    const data = await api.post(`/admin/reports/send/${clientId}`, {});
+    const data = await api.post<{ sent: boolean }>(`/admin/reports/send/${clientId}`, {});
     setReportStatus((s) => ({ ...s, [clientId]: data.sent ? "sent" : "error" }));
     setTimeout(() => setReportStatus((s) => ({ ...s, [clientId]: "" })), 3000);
   };

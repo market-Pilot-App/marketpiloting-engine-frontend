@@ -213,9 +213,9 @@ export default function CalendarPage() {
             view={view}
             onNavigate={onNavigate}
             onView={(v) => setView(v)}
-            onEventDrop={onEventDrop}
+            onEventDrop={onEventDrop as any}
             draggableAccessor={(e) => (e as CalEvent).resource.status === "queued"}
-            eventPropGetter={eventStyleGetter}
+            eventPropGetter={eventStyleGetter as any}
             onSelectEvent={(e) => setSelected((e as CalEvent).resource)}
             style={{ height: "100%" }}
             popup

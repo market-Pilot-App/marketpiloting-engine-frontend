@@ -175,13 +175,13 @@ export default function LandingPageDashboard() {
 
             {/* Page preview summary */}
             <div className="bg-gray-800 rounded-lg p-4 mb-4 text-sm text-gray-300 space-y-1">
-              {page.content_json.hero && (
+              {!!(page.content_json.hero) && (
                 <p>
                   <span className="text-gray-500">Hero: </span>
                   {(page.content_json.hero as Record<string, string>).headline}
                 </p>
               )}
-              {page.content_json.services && (
+              {!!(page.content_json.services) && (
                 <p>
                   <span className="text-gray-500">Services: </span>
                   {(page.content_json.services as Array<{ title: string }>)
