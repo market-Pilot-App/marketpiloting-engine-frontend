@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
@@ -58,26 +58,32 @@ export default function AutoReplyPage() {
   const [overrideText, setOverrideText] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState("");
+  const [requireApproval, setRequireApproval] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     const params = new URLSearchParams();
     if (filterStatus) params.set("status", filterStatus);
     if (filterPlatform) params.set("platform", filterPlatform);
     if (filterSentiment) params.set("sentiment", filterSentiment);
     const data = await api.get<Message[]>(`/auto-reply/inbox?${params}`);
     setMessages(data);
-    if (selected) {
-      const updated = data.find((m) => m.id === selected.id);
-      setSelected(updated ?? null);
-    }
-  };
+    setSelected((prev) => (prev ? (data.find((m) => m.id === prev.id) ?? null) : null));
+  }, [filterStatus, filterPlatform, filterSentiment]);
 
   const fetchAnalytics = async () => {
     const data = await api.get<Analytics>("/auto-reply/analytics");
     setAnalytics(data);
   };
 
-  useEffect(() => { fetchMessages(); fetchAnalytics(); }, [filterStatus, filterPlatform, filterSentiment]);
+  const fetchSettings = async () => {
+    try {
+      const data = await api.get<{ confidence_threshold: number }>("/auto-reply/settings");
+      setRequireApproval(data.confidence_threshold >= 1.0);
+    } catch { /* silently ignore */ }
+  };
+
+  useEffect(() => { fetchMessages(); fetchAnalytics(); fetchSettings(); }, [fetchMessages]);
 
   const flash = (msg: string) => {
     setActionMsg(msg);
@@ -117,6 +123,17 @@ export default function AutoReplyPage() {
     finally { setLoading(false); }
   };
 
+  const toggleRequireApproval = async () => {
+    setToggleLoading(true);
+    const next = !requireApproval;
+    try {
+      await api.patch("/auto-reply/settings", { confidence_threshold: next ? 1.0 : 0.75 });
+      setRequireApproval(next);
+      flash(next ? "🔒 Manual approval ON — all replies need your sign-off" : "⚡ Auto-send ON — replies above 75% send automatically");
+    } catch { flash("❌ Failed to update setting"); }
+    finally { setToggleLoading(false); }
+  };
+
   const confidenceColor = (c: number | null) => {
     if (!c) return "text-gray-500";
     if (c >= 0.75) return "text-green-400";
@@ -131,9 +148,23 @@ export default function AutoReplyPage() {
           <h1 className="text-2xl font-bold">Auto-Reply Inbox</h1>
           <p className="text-gray-400 text-sm mt-1">AI-generated replies to incoming messages — review, approve, or override</p>
         </div>
-        <Link href="/auto-reply/faq" className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg transition">
-          📚 Manage FAQ
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Require Approval quick-toggle */}
+          <button
+            onClick={toggleRequireApproval}
+            disabled={toggleLoading}
+            title={requireApproval ? "Click to switch back to auto-send" : "Click to require manual approval for every reply"}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50 ${
+              requireApproval
+                ? "bg-yellow-600 hover:bg-yellow-500 text-white"
+                : "bg-gray-800 hover:bg-gray-700 text-gray-300"
+            }`}>
+            {requireApproval ? "🔒 Approval Required" : "⚡ Auto-Send ON"}
+          </button>
+          <Link href="/auto-reply/faq" className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg transition">
+            📚 Manage FAQ
+          </Link>
+        </div>
       </div>
 
       {/* Analytics bar */}
@@ -263,6 +294,13 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
+              {/* Sent automatically banner */}
+              {selected.status === "sent" && (
+                <div className="bg-green-950 border border-green-800 rounded-lg p-3 text-sm text-green-300 flex items-center gap-2">
+                  ✅ Sent automatically — AI replied with {selected.confidence !== null ? `${Math.round(selected.confidence * 100)}% confidence` : "high confidence"}
+                </div>
+              )}
+
               {/* Actions for pending */}
               {selected.status === "pending" && (
                 <div className="flex gap-2">
@@ -277,20 +315,22 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
-              {/* Override */}
-              {(selected.status === "pending" || selected.status === "escalated") && (
+              {/* Override — pending, escalated, and sent (follow-up correction) */}
+              {(selected.status === "pending" || selected.status === "escalated" || selected.status === "sent") && (
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Or send a custom reply instead</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    {selected.status === "sent" ? "Send a follow-up or correction" : "Or send a custom reply instead"}
+                  </p>
                   <textarea
                     value={overrideText}
                     onChange={(e) => setOverrideText(e.target.value)}
-                    placeholder="Type your custom reply..."
+                    placeholder={selected.status === "sent" ? "Type a follow-up message..." : "Type your custom reply..."}
                     rows={3}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 resize-none"
                   />
                   <button onClick={() => override(selected.id)} disabled={loading || !overrideText.trim()}
                     className="mt-2 w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition">
-                    ✏️ Send Custom Reply
+                    {selected.status === "sent" ? "📤 Send Follow-up" : "✏️ Send Custom Reply"}
                   </button>
                 </div>
               )}
