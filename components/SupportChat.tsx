@@ -14,6 +14,8 @@ export default function SupportChat() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [escalating, setEscalating] = useState(false);
+  const [escalated, setEscalated] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,24 +113,35 @@ export default function SupportChat() {
           {/* Human escalation */}
           <div className="px-4 py-3 border-t border-gray-700 bg-gray-800">
             <p className="text-xs text-gray-400 mb-2">Talk to a human</p>
-            <div className="flex gap-2">
-              <a
-                href="mailto:support@marketpiloting.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-medium px-3 py-2 rounded-lg transition"
-              >
-                📧 Email
-              </a>
-              <a
-                href="https://wa.me/2348023131379"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-2 rounded-lg transition"
-              >
-                💬 WhatsApp
-              </a>
-            </div>
+            {escalated ? (
+              <p className="text-green-400 text-xs text-center py-1">✅ A support agent has been notified and will contact you shortly.</p>
+            ) : (
+              <div className="flex gap-2">
+                <a
+                  href="mailto:support@marketpiloting.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-medium px-3 py-2 rounded-lg transition"
+                >
+                  📧 Email
+                </a>
+                <button
+                  disabled={escalating}
+                  onClick={async () => {
+                    setEscalating(true);
+                    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.text || "Client requested human support";
+                    try {
+                      await api.post("/support/escalate", { message: lastUserMsg });
+                    } catch {}
+                    setEscalating(false);
+                    setEscalated(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-medium px-3 py-2 rounded-lg transition"
+                >
+                  {escalating ? "Notifying..." : "💬 WhatsApp"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
