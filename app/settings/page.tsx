@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 
 interface Connections {
@@ -233,6 +234,15 @@ function RecyclingSettings() {
 }
 
 export default function SettingsPage() {
+  const canAccess = useCanAccess("admin"); // viewer + editor cannot access settings
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-4xl">🔒</p>
+      <p className="text-white font-semibold">Access Restricted</p>
+      <p className="text-gray-400 text-sm">Settings are only available to admins and owners.</p>
+    </div>
+  );
+
   const [plan, setPlan] = useState("solo");
   const [connections, setConnections] = useState<Connections | null>(null);
   const [billing, setBilling] = useState<BillingInfo | null>(null);
@@ -986,7 +996,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ── Danger Zone ── */}}
+      {/* -- Danger Zone -- */}
       <div className="mt-10 mb-10">
         <h2 className="text-xl font-bold text-red-400 mb-2">⚠️ Danger Zone</h2>
         <p className="text-gray-500 text-sm mb-4">

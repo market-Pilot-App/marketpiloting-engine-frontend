@@ -11,6 +11,7 @@ interface AuthClient {
   access_token: string;
   campaign_name?: string;
   location_name?: string;
+  role?: string; // only set for team members (viewer | editor | admin)
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isImpersonating: boolean;
   impersonatedName: string | null;
+  role: string | null; // null = owner (full access)
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   startImpersonation: (clientId: number) => Promise<void>;
@@ -124,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: client?.plan === "admin",
         isImpersonating,
         impersonatedName,
+        role: client?.role ?? null,
         login,
         logout,
         startImpersonation,

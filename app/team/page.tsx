@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 
 interface Member {
@@ -26,6 +27,15 @@ const ROLE_DESC: Record<string, string> = {
 };
 
 export default function TeamPage() {
+  const canAccess = useCanAccess("admin"); // only admin/owner can manage team
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-4xl">🔒</p>
+      <p className="text-white font-semibold">Access Restricted</p>
+      <p className="text-gray-400 text-sm">Team management is only available to admins and owners.</p>
+    </div>
+  );
+
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");

@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useCanAccess } from "@/lib/use-role-guard";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
@@ -50,11 +51,30 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarProps) {
   const pathname = usePathname();
-  const { client, isAdmin, logout, switchBrand } = useAuth();
+  const { client, isAdmin, logout, switchBrand, role } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
   const isVideoAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
   const isLocationAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
   const showUpgrade = !isAdmin && client?.plan !== "agency" && client?.plan !== "pro";
+
+  // Role-based nav filtering
+  const canEditor = useCanAccess("editor");
+  const canAdmin = useCanAccess("admin");
+
+  // viewer: dashboard + analytics only
+  // editor: everything except settings/billing/team
+  // admin: everything except settings/billing
+  const VIEWER_ALLOWED = new Set(["/", "/analytics"]);
+  const EDITOR_BLOCKED = new Set(["/settings", "/team", "/agency-settings"]);
+  const ADMIN_BLOCKED = new Set(["/settings"]);
+
+  function isNavAllowed(href: string): boolean {
+    if (role === null) return true; // owner
+    if (role === "viewer") return VIEWER_ALLOWED.has(href);
+    if (role === "editor") return !EDITOR_BLOCKED.has(href);
+    if (role === "admin") return !ADMIN_BLOCKED.has(href);
+    return true;
+  }
 
   const [collapsed, setCollapsed] = useState(false);
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
@@ -89,7 +109,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
     ...(isLocationAllowed ? [LOCATIONS_NAV] : []),
     ...(isAgency ? AGENCY_NAV : []),
-  ];
+  ].filter((item) => isNavAllowed(item.href));
 
   const logoSrc = agencyLogoUrl || "/logo.png";
 

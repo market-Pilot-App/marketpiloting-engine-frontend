@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 
 interface EvolutionEntry { date: string; change: string; reason: string; status: string; }
@@ -25,6 +26,15 @@ interface BrandDNA {
 }
 
 export default function BrandDNAPage() {
+  const canAccess = useCanAccess("editor"); // viewer cannot access brand DNA
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-4xl">🔒</p>
+      <p className="text-white font-semibold">Access Restricted</p>
+      <p className="text-gray-400 text-sm">Brand DNA is not available for your role.</p>
+    </div>
+  );
+
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
