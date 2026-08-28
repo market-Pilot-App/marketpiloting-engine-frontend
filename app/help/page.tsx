@@ -27,6 +27,22 @@ const TUTORIALS = [
     duration: "5 min",
   },
   {
+    id: "auto-reply",
+    icon: "💬",
+    label: "Auto Reply Integration Guide",
+    description: "Set up AI-powered auto-reply on MarketPilot to respond to messages automatically in your brand voice.",
+    videoId: "VIEvCph4T4Y",
+    duration: "4 min",
+  },
+  {
+    id: "whatsapp",
+    icon: "📱",
+    label: "How To Connect WhatsApp Business",
+    description: "Step-by-step guide to connect your WhatsApp Business account to MarketPilot.",
+    videoId: "L379yE42I1Q",
+    duration: "4 min",
+  },
+  {
     id: "blog",
     icon: "📝",
     label: "Blog / WordPress / Shopify",
