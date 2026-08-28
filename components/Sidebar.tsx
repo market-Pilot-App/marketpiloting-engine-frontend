@@ -286,6 +286,8 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
             {!collapsed && "Admin Panel"}
           </Link>
         )}
+        {/* Help — hidden from viewers (nothing to set up) */}
+        {role !== "viewer" && (
         <Link
           href="/help"
           title={collapsed ? "Help" : undefined}
@@ -296,6 +298,9 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           <span className="text-base">❓</span>
           {!collapsed && "Help"}
         </Link>
+        )}
+        {/* Settings — hidden from viewers (page guard already blocks access) */}
+        {role !== "viewer" && (
         <Link
           href="/settings"
           title={collapsed ? "Settings" : undefined}
@@ -306,6 +311,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           <span className="text-base">⚙️</span>
           {!collapsed && "Settings"}
         </Link>
+        )}
         <button
           onClick={logout}
           title={collapsed ? "Sign out" : undefined}
