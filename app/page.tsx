@@ -94,8 +94,11 @@ function AgencyOverview() {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { client, isAdmin } = useAuth();
-  const isAgency = client?.plan === "agency" || isAdmin;
+  const { client, isAdmin, role } = useAuth();
+  const isOwner   = role === null;
+  const isAgency  = client?.plan === "agency" || isAdmin;
+  const canEdit   = isOwner || role === "admin" || role === "editor";
+  const canAdminR = isOwner || role === "admin";
 
   const [showIntro, setShowIntro] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,8 @@ export default function DashboardPage() {
     { label: "Referral Clicks",      value: overview?.total_referral_clicks ?? "—",     icon: "🔗" },
     { label: "Telegram Members",     value: overview?.telegram_members ?? "—",          icon: "✈️" },
     { label: "Brand DNA Score",      value: dna ? `${dna.consistency_score}/100` : "—", icon: "🧬" },
-    ...(revenue && revenue.total_revenue > 0 ? [
+    // Revenue cards: owner only — financial data never shown to invitees
+    ...(isOwner && revenue && revenue.total_revenue > 0 ? [
       { label: "Revenue (30d)", value: `₦${revenue.total_revenue.toLocaleString()}`, icon: "💵" },
       { label: "Sales (30d)",   value: revenue.total_sales,                           icon: "🛒" },
     ] : []),
@@ -177,16 +181,16 @@ export default function DashboardPage() {
     { label: "✍️ Write Blog Post",        href: "/blog" },
     { label: "💡 AI Opportunities",       href: "/opportunities" },
     { label: "📅 Scheduler",             href: "/scheduler" },
-  ];
+  ].filter(() => canEdit);
 
   const cronActions = [
-    { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",        msg: "Posts triggered!" },
-    { label: "🔥 Newsjack Now",           endpoint: "/opportunities/hijack-news",  msg: "Newsjack generated!" },
-    { label: "📝 Auto Blog",             endpoint: "/blog/generate",              msg: "Blog post generated!" },
-    { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news", msg: "News posts generated!" },
-    { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report", msg: "Report sent!" },
-    { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",         msg: "Schedule filled!" },
-  ];
+    { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",          msg: "Posts triggered!",      show: canEdit },
+    { label: "🔥 Newsjack Now",           endpoint: "/opportunities/hijack-news",    msg: "Newsjack generated!",    show: canEdit },
+    { label: "📝 Auto Blog",             endpoint: "/blog/generate",                msg: "Blog post generated!",   show: canEdit },
+    { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news",   msg: "News posts generated!",  show: canEdit },
+    { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report",  msg: "Report sent!",           show: canAdminR },
+    { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",           msg: "Schedule filled!",       show: canEdit },
+  ].filter((a) => a.show);
 
   const adminCronActions = [
     { label: "🚀 Run Boosts Now",         endpoint: "/scheduler/run-boosts",       msg: "Boosts triggered!" },
@@ -360,7 +364,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => runAction("🔥 Newsjack Now", "/opportunities/hijack-news", "Newsjack generated!")}
                     disabled={actionLoading === "🔥 Newsjack Now"}
-                    className="px-3 py-1 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                  className="px-3 py-1 bg-orange-700 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition" style={{display: canEdit ? undefined : 'none'}}>
                     {actionLoading === "🔥 Newsjack Now" ? "Running..." : "🔥 Newsjack Now"}
                   </button>
                 </div>
@@ -469,7 +473,8 @@ export default function DashboardPage() {
           )}
           </ErrorBoundary>
 
-          {/* Quick Actions */}
+          {/* Quick Actions — hidden entirely from viewers */}
+          {canEdit && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
             <h3 className="font-semibold mb-4">Quick Actions</h3>
             <div className="flex flex-wrap gap-2">
@@ -497,6 +502,7 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* Recent Boosted Posts — admin only */}
           {isAdmin && recentBoosts.length > 0 && (
