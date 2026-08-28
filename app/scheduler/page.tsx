@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface QueuedPost {
   id: number;
@@ -45,6 +46,14 @@ const PLAN_LIMITS: Record<string, number> = {
 
 export default function SchedulerPage() {
   const { client } = useAuth();
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access the Scheduler.</p>
+    </div>
+  );
   const dailyLimit = PLAN_LIMITS[client?.plan || "starter"] ?? 5;
   const [posts, setPosts] = useState<QueuedPost[]>([]);
   const [loading, setLoading] = useState(true);

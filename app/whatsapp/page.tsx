@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface WASettings {
   whatsapp_phone_number_id: string;
@@ -17,6 +18,14 @@ interface BroadcastResult {
 }
 
 export default function WhatsAppBroadcastPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access WA Broadcast.</p>
+    </div>
+  );
   const [settings, setSettings] = useState<WASettings | null>(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);

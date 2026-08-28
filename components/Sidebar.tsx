@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useCanAccess } from "@/lib/use-role-guard";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
@@ -58,21 +57,19 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const showUpgrade = !isAdmin && client?.plan !== "agency" && client?.plan !== "pro";
 
   // Role-based nav filtering
-  const canEditor = useCanAccess("editor");
-  const canAdmin = useCanAccess("admin");
-
-  // viewer: dashboard + analytics only
-  // editor: everything except settings/billing/team
-  // admin: everything except settings/billing
-  const VIEWER_ALLOWED = new Set(["/", "/analytics"]);
-  const EDITOR_BLOCKED = new Set(["/settings", "/team", "/agency-settings"]);
-  const ADMIN_BLOCKED = new Set(["/settings"]);
+  // viewer  : dashboard + analytics + help only
+  // editor  : everything except boosts, approval-queue, brands, team, agency-settings, settings
+  // admin   : everything except team, agency-settings, settings
+  // owner   : full access
+  const VIEWER_ALLOWED   = new Set(["/", "/analytics", "/help"]);
+  const EDITOR_BLOCKED   = new Set(["/boosts", "/approval-queue", "/brands", "/team", "/agency-settings", "/settings"]);
+  const ADMIN_BLOCKED    = new Set(["/team", "/agency-settings", "/settings"]);
 
   function isNavAllowed(href: string): boolean {
-    if (role === null) return true; // owner
+    if (role === null) return true; // owner — full access
     if (role === "viewer") return VIEWER_ALLOWED.has(href);
     if (role === "editor") return !EDITOR_BLOCKED.has(href);
-    if (role === "admin") return !ADMIN_BLOCKED.has(href);
+    if (role === "admin")  return !ADMIN_BLOCKED.has(href);
     return true;
   }
 
@@ -108,7 +105,8 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
     ...NAV,
     ...(isVideoAllowed ? [VIDEO_NAV] : []),
     ...(isLocationAllowed ? [LOCATIONS_NAV] : []),
-    ...(isAgency ? AGENCY_NAV : []),
+    // Agency nav only shown to owners — team members never see brands/team/agency-settings
+    ...(isAgency && role === null ? AGENCY_NAV : []),
   ].filter((item) => isNavAllowed(item.href));
 
   const logoSrc = agencyLogoUrl || "/logo.png";
@@ -166,9 +164,20 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
         {!collapsed && (
           <>
             <p className="text-white text-sm font-semibold truncate mt-2">{client?.name}</p>
-            <span className="inline-block mt-1.5 text-xs font-bold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
-              {client?.plan}
-            </span>
+            {/* Show role badge for team members, plan badge for owners */}
+            {role ? (
+              <span className={`inline-block mt-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full capitalize tracking-wide ${
+                role === "admin" ? "bg-red-900 text-red-300"
+                : role === "editor" ? "bg-blue-900 text-blue-300"
+                : "bg-gray-800 text-gray-400"
+              }`}>
+                {role}
+              </span>
+            ) : (
+              <span className="inline-block mt-1.5 text-xs font-bold bg-indigo-900 text-indigo-300 px-2.5 py-0.5 rounded-full capitalize tracking-wide">
+                {client?.plan}
+              </span>
+            )}
             {client?.location_name && (
               <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium bg-amber-900/40 border border-amber-700/40 text-amber-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
                 📍 {client.location_name}
@@ -178,8 +187,8 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
         )}
       </div>
 
-      {/* Brand switcher — Agency only, hidden when collapsed */}
-      {!collapsed && isAgency && brands.length > 0 && (
+      {/* Brand switcher — Agency owners only, never shown to team members */}
+      {!collapsed && isAgency && brands.length > 0 && role === null && (
         <div className="px-3 py-3 border-b border-gray-800">
           <button
             onClick={() => setBrandOpen(!brandOpen)}
@@ -250,8 +259,8 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
         })}
       </nav>
 
-      {/* Upgrade prompt — non-admin, non-agency only */}
-      {!collapsed && showUpgrade && (
+      {/* Upgrade prompt — owners only, never shown to team members */}
+      {!collapsed && showUpgrade && role === null && (
         <div className="px-3 pb-3">
           <Link
             href="/upgrade"

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface BlogSettings {
   blog_platform: string;
@@ -24,6 +25,14 @@ interface BlogPost {
 }
 
 export default function BlogPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Blog.</p>
+    </div>
+  );
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);

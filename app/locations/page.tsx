@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface Location {
   id: number;
@@ -16,6 +17,14 @@ interface Location {
 const PLAN_LIMITS: Record<string, number> = { growth: 3, pro: 5, agency: 999, admin: 999 };
 
 export default function LocationsPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Locations.</p>
+    </div>
+  );
   const { client, setSession } = useAuth();
   const plan = client?.plan ?? "";
   const limit = PLAN_LIMITS[plan] ?? 0;

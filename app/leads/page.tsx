@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface Lead {
   id: number;
@@ -48,6 +49,14 @@ const SCORE_CONFIG: Record<string, { label: string; emoji: string; cls: string }
 };
 
 export default function LeadsPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Leads.</p>
+    </div>
+  );
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [scoreFilter, setScoreFilter] = useState("");

@@ -7,6 +7,7 @@ import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { "en-US": enUS } });
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -50,6 +51,14 @@ interface CalEvent {
 }
 
 export default function CalendarPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access the Calendar.</p>
+    </div>
+  );
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState<View>("month");
   const [events, setEvents] = useState<CalEvent[]>([]);

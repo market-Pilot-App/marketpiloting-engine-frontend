@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface LandingPageData {
   id: number;
@@ -22,6 +23,14 @@ interface BlogSettings {
 const PUBLIC_BASE = "https://dashboard.marketpiloting.com/p";
 
 export default function LandingPageDashboard() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Landing Page.</p>
+    </div>
+  );
   const [page, setPage] = useState<LandingPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);

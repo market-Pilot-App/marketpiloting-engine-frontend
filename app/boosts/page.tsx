@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface BoostOrder {
   id: number;
@@ -44,6 +45,14 @@ const TWITTER_BOOST_PLANS = new Set(["growth", "pro", "agency", "admin"]);
 
 export default function BoostsPage() {
   const { isAdmin, client } = useAuth();
+  const canAccess = useCanAccess("admin");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Admin access required</p>
+      <p className="text-gray-400 text-sm">Only admins and owners can view Boosts.</p>
+    </div>
+  );
   const plan = client?.plan ?? "starter";
   const [orders, setOrders] = useState<BoostOrder[]>([]);
   const [pending, setPending] = useState<BoostOrder[]>([]);

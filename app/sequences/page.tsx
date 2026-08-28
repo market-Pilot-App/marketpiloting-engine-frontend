@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface Sequence {
   id: number;
@@ -25,6 +26,14 @@ interface Lead {
 }
 
 export default function SequencesPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Sequences.</p>
+    </div>
+  );
   const [sequences, setSequences] = useState<Sequence[]>([]);
   const [tab, setTab] = useState<"list" | "create">("list");
   const [name, setName] = useState("");

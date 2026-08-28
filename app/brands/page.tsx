@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 interface Brand {
   id: number;
@@ -21,13 +22,14 @@ const PLATFORM_ICONS: Record<string, string> = {
 export default function BrandsPage() {
   const { client, switchBrand } = useAuth();
   const router = useRouter();
+  const canAccess = useCanAccess("admin");
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<number | null>(null);
 
   useEffect(() => {
     if (!client) return;
-    if (!["agency", "admin"].includes(client.plan)) { router.push("/"); return; }
+    if (!canAccess || !["agency", "admin"].includes(client.plan)) { router.push("/"); return; }
     api.get<Brand[]>("/campaigns/").then(setBrands).finally(() => setLoading(false));
   }, [client, router]);
 

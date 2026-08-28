@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 const DASHBOARD_URL = "https://dashboard.marketpiloting.com";
 
@@ -11,6 +12,14 @@ interface BioSettings {
 }
 
 export default function BioSettingsPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Link-in-Bio.</p>
+    </div>
+  );
   const [settings, setSettings] = useState<BioSettings>({
     bio_username: "", bio_headline: "", bio_show_catalog: true,
     bio_show_leads_form: true, bio_custom_links: [],

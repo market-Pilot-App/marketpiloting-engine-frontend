@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { api, API_URL } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 interface DaySeries { date: string; posts: number; likes: number; reach: number; }
 interface PlatformStats { posts: number; likes: number; reach: number; }
@@ -114,9 +115,30 @@ interface RevenueData {
 }
 
 export default function AnalyticsPage() {
+  const { role } = useAuth();
+  const isOwner   = role === null;
+  const canRevenue = isOwner;                              // Revenue tab: owner only (Paystack financials)
+  const canROI     = isOwner || role === "admin";          // ROI tab: owner + admin
+  const canActions = isOwner || role === "admin" || role === "editor"; // Sync/Generate buttons
+  const canWrite   = isOwner || role === "admin" || role === "editor"; // Add competitor
+
+  type TabKey = "engagement" | "revenue" | "roi" | "heatmap" | "benchmark" | "hashtags";
+  const ALL_TABS: TabKey[] = ["engagement", "revenue", "roi", "heatmap", "benchmark", "hashtags"];
+  const visibleTabs = ALL_TABS.filter((t) => {
+    if (t === "revenue") return canRevenue;
+    if (t === "roi")     return canROI;
+    return true;
+  });
+
   const [data, setData] = useState<Summary | null>(null);
   const [days, setDays] = useState(30);
-  const [activeTab, setActiveTab] = useState<"engagement" | "revenue" | "roi" | "heatmap" | "benchmark" | "hashtags">("engagement");
+  const [activeTab, setActiveTab] = useState<TabKey>("engagement");
+
+  // Reset to engagement if current tab is not allowed for this role
+  useEffect(() => {
+    if (!visibleTabs.includes(activeTab)) setActiveTab("engagement");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
   const [roiData, setRoiData] = useState<ROIData | null>(null);
   const [roiLoading, setRoiLoading] = useState(false);
@@ -259,7 +281,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3">
           {/* Tab switcher */}
           <div className="flex bg-gray-100 rounded-lg p-1">
-            {(["engagement", "revenue", "roi", "heatmap", "benchmark", "hashtags"] as const).map((t) => (
+            {visibleTabs.map((t) => (
               <button key={t} onClick={() => setActiveTab(t)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
                   activeTab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
@@ -278,13 +300,15 @@ export default function AnalyticsPage() {
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
           </select>
-          <button
-            onClick={runAggregate}
-            disabled={aggregating}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {aggregating ? "Syncing…" : "↻ Sync Now"}
-          </button>
+          {canActions && (
+            <button
+              onClick={runAggregate}
+              disabled={aggregating}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {aggregating ? "Syncing…" : "↻ Sync Now"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -391,8 +415,8 @@ export default function AnalyticsPage() {
                     } catch { alert("Failed to apply — try again."); }
                     finally { setApplyingSchedule(false); }
                   }}
-                  disabled={applyingSchedule}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition whitespace-nowrap"
+                  disabled={applyingSchedule || !canActions}
+                  className={`px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition whitespace-nowrap ${!canActions ? "hidden" : ""}`}
                 >
                   {applyingSchedule ? "Saving..." : "Apply to Schedule →"}
                 </button>
@@ -639,7 +663,7 @@ export default function AnalyticsPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className={`flex gap-2 ${!canWrite ? "hidden" : ""}`}>
                   <input
                     value={newCompetitor.url}
                     onChange={(e) => setNewCompetitor((p) => ({ ...p, url: e.target.value }))}
@@ -889,21 +913,23 @@ export default function AnalyticsPage() {
                   {weeklyReport ? `Week of ${weeklyReport.week_start}` : "AI-written analysis of your week's performance"}
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  setGeneratingWeekly(true);
-                  try {
-                    const r = await api.post<WeeklyReport>("/analytics/weekly-report/generate");
-                    setWeeklyReport(r);
-                  } finally {
-                    setGeneratingWeekly(false);
-                  }
-                }}
-                disabled={generatingWeekly}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {generatingWeekly ? "Generating..." : "✨ Generate Now"}
-              </button>
+              {canActions && (
+                <button
+                  onClick={async () => {
+                    setGeneratingWeekly(true);
+                    try {
+                      const r = await api.post<WeeklyReport>("/analytics/weekly-report/generate");
+                      setWeeklyReport(r);
+                    } finally {
+                      setGeneratingWeekly(false);
+                    }
+                  }}
+                  disabled={generatingWeekly}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {generatingWeekly ? "Generating..." : "✨ Generate Now"}
+                </button>
+              )}
             </div>
             {weeklyReport === undefined ? (
               <p className="text-sm text-gray-400">Loading...</p>
@@ -930,8 +956,8 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* PDF Report section */}
-          {reportPreview && (
+          {/* PDF Report section — owner only (contains business financials + email trigger) */}
+          {reportPreview && isOwner && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>

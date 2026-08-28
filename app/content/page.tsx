@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api, API_URL } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 import HashtagSuggester from "@/components/HashtagSuggester";
 
 const PLATFORM_CONFIG: Record<string, { emoji: string; limit: number }> = {
@@ -59,6 +60,14 @@ interface ContentInsight {
 type PostStatus = "idle" | "posting" | "posted" | "failed";
 
 export default function ContentStudio() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Content.</p>
+    </div>
+  );
   const [plan, setPlan] = useState("solo");
   const [subscriptionStatus, setSubscriptionStatus] = useState("active");
   const [niche, setNiche] = useState("general");

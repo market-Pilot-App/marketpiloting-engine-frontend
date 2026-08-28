@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { useCanAccess } from "@/lib/use-role-guard";
 
 const PLATFORMS = ["facebook", "instagram", "twitter", "linkedin", "telegram", "tiktok"];
 
@@ -14,6 +15,14 @@ interface BrandImage {
 }
 
 export default function MediaPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Media Library.</p>
+    </div>
+  );
   const [images, setImages] = useState<BrandImage[]>([]);
   const [total, setTotal] = useState(0);
   const [filterPlatform, setFilterPlatform] = useState("");

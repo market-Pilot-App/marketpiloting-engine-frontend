@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useCanAccess } from "@/lib/use-role-guard";
 import { API_URL } from "@/lib/api";
 
 const PLATFORMS = ["facebook", "instagram", "linkedin", "telegram", "youtube"];
@@ -38,6 +39,14 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function VideoPage() {
+  const canAccess = useCanAccess("editor");
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <span className="text-4xl">🔒</span>
+      <p className="text-white font-semibold">Editor access required</p>
+      <p className="text-gray-400 text-sm">Viewers cannot access Video.</p>
+    </div>
+  );
   const { client } = useAuth();
   const token = typeof window !== "undefined" ? localStorage.getItem("mp_token") : "";
   const [tab, setTab] = useState<"now" | "schedule">("now");
