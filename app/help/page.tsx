@@ -54,20 +54,36 @@ const TUTORIALS = [
 
 const FAQS = [
   {
-    q: "Why does my token keep expiring?",
-    a: "Facebook and LinkedIn access tokens expire after 60–90 days. You'll need to regenerate them from the developer portal and update them in Settings. YouTube refresh tokens don't expire unless revoked.",
+    q: "How do I connect Facebook and Instagram?",
+    a: "Go to Settings → Social Connections → click Facebook. A popup will open — log in and authorize MarketPilot. Instagram connects automatically once Facebook is linked, as long as your Instagram Business account is attached to your Facebook Page. No extra steps needed.",
   },
   {
-    q: "Where do I find my Facebook Page ID?",
-    a: "Go to your Facebook Page → About → scroll down to find 'Page ID'. Alternatively, use the Graph API Explorer at developers.facebook.com to find it.",
+    q: "How do I connect WhatsApp Business?",
+    a: "Go to Settings → WhatsApp Business → click Connect WhatsApp Business. A popup will open — log in with your Facebook account and authorize MarketPilot to access your WhatsApp Business account. You need a Meta Business Portfolio and a WhatsApp Business number. Watch the tutorial in the Help Center for a full walkthrough.",
   },
   {
     q: "My Telegram bot isn't posting — what's wrong?",
-    a: "Make sure you've added the bot as an Administrator to your channel with permission to post messages. Also confirm the Channel ID starts with @ or -100 for private channels.",
+    a: "Make sure you've added the bot as an Administrator to your channel with permission to post messages. Also confirm the Channel ID starts with @ for public channels or -100 followed by numbers for private channels.",
   },
   {
     q: "How do I get a LinkedIn Person URN?",
-    a: "After creating your LinkedIn app and getting an access token, call the LinkedIn API: GET https://api.linkedin.com/v2/me — the 'id' field in the response is your Person URN. Format it as urn:li:person:{id}.",
+    a: "After creating your LinkedIn app and getting an access token, call the LinkedIn API: GET https://api.linkedin.com/v2/me — the 'id' field in the response is your Person URN. Format it as urn:li:person:{id}. Watch the LinkedIn tutorial in the Help Center for a step-by-step guide.",
+  },
+  {
+    q: "Why does my LinkedIn token keep expiring?",
+    a: "LinkedIn access tokens expire after 60 days. You'll need to regenerate them from the LinkedIn developer portal and update them in Settings → Social Connections → LinkedIn. YouTube refresh tokens don't expire unless manually revoked.",
+  },
+  {
+    q: "How does Auto-Reply work?",
+    a: "When a message comes in on a connected platform (Telegram, WhatsApp, Facebook, Instagram), MarketPilot's AI generates a reply using your Brand DNA and FAQ entries. If the confidence score is above your threshold, it sends automatically. Below the threshold, it goes to your Auto-Reply Inbox for your approval. You can also override any reply with a custom message.",
+  },
+  {
+    q: "What is the confidence threshold in Auto-Reply?",
+    a: "The confidence threshold controls when replies send automatically. At 75%, replies with 75% or higher AI confidence send without your approval. At 100%, every reply requires manual approval. You can adjust this in Settings → Auto-Reply Settings, or toggle it quickly from the Auto-Reply Inbox page.",
+  },
+  {
+    q: "How do I invite team members?",
+    a: "Go to Team → enter their email and select a role (Admin, Editor, or Viewer). They'll receive an invite email with a link to set their password and join your workspace. Viewers can only see the dashboard and analytics. Editors can create and manage content. Admins can do everything except billing and settings.",
   },
   {
     q: "Can I connect multiple platforms at once?",
