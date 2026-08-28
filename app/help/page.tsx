@@ -27,14 +27,6 @@ const TUTORIALS = [
     duration: "5 min",
   },
   {
-    id: "whatsapp",
-    icon: "💬",
-    label: "WhatsApp Business",
-    description: "Get your Phone Number ID and Access Token from Meta Business Suite.",
-    videoId: "F7BiB7LdrXw",
-    duration: "4 min",
-  },
-  {
     id: "blog",
     icon: "📝",
     label: "Blog / WordPress / Shopify",
