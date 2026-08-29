@@ -952,7 +952,7 @@ export default function SettingsPage() {
                 <p className="text-white font-medium text-sm">📲 Human Escalation Number</p>
                 <p className="text-gray-500 text-xs mt-0.5">
                   When the AI can&apos;t answer a customer message, we&apos;ll send a WhatsApp alert to this number so you can reply manually.
-                  Use international format without the + sign (e.g. <span className="text-gray-400 font-mono">2348023131379</span>).
+                  Use international format without the + sign (e.g. <span className="text-gray-400 font-mono">2348012345678</span>).
                 </p>
               </div>
               {waEscalationNumber && !waEscSaving && (
@@ -960,7 +960,7 @@ export default function SettingsPage() {
               )}
               <input
                 type="tel"
-                placeholder="e.g. 2348023131379"
+                placeholder="e.g. 2348012345678"
                 value={waEscalationNumber}
                 onChange={(e) => { setWaEscalationNumber(e.target.value); setWaEscError(""); setWaEscSaved(false); }}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-500 font-mono"
