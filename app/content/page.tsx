@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api, API_URL } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useCanAccess } from "@/lib/use-role-guard";
 import HashtagSuggester from "@/components/HashtagSuggester";
 
@@ -94,6 +94,8 @@ export default function ContentStudio() {
   const [storyPostError, setStoryPostError] = useState("");
   const [insights, setInsights] = useState<ContentInsight[]>([]);
   const [generatingInsight, setGeneratingInsight] = useState<Record<number, boolean>>({});
+  const [analyzingConversations, setAnalyzingConversations] = useState(false);
+  const [analyzeMsg, setAnalyzeMsg] = useState("");
 
   const [hasPerformanceData, setHasPerformanceData] = useState(false);
   const [tab, setTab] = useState<"generate" | "repurpose" | "offer" | "templates">("generate");
@@ -574,21 +576,34 @@ export default function ContentStudio() {
             <p className="text-sm font-medium text-gray-300">💬 From Conversations <span className="text-xs text-gray-500 ml-1">Top topics customers asked this week</span></p>
             <button
               onClick={async () => {
+                setAnalyzingConversations(true);
+                setAnalyzeMsg("");
                 try {
-                  const token = localStorage.getItem("mp_token");
-                  await window.fetch(`${API_URL}/cron/analyze-conversations`, {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${token}`, "x-cron-secret": "cron-secret-change-me" },
-                  });
-                  const data = await api.get<ContentInsight[]>("/insights/");
-                  setInsights(data);
-                } catch { setGenError("Analysis failed — check if you have conversation messages."); }
+                  const result = await api.post<{ insights_saved?: number; skipped?: string; error?: string }>("/insights/analyze");
+                  if (result.skipped) {
+                    setAnalyzeMsg("No messages this week yet — insights will appear once customers message you.");
+                  } else if (result.error) {
+                    setAnalyzeMsg(`Analysis error: ${result.error}`);
+                  } else {
+                    setAnalyzeMsg(`✓ Found ${result.insights_saved ?? 0} topic${(result.insights_saved ?? 0) !== 1 ? "s" : ""}`);
+                    const data = await api.get<ContentInsight[]>("/insights/");
+                    setInsights(data);
+                  }
+                } catch (e: unknown) {
+                  setAnalyzeMsg(e instanceof Error ? e.message : "Analysis failed");
+                } finally {
+                  setAnalyzingConversations(false);
+                }
               }}
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+              disabled={analyzingConversations}
+              className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50 transition"
             >
-              ↻ Run Analysis
+              {analyzingConversations ? "Scanning..." : "↻ Run Analysis"}
             </button>
           </div>
+          {analyzeMsg && (
+            <p className="text-xs mt-2 text-gray-400">{analyzeMsg}</p>
+          )}
           {insights.length === 0 ? (
             <p className="text-xs text-gray-600 py-2">No insights yet. Click ↻ Run Analysis to scan this week's incoming messages.</p>
           ) : (
