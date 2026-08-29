@@ -170,10 +170,10 @@ function RecyclingSettings() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    api.get<{ recycling_enabled: boolean; recycle_threshold: number }>("/campaigns/me")
+    api.get<{ recycling_enabled: boolean; recycle_threshold: number }>("/campaigns/me/recycling")
       .then((d) => {
-        setEnabled((d as Record<string, unknown>).recycling_enabled as boolean ?? false);
-        setThreshold((d as Record<string, unknown>).recycle_threshold as number ?? 10.0);
+        setEnabled(d.recycling_enabled ?? false);
+        setThreshold(d.recycle_threshold ?? 10.0);
       }).catch(() => {});
   }, []);
 
