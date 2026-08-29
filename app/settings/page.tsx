@@ -270,6 +270,10 @@ export default function SettingsPage() {
   const [waWabaId, setWaWabaId] = useState("");
   const [waEnableSaving, setWaEnableSaving] = useState(false);
   const [waError, setWaError] = useState("");
+  const [waEscalationNumber, setWaEscalationNumber] = useState("");
+  const [waEscSaving, setWaEscSaving] = useState(false);
+  const [waEscSaved, setWaEscSaved] = useState(false);
+  const [waEscError, setWaEscError] = useState("");
   const canWhatsApp = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
 
   // Delete account state
@@ -326,12 +330,13 @@ export default function SettingsPage() {
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
     api.get<BillingInfo>("/auth/billing").then(setBilling).catch(() => {});
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
-    api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
+    api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean; whatsapp_escalation_number: string }>("/whatsapp/settings")
       .then((d) => {
         setWaEnabled(d.whatsapp_enabled);
         setWaConnected(d.connected);
         setWaPhoneId(d.whatsapp_phone_number_id || "");
         setWaWabaId(d.whatsapp_business_account_id || "");
+        setWaEscalationNumber(d.whatsapp_escalation_number || "");
       }).catch(() => {});
     api.get<{ paystack_secret_key_set: boolean; paystack_secret_key_hint: string }>("/revenue/settings")
       .then((d) => { setRevKeySet(d.paystack_secret_key_set); setRevKeyHint(d.paystack_secret_key_hint); })
@@ -916,12 +921,13 @@ export default function SettingsPage() {
                     if (e.data === "whatsapp_connected") {
                       window.removeEventListener("message", handler);
                       popup?.close();
-                      api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean }>("/whatsapp/settings")
+                      api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean; whatsapp_escalation_number: string }>("/whatsapp/settings")
                         .then((d) => {
                           setWaConnected(d.connected);
                           setWaPhoneId(d.whatsapp_phone_number_id || "");
                           setWaWabaId(d.whatsapp_business_account_id || "");
                           setWaEnabled(d.whatsapp_enabled);
+                          setWaEscalationNumber(d.whatsapp_escalation_number || "");
                         });
                     } else if (e.data?.type === "whatsapp_error") {
                       window.removeEventListener("message", handler);
@@ -939,6 +945,54 @@ export default function SettingsPage() {
               {waConnected ? "🔄 Reconnect WhatsApp Business" : "💬 Connect WhatsApp Business"}
             </button>
             <p className="text-xs text-gray-600">A popup will open — log in with your Facebook account and authorize MarketPilot to access your WhatsApp Business account.</p>
+
+            {/* ── Human Escalation Number ── */}
+            <div className="border-t border-gray-800 pt-4 space-y-3">
+              <div>
+                <p className="text-white font-medium text-sm">📲 Human Escalation Number</p>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  When the AI can&apos;t answer a customer message, we&apos;ll send a WhatsApp alert to this number so you can reply manually.
+                  Use international format without the + sign (e.g. <span className="text-gray-400 font-mono">2348023131379</span>).
+                </p>
+              </div>
+              {waEscalationNumber && !waEscSaving && (
+                <p className="text-green-400 text-xs">✅ Current: <span className="font-mono">{waEscalationNumber}</span></p>
+              )}
+              <input
+                type="tel"
+                placeholder="e.g. 2348023131379"
+                value={waEscalationNumber}
+                onChange={(e) => { setWaEscalationNumber(e.target.value); setWaEscError(""); setWaEscSaved(false); }}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-500 font-mono"
+              />
+              {waEscError && <p className="text-red-400 text-xs">{waEscError}</p>}
+              <button
+                onClick={async () => {
+                  setWaEscError("");
+                  const num = waEscalationNumber.trim().replace(/\D/g, "");
+                  if (!num) { setWaEscError("Enter a number in international format, e.g. 2348023131379"); return; }
+                  if (num.length < 7 || num.length > 15) { setWaEscError("Number must be 7–15 digits in international format"); return; }
+                  setWaEscSaving(true);
+                  try {
+                    await api.post("/whatsapp/settings", {
+                      whatsapp_enabled: waEnabled,
+                      whatsapp_escalation_number: num,
+                    });
+                    setWaEscalationNumber(num);
+                    setWaEscSaved(true);
+                    setTimeout(() => setWaEscSaved(false), 3000);
+                  } catch (e: unknown) {
+                    setWaEscError(e instanceof Error ? e.message : "Save failed");
+                  } finally {
+                    setWaEscSaving(false);
+                  }
+                }}
+                disabled={waEscSaving || !waEscalationNumber.trim()}
+                className="w-full py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
+              >
+                {waEscSaving ? "Saving..." : waEscSaved ? "✓ Saved" : "Save Escalation Number"}
+              </button>
+            </div>
           </div>
         )}
       </div>
