@@ -218,7 +218,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
         <h2 className="text-3xl font-bold mb-2">Ready to get started?</h2>
         <p className="opacity-90 mb-8">Leave your details and we&apos;ll be in touch.</p>
         {submitted ? (
-          <div className="bg-white rounded-xl p-6 max-w-md mx-auto font-semibold" style={{ color: "inherit" }}>
+          <div className="bg-white text-indigo-700 rounded-xl p-6 max-w-md mx-auto font-semibold">
             ✅ Thanks! We&apos;ll be in touch soon.
           </div>
         ) : (
