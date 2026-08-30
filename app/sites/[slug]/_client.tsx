@@ -188,7 +188,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
         </section>
       )}
 
-      {/* Social proof */}
+      {/* Testimonials */}
       {socialProof && Array.isArray(socialProof.testimonials) && (socialProof.testimonials as unknown[]).length > 0 && (
         <section className="py-16 px-6 max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-10">{socialProof.heading as string}</h2>
@@ -198,8 +198,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
                 <p className={`${t.muted} italic mb-4`}>&ldquo;{t2.text}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   {t2.avatar_url && (
-                    <img src={t2.avatar_url} alt={t2.name}
-                      className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                    <img src={t2.avatar_url} alt={t2.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                   )}
                   <div>
                     <p className="font-semibold text-sm">{t2.name}</p>
