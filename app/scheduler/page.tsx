@@ -119,6 +119,8 @@ export default function SchedulerPage() {
         : "/scheduler/queue?limit=50";
       const data = await api.get<QueuedPost[]>(url);
       setPosts(data);
+    } catch {
+      setPosts([]);
     } finally {
       setLoading(false);
     }
