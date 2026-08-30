@@ -5,11 +5,11 @@ import { api, API_URL } from "@/lib/api";
 
 const PLANS = [
   { key: "micro",   label: "Micro",   monthly: "₦5,999",   yearly: "₦4,199",   desc: "1 brand, Facebook only, 2 posts/day" },
-  { key: "solo",    label: "Solo",    monthly: "₦15,000",  yearly: "₦10,499",  desc: "2 platforms (Facebook + X), 3 posts/day" },
-  { key: "starter", label: "Starter", monthly: "₦35,000",  yearly: "₦24,499",  desc: "6 platforms, 5 posts/day + followers boost" },
-  { key: "growth",  label: "Growth",  monthly: "₦75,000",  yearly: "₦52,499",  desc: "7 platforms, 8 posts/day + full automation" },
-  { key: "pro",     label: "Pro",     monthly: "₦185,000", yearly: "₦129,499", desc: "9 platforms, 12 posts/day + max boost" },
-  { key: "agency",  label: "Agency",  monthly: "₦495,000", yearly: "₦346,499", desc: "11 brands, everything included" },
+  { key: "solo",    label: "Solo",    monthly: "₦19,500",  yearly: "₦13,650",  desc: "2 platforms (Facebook + X), 3 posts/day" },
+  { key: "starter", label: "Starter", monthly: "₦42,900",  yearly: "₦30,030",  desc: "6 platforms, 5 posts/day + followers boost" },
+  { key: "growth",  label: "Growth",  monthly: "₦95,000",  yearly: "₦66,500",  desc: "7 platforms, 8 posts/day + full automation" },
+  { key: "pro",     label: "Pro",     monthly: "₦200,000", yearly: "₦140,000", desc: "9 platforms, 12 posts/day + max boost" },
+  { key: "agency",  label: "Agency",  monthly: "₦550,000", yearly: "₦385,000", desc: "11 brands, everything included" },
 ];
 
 const PLAN_ORDER = ["micro", "solo", "starter", "growth", "pro", "agency"];
