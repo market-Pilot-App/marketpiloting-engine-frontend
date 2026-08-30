@@ -381,6 +381,7 @@ export default function EditWebsite() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("content");
   const [activePage, setActivePage] = useState("home");
+  const [subscriptionActive, setSubscriptionActive] = useState(true);
 
   const [theme, setTheme] = useState("indigo");
   const [seoTitle, setSeoTitle] = useState("");
@@ -414,6 +415,15 @@ export default function EditWebsite() {
   }, [websiteId, router]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    api.get<{ subscription_status: string; plan: string }>("/auth/billing")
+      .then((b) => {
+        const active = b.plan === "admin" || ["active", "trial"].includes(b.subscription_status);
+        setSubscriptionActive(active);
+      })
+      .catch(() => {});
+  }, []);
 
   if (!canAccess) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -534,7 +544,24 @@ export default function EditWebsite() {
         ))}
       </div>
 
-      {/* Content Tab */}
+      {/* Expired plan gate — replaces all tab content */}
+      {!subscriptionActive ? (
+        <div className="bg-gray-900 border border-yellow-700/40 rounded-xl p-10 text-center">
+          <p className="text-4xl mb-4">🔒</p>
+          <p className="text-white font-bold text-lg mb-2">Editing is locked</p>
+          <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
+            Your plan has expired. Your website is still live and visible to visitors, but you need an active plan to make changes.
+          </p>
+          <a
+            href="/upgrade"
+            className="inline-block px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition text-sm"
+          >
+            Renew Plan to Edit →
+          </a>
+        </div>
+      ) : (
+        <>
+
       {tab === "content" && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between gap-2 p-3 border-b border-gray-800">
@@ -671,6 +698,8 @@ export default function EditWebsite() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

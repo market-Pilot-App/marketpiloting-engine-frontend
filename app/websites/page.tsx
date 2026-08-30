@@ -26,6 +26,28 @@ interface Analytics {
 
 const PUBLIC_BASE = "https://dashboard.marketpiloting.com/sites";
 
+function ExpiredBanner() {
+  return (
+    <div className="mb-6 rounded-xl border border-yellow-600/40 bg-yellow-950/30 p-5">
+      <div className="flex items-start gap-4">
+        <span className="text-2xl flex-shrink-0">⚠️</span>
+        <div className="flex-1">
+          <p className="text-yellow-300 font-bold text-sm mb-1">Your plan has expired — website editing is locked</p>
+          <p className="text-yellow-500 text-xs leading-relaxed">
+            Your website is still live and your visitors can still access it. However, editing content, settings, and domain is locked until you renew your plan.
+          </p>
+        </div>
+        <a
+          href="/upgrade"
+          className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs rounded-lg transition whitespace-nowrap"
+        >
+          Renew Now →
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function WebsitesDashboard() {
   const canAccess = useCanAccess("editor");
   const [websites, setWebsites] = useState<Website[]>([]);
@@ -35,12 +57,19 @@ export default function WebsitesDashboard() {
   const [copied, setCopied] = useState<number | null>(null);
   const [analytics, setAnalytics] = useState<Record<number, Analytics>>({});
   const [analyticsOpen, setAnalyticsOpen] = useState<number | null>(null);
+  const [subscriptionActive, setSubscriptionActive] = useState(true);
 
   useEffect(() => {
     api.get<Website[]>("/websites/me")
       .then(setWebsites)
       .catch(() => setWebsites([]))
       .finally(() => setLoading(false));
+    api.get<{ subscription_status: string; plan: string }>("/auth/billing")
+      .then((b) => {
+        const active = b.plan === "admin" || ["active", "trial"].includes(b.subscription_status);
+        setSubscriptionActive(active);
+      })
+      .catch(() => {});
   }, []);
 
   if (!canAccess) return (
@@ -110,6 +139,8 @@ export default function WebsitesDashboard() {
           + Build Website
         </Link>
       </div>
+
+      {!subscriptionActive && <ExpiredBanner />}
 
       {websites.length === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
@@ -191,9 +222,15 @@ export default function WebsitesDashboard() {
 
                   <Link
                     href={`/websites/${w.id}/edit`}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
+                      subscriptionActive
+                        ? "bg-gray-700 hover:bg-gray-600 text-white"
+                        : "bg-gray-800 text-gray-600 cursor-not-allowed pointer-events-none"
+                    }`}
+                    aria-disabled={!subscriptionActive}
+                    title={!subscriptionActive ? "Renew your plan to edit" : undefined}
                   >
-                    Edit
+                    {subscriptionActive ? "Edit" : "🔒 Edit"}
                   </Link>
 
                   <Link
