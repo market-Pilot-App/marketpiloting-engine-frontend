@@ -140,7 +140,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
             </h1>
             <p className="text-lg mb-8 max-w-xl mx-auto opacity-90">{hero.subheadline}</p>
             <Link
-              href={hero.cta_url || (pages.includes("contact") ? `/sites/${slug}/contact` : "#contact")}
+              href={hero.cta_url && hero.cta_url.startsWith("/sites/") ? hero.cta_url : (pages.includes("contact") ? `/sites/${slug}/contact` : `#contact`)}
               onClick={() => trackEvent(slug, "home", "cta_click")}
               className="inline-block bg-white text-indigo-700 font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
             >
