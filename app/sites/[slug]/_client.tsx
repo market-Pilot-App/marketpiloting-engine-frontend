@@ -142,8 +142,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
             <Link
               href={hero.cta_url || (pages.includes("contact") ? `/sites/${slug}/contact` : "#contact")}
               onClick={() => trackEvent(slug, "home", "cta_click")}
-              className="inline-block bg-white font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
-              style={{ color: "inherit" }}
+              className="inline-block bg-white text-indigo-700 font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
             >
               {hero.cta_text || "Get Started"}
             </Link>
@@ -233,8 +232,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
               onChange={(e) => setLead((f) => ({ ...f, whatsapp: e.target.value }))}
               className="w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none" />
             <button type="submit" disabled={submitting}
-              className="w-full bg-white font-bold py-3 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-              style={{ color: "inherit" }}>
+              className="w-full bg-white text-indigo-700 font-bold py-3 rounded-lg hover:opacity-90 transition disabled:opacity-50">
               {submitting ? "Sending..." : "Send Message"}
             </button>
           </form>
