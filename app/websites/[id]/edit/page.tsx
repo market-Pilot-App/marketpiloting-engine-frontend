@@ -110,9 +110,38 @@ function ImageUpload({
   );
 }
 
+// Per-page SEO fields — appended to every page editor
+function PageSeoFields({
+  data, onSave,
+}: {
+  data: Record<string, unknown>;
+  onSave: (seo: { seo_title: string; seo_description: string }) => void;
+}) {
+  const seo = (data.seo as Record<string, string>) || {};
+  const [title, setTitle] = useState(s(seo.title));
+  const [desc, setDesc] = useState(s(seo.description));
+  return (
+    <>
+      <hr className="border-gray-800" />
+      <p className="text-white font-semibold text-sm">Page SEO</p>
+      <Field label="SEO Title (overrides global)" value={title} onChange={setTitle} />
+      <Field label="SEO Description (overrides global)" value={desc} onChange={setDesc} multiline rows={2} />
+      <p className="text-gray-600 text-xs">Leave blank to use the global SEO settings.</p>
+      <div className="flex justify-end">
+        <button
+          onClick={() => onSave({ seo_title: title, seo_description: desc })}
+          className="text-xs font-semibold px-4 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
+        >
+          Save SEO
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Page editors ──────────────────────────────────────────────────────────────
 
-function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const hero = (data.hero as Record<string, unknown>) || {};
   const about = (data.about_preview as Record<string, unknown>) || {};
   const social = (data.social_proof as Record<string, unknown>) || {};
@@ -178,11 +207,12 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
         + Add Testimonial
       </button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
 
-function AboutEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const [heading, setHeading] = useState(s(data.heading));
   const [story, setStory] = useState(s(data.story));
   const [mission, setMission] = useState(s(data.mission));
@@ -198,11 +228,12 @@ function AboutEditor({ data, onSave }: { data: Record<string, unknown>; onSave: 
       <Field label="Our Story" value={story} onChange={setStory} multiline rows={4} />
       <Field label="Mission Statement" value={mission} onChange={setMission} multiline rows={3} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
 
-function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   type Item = { title: string; description: string; price: string; icon_emoji: string; image_url?: string };
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
@@ -236,11 +267,12 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
       ))}
       <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Service</button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
 
-function ContactEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function ContactEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const [heading, setHeading] = useState(s(data.heading));
   const [subheading, setSubheading] = useState(s(data.subheading));
   const [whatsapp, setWhatsapp] = useState(s(data.whatsapp));
@@ -258,11 +290,12 @@ function ContactEditor({ data, onSave }: { data: Record<string, unknown>; onSave
       <Field label="Email" value={email} onChange={setEmail} />
       <Field label="Address" value={address} onChange={setAddress} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
 
-function FaqEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function FaqEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   type Item = { question: string; answer: string };
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
@@ -291,11 +324,12 @@ function FaqEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u
       ))}
       <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add FAQ</button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
 
-function BlogEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
+function BlogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const [heading, setHeading] = useState(s(data.heading));
   const [subheading, setSubheading] = useState(s(data.subheading));
   const [saving, setSaving] = useState(false);
@@ -308,6 +342,7 @@ function BlogEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
       <Field label="Section Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading" value={subheading} onChange={setSubheading} multiline rows={2} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
   );
 }
@@ -373,6 +408,11 @@ export default function EditWebsite() {
       updates: { [pageKey]: updates },
     });
     setWebsite(updated);
+  };
+
+  const savePageSeo = async (pageKey: string, seo: { seo_title: string; seo_description: string }) => {
+    const existing = (website.content_json[pageKey] as Record<string, unknown>) || {};
+    await saveContent(pageKey, { ...existing, seo: { title: seo.seo_title, description: seo.seo_description } });
   };
 
   const revertToAI = async () => {
@@ -501,12 +541,12 @@ export default function EditWebsite() {
             )}
           </div>
           <div className="p-5">
-            {activePage === "home"     && <HomeEditor     data={pageData} onSave={(u) => saveContent("home", u)} />}
-            {activePage === "about"    && <AboutEditor    data={pageData} onSave={(u) => saveContent("about", u)} />}
-            {activePage === "services" && <ServicesEditor data={pageData} onSave={(u) => saveContent("services", u)} />}
-            {activePage === "contact"  && <ContactEditor  data={pageData} onSave={(u) => saveContent("contact", u)} />}
-            {activePage === "faq"      && <FaqEditor      data={pageData} onSave={(u) => saveContent("faq", u)} />}
-            {activePage === "blog"     && <BlogEditor     data={pageData} onSave={(u) => saveContent("blog", u)} />}
+            {activePage === "home"     && <HomeEditor     data={pageData} onSave={(u) => saveContent("home", u)}     onSaveSeo={(s) => savePageSeo("home", s)} />}
+            {activePage === "about"    && <AboutEditor    data={pageData} onSave={(u) => saveContent("about", u)}    onSaveSeo={(s) => savePageSeo("about", s)} />}
+            {activePage === "services" && <ServicesEditor data={pageData} onSave={(u) => saveContent("services", u)} onSaveSeo={(s) => savePageSeo("services", s)} />}
+            {activePage === "contact"  && <ContactEditor  data={pageData} onSave={(u) => saveContent("contact", u)}  onSaveSeo={(s) => savePageSeo("contact", s)} />}
+            {activePage === "faq"      && <FaqEditor      data={pageData} onSave={(u) => saveContent("faq", u)}      onSaveSeo={(s) => savePageSeo("faq", s)} />}
+            {activePage === "blog"     && <BlogEditor     data={pageData} onSave={(u) => saveContent("blog", u)}     onSaveSeo={(s) => savePageSeo("blog", s)} />}
           </div>
         </div>
       )}
