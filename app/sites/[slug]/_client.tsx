@@ -234,6 +234,10 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
           <a href="https://marketpiloting.com" className={`${t.primaryText} hover:underline`}>
             MarketPiloting
           </a>
+          {" · "}
+          <a href="https://marketpiloting.com/#pricing" className={`${t.primaryText} hover:underline`}>
+            Get your own website
+          </a>
         </p>
       </footer>
     </div>

@@ -112,6 +112,10 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
         <a href="https://marketpiloting.com" className={`${t.primaryText} hover:underline`}>
           MarketPiloting
         </a>
+        {" · "}
+        <a href="https://marketpiloting.com/#pricing" className={`${t.primaryText} hover:underline`}>
+          Get your own website
+        </a>
       </p>
     </footer>
   );
