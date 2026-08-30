@@ -70,20 +70,31 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
   const hero = (data.hero as Record<string, unknown>) || {};
   const about = (data.about_preview as Record<string, unknown>) || {};
   const social = (data.social_proof as Record<string, unknown>) || {};
+  type Testimonial = { name: string; text: string; role: string };
+  const rawTestimonials = (social.testimonials as Testimonial[]) || [];
+
   const [headline, setHeadline] = useState(s(hero.headline));
   const [subheadline, setSubheadline] = useState(s(hero.subheadline));
   const [ctaText, setCtaText] = useState(s(hero.cta_text));
   const [aboutHeading, setAboutHeading] = useState(s(about.heading));
   const [aboutBody, setAboutBody] = useState(s(about.body));
   const [spHeading, setSpHeading] = useState(s(social.heading));
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(
+    rawTestimonials.map((t) => ({ name: s(t.name), text: s(t.text), role: s(t.role) }))
+  );
   const [saving, setSaving] = useState(false);
+
+  const updateT = (idx: number, field: keyof Testimonial, val: string) =>
+    setTestimonials((prev) => prev.map((t, i) => i === idx ? { ...t, [field]: val } : t));
+  const addT = () => setTestimonials((prev) => [...prev, { name: "", text: "", role: "" }]);
+  const removeT = (idx: number) => setTestimonials((prev) => prev.filter((_, i) => i !== idx));
 
   const save = async () => {
     setSaving(true);
     await onSave({
       hero: { ...hero, headline, subheadline, cta_text: ctaText },
       about_preview: { ...about, heading: aboutHeading, body: aboutBody },
-      social_proof: { ...social, heading: spHeading },
+      social_proof: { ...social, heading: spHeading, testimonials },
     });
     setSaving(false);
   };
@@ -99,8 +110,22 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
       <Field label="Heading" value={aboutHeading} onChange={setAboutHeading} />
       <Field label="Body" value={aboutBody} onChange={setAboutBody} multiline rows={3} />
       <hr className="border-gray-800" />
-      <p className="text-white font-semibold text-sm">Social Proof</p>
+      <p className="text-white font-semibold text-sm">Testimonials</p>
       <Field label="Section Heading" value={spHeading} onChange={setSpHeading} />
+      {testimonials.map((t, idx) => (
+        <div key={idx} className="bg-gray-800/50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-gray-400 text-xs font-semibold">Testimonial {idx + 1}</p>
+            <button onClick={() => removeT(idx)} className="text-red-400 text-xs hover:text-red-300 transition">Remove</button>
+          </div>
+          <Field label="Name" value={t.name} onChange={(v) => updateT(idx, "name", v)} />
+          <Field label="Role / Title" value={t.role} onChange={(v) => updateT(idx, "role", v)} />
+          <Field label="Quote" value={t.text} onChange={(v) => updateT(idx, "text", v)} multiline rows={2} />
+        </div>
+      ))}
+      <button onClick={addT} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">
+        + Add Testimonial
+      </button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
     </div>
   );
@@ -236,6 +261,8 @@ export default function EditWebsite() {
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState("");
 
@@ -278,6 +305,24 @@ export default function EditWebsite() {
       updates: { [pageKey]: updates },
     });
     setWebsite(updated);
+  };
+
+  const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    setLogoError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const result = await api.upload<{ public_url: string }>("/media/upload", form);
+      setLogoUrl(result.public_url);
+    } catch (err: unknown) {
+      setLogoError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setLogoUploading(false);
+      e.target.value = "";
+    }
   };
 
   const saveSettings = async () => {
@@ -406,7 +451,29 @@ export default function EditWebsite() {
           <hr className="border-gray-800" />
           <div className="space-y-4">
             <p className="text-white font-semibold text-sm">SEO & Branding</p>
-            <Field label="Logo URL" value={logoUrl} onChange={setLogoUrl} />
+            {/* Logo upload */}
+            <div>
+              <label className="text-gray-400 text-xs block mb-2">Logo</label>
+              <div className="flex items-center gap-3">
+                {logoUrl && (
+                  <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain rounded bg-gray-700 p-1" />
+                )}
+                <label className="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
+                  {logoUploading ? "Uploading…" : logoUrl ? "Change Logo" : "Upload Logo"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={logoUploading}
+                    onChange={uploadLogo}
+                  />
+                </label>
+                {logoUrl && (
+                  <button onClick={() => setLogoUrl("")} className="text-xs text-red-400 hover:text-red-300 transition">Remove</button>
+                )}
+              </div>
+              {logoError && <p className="text-red-400 text-xs mt-1">{logoError}</p>}
+            </div>
             <Field label="SEO Title" value={seoTitle} onChange={setSeoTitle} />
             <Field label="SEO Description" value={seoDesc} onChange={setSeoDesc} multiline rows={2} />
           </div>
