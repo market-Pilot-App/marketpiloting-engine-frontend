@@ -122,6 +122,7 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
   const [headline, setHeadline] = useState(s(hero.headline));
   const [subheadline, setSubheadline] = useState(s(hero.subheadline));
   const [ctaText, setCtaText] = useState(s(hero.cta_text));
+  const [ctaUrl, setCtaUrl] = useState(s(hero.cta_url));
   const [heroImage, setHeroImage] = useState(s(hero.image_url));
   const [aboutHeading, setAboutHeading] = useState(s(about.heading));
   const [aboutBody, setAboutBody] = useState(s(about.body));
@@ -139,7 +140,7 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
   const save = async () => {
     setSaving(true);
     await onSave({
-      hero: { ...hero, headline, subheadline, cta_text: ctaText, image_url: heroImage },
+      hero: { ...hero, headline, subheadline, cta_text: ctaText, cta_url: ctaUrl, image_url: heroImage },
       about_preview: { ...about, heading: aboutHeading, body: aboutBody },
       social_proof: { ...social, heading: spHeading, testimonials },
     });
@@ -152,6 +153,7 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
       <Field label="Headline" value={headline} onChange={setHeadline} />
       <Field label="Subheadline" value={subheadline} onChange={setSubheadline} multiline rows={2} />
       <Field label="CTA Button Text" value={ctaText} onChange={setCtaText} />
+      <Field label="CTA Button URL" value={ctaUrl} onChange={setCtaUrl} />
       <ImageUpload label="Hero Image (optional)" url={heroImage} onChange={setHeroImage} />
       <hr className="border-gray-800" />
       <p className="text-white font-semibold text-sm">About Preview</p>
@@ -209,6 +211,8 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
 
   const update = (idx: number, field: keyof Item, val: string) =>
     setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  const addItem = () => setItems((prev) => [...prev, { title: "", description: "", price: "", icon_emoji: "✨", image_url: "" }]);
+  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
   const save = async () => { setSaving(true); await onSave({ heading, items }); setSaving(false); };
 
@@ -217,7 +221,10 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
       <Field label="Section Heading" value={heading} onChange={setHeading} />
       {items.map((item, idx) => (
         <div key={idx} className="bg-gray-800/50 rounded-lg p-4 space-y-3">
-          <p className="text-gray-400 text-xs font-semibold">Service {idx + 1}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-gray-400 text-xs font-semibold">Service {idx + 1}</p>
+            <button onClick={() => removeItem(idx)} className="text-red-400 text-xs hover:text-red-300 transition">Remove</button>
+          </div>
           <ImageUpload label="Service Image (optional)" url={item.image_url || ""} onChange={(v) => update(idx, "image_url", v)} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Emoji" value={item.icon_emoji} onChange={(v) => update(idx, "icon_emoji", v)} />
@@ -227,6 +234,7 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
           <Field label="Description" value={item.description} onChange={(v) => update(idx, "description", v)} multiline rows={2} />
         </div>
       ))}
+      <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Service</button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
     </div>
   );
@@ -235,16 +243,18 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
 function ContactEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
   const [heading, setHeading] = useState(s(data.heading));
   const [subheading, setSubheading] = useState(s(data.subheading));
+  const [whatsapp, setWhatsapp] = useState(s(data.whatsapp));
   const [email, setEmail] = useState(s(data.email));
   const [address, setAddress] = useState(s(data.address));
   const [saving, setSaving] = useState(false);
 
-  const save = async () => { setSaving(true); await onSave({ heading, subheading, email, address }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, whatsapp, email, address }); setSaving(false); };
 
   return (
     <div className="space-y-4">
       <Field label="Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <Field label="WhatsApp Number" value={whatsapp} onChange={setWhatsapp} />
       <Field label="Email" value={email} onChange={setEmail} />
       <Field label="Address" value={address} onChange={setAddress} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
@@ -261,6 +271,8 @@ function FaqEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u
 
   const update = (idx: number, field: keyof Item, val: string) =>
     setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  const addItem = () => setItems((prev) => [...prev, { question: "", answer: "" }]);
+  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
   const save = async () => { setSaving(true); await onSave({ heading, items }); setSaving(false); };
 
@@ -269,11 +281,15 @@ function FaqEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u
       <Field label="Section Heading" value={heading} onChange={setHeading} />
       {items.map((item, idx) => (
         <div key={idx} className="bg-gray-800/50 rounded-lg p-4 space-y-3">
-          <p className="text-gray-400 text-xs font-semibold">FAQ {idx + 1}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-gray-400 text-xs font-semibold">FAQ {idx + 1}</p>
+            <button onClick={() => removeItem(idx)} className="text-red-400 text-xs hover:text-red-300 transition">Remove</button>
+          </div>
           <Field label="Question" value={item.question} onChange={(v) => update(idx, "question", v)} />
           <Field label="Answer" value={item.answer} onChange={(v) => update(idx, "answer", v)} multiline rows={3} />
         </div>
       ))}
+      <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add FAQ</button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
     </div>
   );
@@ -357,6 +373,13 @@ export default function EditWebsite() {
       updates: { [pageKey]: updates },
     });
     setWebsite(updated);
+  };
+
+  const revertToAI = async () => {
+    if (!confirm("Revert this page to the original AI-generated content? Your edits will be lost.")) return;
+    const original = (website.content_json._original as Record<string, unknown>)?.[activePage];
+    if (!original) { alert("No original AI version saved for this page."); return; }
+    await saveContent(activePage, original as Record<string, unknown>);
   };
 
   const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -452,20 +475,30 @@ export default function EditWebsite() {
       {/* Content Tab */}
       {tab === "content" && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="flex gap-1 p-3 border-b border-gray-800 overflow-x-auto">
-            {website.pages_config.map((pg) => (
+          <div className="flex items-center justify-between gap-2 p-3 border-b border-gray-800">
+            <div className="flex gap-1 overflow-x-auto">
+              {website.pages_config.map((pg) => (
+                <button
+                  key={pg}
+                  onClick={() => setActivePage(pg)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg capitalize whitespace-nowrap transition ${
+                    activePage === pg
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {pg}
+                </button>
+              ))}
+            </div>
+            {!!((website.content_json._original as Record<string, unknown>)?.[activePage]) && (
               <button
-                key={pg}
-                onClick={() => setActivePage(pg)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg capitalize whitespace-nowrap transition ${
-                  activePage === pg
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-white"
-                }`}
+                onClick={revertToAI}
+                className="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap transition flex-shrink-0"
               >
-                {pg}
+                ↺ Revert to AI
               </button>
-            ))}
+            )}
           </div>
           <div className="p-5">
             {activePage === "home"     && <HomeEditor     data={pageData} onSave={(u) => saveContent("home", u)} />}
@@ -551,9 +584,23 @@ export default function EditWebsite() {
             </p>
             <Field label="Domain (e.g. www.yourbusiness.com)" value={domain} onChange={setDomain} />
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-3">
-            <p className="text-gray-400 text-xs font-semibold mb-1">Default URL</p>
-            <p className="text-white text-xs font-mono">{previewUrl}</p>
+          <div className="bg-gray-800/50 rounded-lg p-3 space-y-3">
+            <div>
+              <p className="text-gray-400 text-xs font-semibold mb-1">Default URL</p>
+              <p className="text-white text-xs font-mono">{previewUrl}</p>
+            </div>
+            {canDomain && (
+              <div>
+                <p className="text-gray-400 text-xs font-semibold mb-2">DNS Setup Instructions</p>
+                <div className="bg-gray-900 rounded-lg p-3 text-xs font-mono space-y-1">
+                  <p className="text-gray-400">Add a CNAME record to your domain:</p>
+                  <p><span className="text-gray-500">Name:</span> <span className="text-white">www</span></p>
+                  <p><span className="text-gray-500">Value:</span> <span className="text-white">dashboard.marketpiloting.com</span></p>
+                  <p><span className="text-gray-500">TTL:</span> <span className="text-white">Auto</span></p>
+                </div>
+                <p className="text-gray-600 text-xs mt-2">SSL is provisioned automatically by Vercel once DNS propagates (up to 48h).</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             {domainMsg && <p className="text-sm text-green-400">{domainMsg}</p>}

@@ -12,12 +12,17 @@ export async function generateMetadata(
     const site = await res.json();
     const title = site.seo_title || site.business_name || "Website";
     const description = site.seo_description || `Welcome to ${site.business_name}`;
+    const canonical = site.custom_domain
+      ? `https://${site.custom_domain}`
+      : `https://dashboard.marketpiloting.com/sites/${params.slug}`;
     return {
       title,
       description,
+      alternates: { canonical },
       openGraph: {
         title,
         description,
+        url: canonical,
         ...(site.logo_url ? { images: [{ url: site.logo_url }] } : {}),
       },
     };

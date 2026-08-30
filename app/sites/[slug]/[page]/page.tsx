@@ -13,7 +13,10 @@ export async function generateMetadata(
     const pageName = params.page.charAt(0).toUpperCase() + params.page.slice(1);
     const title = data.seo_title ? `${pageName} — ${data.seo_title}` : `${pageName} — ${data.business_name}`;
     const description = data.seo_description || `${pageName} page for ${data.business_name}`;
-    return { title, description, openGraph: { title, description } };
+    const canonical = data.custom_domain
+      ? `https://${data.custom_domain}/${params.page}`
+      : `https://dashboard.marketpiloting.com/sites/${params.slug}/${params.page}`;
+    return { title, description, alternates: { canonical }, openGraph: { title, description, url: canonical } };
   } catch {
     return {};
   }

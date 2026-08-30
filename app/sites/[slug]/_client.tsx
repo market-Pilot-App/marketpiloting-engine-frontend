@@ -116,12 +116,16 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
               className="absolute inset-0 w-full h-full object-cover opacity-20" />
           )}
           <div className="relative">
+            {site.logo_url && (
+              <img src={site.logo_url} alt={site.business_name}
+                className="h-14 w-auto object-contain mx-auto mb-6" />
+            )}
             <h1 className="text-4xl md:text-5xl font-bold mb-4 max-w-3xl mx-auto leading-tight">
               {hero.headline}
             </h1>
             <p className="text-lg mb-8 max-w-xl mx-auto opacity-90">{hero.subheadline}</p>
             <Link
-              href={pages.includes("contact") ? `/sites/${slug}/contact` : "#contact"}
+              href={hero.cta_url || (pages.includes("contact") ? `/sites/${slug}/contact` : "#contact")}
               onClick={() => trackEvent(slug, "home", "cta_click")}
               className="inline-block bg-white font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
               style={{ color: "inherit" }}
