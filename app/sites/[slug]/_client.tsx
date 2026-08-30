@@ -244,11 +244,11 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
         <p>© {new Date().getFullYear()} {site.business_name}</p>
         <p className="mt-2">
           Powered by{" "}
-          <a href="https://marketpiloting.com" className={`${t.primaryText} hover:underline`}>
+          <a href="https://marketpiloting.com" target="_blank" rel="noopener noreferrer" className={`${t.primaryText} hover:underline`}>
             MarketPiloting
           </a>
           {" · "}
-          <a href="https://marketpiloting.com/#pricing" className={`${t.primaryText} hover:underline`}>
+          <a href="https://marketpiloting.com/#pricing" target="_blank" rel="noopener noreferrer" className={`${t.primaryText} hover:underline`}>
             Get your own website
           </a>
         </p>
