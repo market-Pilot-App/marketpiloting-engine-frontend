@@ -17,6 +17,13 @@ interface Website {
   created_at: string;
 }
 
+interface Analytics {
+  total_views: number;
+  total_leads: number;
+  cta_clicks_30d: number;
+  page_views_30d: { page: string; views: number }[];
+}
+
 const PUBLIC_BASE = "https://dashboard.marketpiloting.com/sites";
 
 export default function WebsitesDashboard() {
@@ -26,6 +33,8 @@ export default function WebsitesDashboard() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [publishing, setPublishing] = useState<number | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
+  const [analytics, setAnalytics] = useState<Record<number, Analytics>>({});
+  const [analyticsOpen, setAnalyticsOpen] = useState<number | null>(null);
 
   useEffect(() => {
     api.get<Website[]>("/websites/me")
@@ -64,6 +73,16 @@ export default function WebsitesDashboard() {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const loadAnalytics = async (w: Website) => {
+    if (analyticsOpen === w.id) { setAnalyticsOpen(null); return; }
+    setAnalyticsOpen(w.id);
+    if (analytics[w.id]) return;
+    try {
+      const data = await api.get<Analytics>(`/websites/${w.id}/analytics`);
+      setAnalytics((prev) => ({ ...prev, [w.id]: data }));
+    } catch { /* ignore */ }
   };
 
   const copyLink = (w: Website) => {
@@ -163,6 +182,13 @@ export default function WebsitesDashboard() {
                     </a>
                   )}
 
+                  <button
+                    onClick={() => loadAnalytics(w)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
+                  >
+                    {analyticsOpen === w.id ? "Hide Stats" : "Stats"}
+                  </button>
+
                   <Link
                     href={`/websites/${w.id}/edit`}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
@@ -185,6 +211,42 @@ export default function WebsitesDashboard() {
                     {deleting === w.id ? "..." : "Delete"}
                   </button>
                 </div>
+
+                {/* Analytics panel */}
+                {analyticsOpen === w.id && (
+                  <div className="mt-4 pt-4 border-t border-gray-800">
+                    {!analytics[w.id] ? (
+                      <p className="text-gray-500 text-xs">Loading…</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+                          <p className="text-white font-bold text-lg">{analytics[w.id].total_views}</p>
+                          <p className="text-gray-500 text-xs">Total Views</p>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+                          <p className="text-white font-bold text-lg">{analytics[w.id].total_leads}</p>
+                          <p className="text-gray-500 text-xs">Leads</p>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+                          <p className="text-white font-bold text-lg">{analytics[w.id].cta_clicks_30d}</p>
+                          <p className="text-gray-500 text-xs">CTA Clicks</p>
+                        </div>
+                        {analytics[w.id].page_views_30d.length > 0 && (
+                          <div className="col-span-3">
+                            <p className="text-gray-500 text-xs mb-2">Top pages (30d)</p>
+                            <div className="flex flex-wrap gap-2">
+                              {analytics[w.id].page_views_30d.map((pv) => (
+                                <span key={pv.page} className="text-xs bg-gray-800 text-gray-300 px-2 py-1 rounded capitalize">
+                                  {pv.page}: {pv.views}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
