@@ -164,6 +164,13 @@ export default function WebsitesDashboard() {
                   )}
 
                   <Link
+                    href={`/websites/${w.id}/edit`}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
+                  >
+                    Edit
+                  </Link>
+
+                  <Link
                     href={`/websites/build?regenerate=${w.id}`}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white transition"
                   >
