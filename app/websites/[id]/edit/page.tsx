@@ -506,7 +506,9 @@ export default function EditWebsite() {
   const content = website.content_json;
   const pageData = (content[activePage] as Record<string, unknown>) || {};
   const canDomain = ["pro", "agency", "admin"].includes(authClient?.plan ?? "");
-  const previewUrl = `https://dashboard.marketpiloting.com/sites/${website.slug}`;
+  const previewUrl = website.is_published
+    ? `https://dashboard.marketpiloting.com/sites/${website.slug}`
+    : `/sites/${website.slug}?preview=${website.id}`;
 
   return (
     <div className="max-w-3xl">

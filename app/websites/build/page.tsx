@@ -130,6 +130,7 @@ export default function BuildWebsite() {
   // Success state
   if (result) {
     const url = `${PUBLIC_BASE}/${result.slug}`;
+    const previewUrl = result.is_published ? url : `/sites/${result.slug}?preview=${result.id}`;
     return (
       <div className="max-w-xl mx-auto text-center py-12">
         <div className="text-6xl mb-4">🎉</div>
@@ -145,7 +146,7 @@ export default function BuildWebsite() {
 
         <div className="flex flex-col gap-3">
           <a
-            href={url}
+            href={previewUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition text-sm"
