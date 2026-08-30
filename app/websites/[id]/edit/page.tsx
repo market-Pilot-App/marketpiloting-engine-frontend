@@ -64,35 +64,82 @@ function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) 
   );
 }
 
+// Shared image upload button — calls /media/upload, returns public_url
+function ImageUpload({
+  label, url, onChange,
+}: {
+  label: string; url: string; onChange: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setErr("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const result = await api.upload<{ public_url: string }>("/media/upload", form);
+      onChange(result.public_url);
+    } catch (ex: unknown) {
+      setErr(ex instanceof Error ? ex.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-gray-400 text-xs block mb-2">{label}</label>
+      <div className="flex items-center gap-3">
+        {url && (
+          <img src={url} alt={label} className="h-12 w-20 object-cover rounded-lg bg-gray-700" />
+        )}
+        <label className="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
+          {uploading ? "Uploading…" : url ? "Change" : "Upload Image"}
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={uploading} onChange={upload} />
+        </label>
+        {url && (
+          <button onClick={() => onChange("")} className="text-xs text-red-400 hover:text-red-300 transition">Remove</button>
+        )}
+      </div>
+      {err && <p className="text-red-400 text-xs mt-1">{err}</p>}
+    </div>
+  );
+}
+
 // ── Page editors ──────────────────────────────────────────────────────────────
 
 function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
   const hero = (data.hero as Record<string, unknown>) || {};
   const about = (data.about_preview as Record<string, unknown>) || {};
   const social = (data.social_proof as Record<string, unknown>) || {};
-  type Testimonial = { name: string; text: string; role: string };
+  type Testimonial = { name: string; text: string; role: string; avatar_url?: string };
   const rawTestimonials = (social.testimonials as Testimonial[]) || [];
 
   const [headline, setHeadline] = useState(s(hero.headline));
   const [subheadline, setSubheadline] = useState(s(hero.subheadline));
   const [ctaText, setCtaText] = useState(s(hero.cta_text));
+  const [heroImage, setHeroImage] = useState(s(hero.image_url));
   const [aboutHeading, setAboutHeading] = useState(s(about.heading));
   const [aboutBody, setAboutBody] = useState(s(about.body));
   const [spHeading, setSpHeading] = useState(s(social.heading));
   const [testimonials, setTestimonials] = useState<Testimonial[]>(
-    rawTestimonials.map((t) => ({ name: s(t.name), text: s(t.text), role: s(t.role) }))
+    rawTestimonials.map((t) => ({ name: s(t.name), text: s(t.text), role: s(t.role), avatar_url: s(t.avatar_url) }))
   );
   const [saving, setSaving] = useState(false);
 
   const updateT = (idx: number, field: keyof Testimonial, val: string) =>
     setTestimonials((prev) => prev.map((t, i) => i === idx ? { ...t, [field]: val } : t));
-  const addT = () => setTestimonials((prev) => [...prev, { name: "", text: "", role: "" }]);
+  const addT = () => setTestimonials((prev) => [...prev, { name: "", text: "", role: "", avatar_url: "" }]);
   const removeT = (idx: number) => setTestimonials((prev) => prev.filter((_, i) => i !== idx));
 
   const save = async () => {
     setSaving(true);
     await onSave({
-      hero: { ...hero, headline, subheadline, cta_text: ctaText },
+      hero: { ...hero, headline, subheadline, cta_text: ctaText, image_url: heroImage },
       about_preview: { ...about, heading: aboutHeading, body: aboutBody },
       social_proof: { ...social, heading: spHeading, testimonials },
     });
@@ -105,6 +152,7 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
       <Field label="Headline" value={headline} onChange={setHeadline} />
       <Field label="Subheadline" value={subheadline} onChange={setSubheadline} multiline rows={2} />
       <Field label="CTA Button Text" value={ctaText} onChange={setCtaText} />
+      <ImageUpload label="Hero Image (optional)" url={heroImage} onChange={setHeroImage} />
       <hr className="border-gray-800" />
       <p className="text-white font-semibold text-sm">About Preview</p>
       <Field label="Heading" value={aboutHeading} onChange={setAboutHeading} />
@@ -118,6 +166,7 @@ function HomeEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (
             <p className="text-gray-400 text-xs font-semibold">Testimonial {idx + 1}</p>
             <button onClick={() => removeT(idx)} className="text-red-400 text-xs hover:text-red-300 transition">Remove</button>
           </div>
+          <ImageUpload label="Avatar (optional)" url={t.avatar_url || ""} onChange={(v) => updateT(idx, "avatar_url", v)} />
           <Field label="Name" value={t.name} onChange={(v) => updateT(idx, "name", v)} />
           <Field label="Role / Title" value={t.role} onChange={(v) => updateT(idx, "role", v)} />
           <Field label="Quote" value={t.text} onChange={(v) => updateT(idx, "text", v)} multiline rows={2} />
@@ -135,13 +184,15 @@ function AboutEditor({ data, onSave }: { data: Record<string, unknown>; onSave: 
   const [heading, setHeading] = useState(s(data.heading));
   const [story, setStory] = useState(s(data.story));
   const [mission, setMission] = useState(s(data.mission));
+  const [imageUrl, setImageUrl] = useState(s(data.image_url));
   const [saving, setSaving] = useState(false);
 
-  const save = async () => { setSaving(true); await onSave({ heading, story, mission }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, story, mission, image_url: imageUrl }); setSaving(false); };
 
   return (
     <div className="space-y-4">
       <Field label="Heading" value={heading} onChange={setHeading} />
+      <ImageUpload label="Team / Founder Photo (optional)" url={imageUrl} onChange={setImageUrl} />
       <Field label="Our Story" value={story} onChange={setStory} multiline rows={4} />
       <Field label="Mission Statement" value={mission} onChange={setMission} multiline rows={3} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
@@ -150,10 +201,10 @@ function AboutEditor({ data, onSave }: { data: Record<string, unknown>; onSave: 
 }
 
 function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void> }) {
-  type Item = { title: string; description: string; price: string; icon_emoji: string };
+  type Item = { title: string; description: string; price: string; icon_emoji: string; image_url?: string };
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
-  const [items, setItems] = useState<Item[]>(raw.map((i) => ({ title: s(i.title), description: s(i.description), price: s(i.price), icon_emoji: s(i.icon_emoji) })));
+  const [items, setItems] = useState<Item[]>(raw.map((i) => ({ title: s(i.title), description: s(i.description), price: s(i.price), icon_emoji: s(i.icon_emoji), image_url: s(i.image_url) })));
   const [saving, setSaving] = useState(false);
 
   const update = (idx: number, field: keyof Item, val: string) =>
@@ -167,6 +218,7 @@ function ServicesEditor({ data, onSave }: { data: Record<string, unknown>; onSav
       {items.map((item, idx) => (
         <div key={idx} className="bg-gray-800/50 rounded-lg p-4 space-y-3">
           <p className="text-gray-400 text-xs font-semibold">Service {idx + 1}</p>
+          <ImageUpload label="Service Image (optional)" url={item.image_url || ""} onChange={(v) => update(idx, "image_url", v)} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Emoji" value={item.icon_emoji} onChange={(v) => update(idx, "icon_emoji", v)} />
             <Field label="Price" value={item.price} onChange={(v) => update(idx, "price", v)} />

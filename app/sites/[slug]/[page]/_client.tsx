@@ -125,6 +125,10 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           <h1 className="text-4xl font-bold">{s(d.heading)}</h1>
         </section>
         <div className="max-w-3xl mx-auto py-16 px-6 space-y-8">
+          {!!d.image_url && (
+            <img src={s(d.image_url)} alt="Team"
+              className="w-full max-h-72 object-cover rounded-xl" />
+          )}
           {!!d.story && (
             <div>
               <h2 className="text-xl font-bold mb-3">Our Story</h2>
@@ -167,13 +171,19 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
         <div className="max-w-4xl mx-auto py-16 px-6">
           <div className="grid md:grid-cols-2 gap-6">
             {items?.map((svc, i) => (
-              <div key={i} className={`${t.cardBg} rounded-xl p-6 border ${t.border}`}>
-                <p className="text-3xl mb-3">{svc.icon_emoji}</p>
-                <h3 className="font-bold text-lg mb-2">{svc.title}</h3>
-                <p className={`${t.muted} text-sm mb-3`}>{svc.description}</p>
-                {svc.price && (
-                  <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+              <div key={i} className={`${t.cardBg} rounded-xl overflow-hidden border ${t.border}`}>
+                {svc.image_url && (
+                  <img src={svc.image_url} alt={svc.title}
+                    className="w-full h-44 object-cover" />
                 )}
+                <div className="p-6">
+                  <p className="text-3xl mb-3">{svc.icon_emoji}</p>
+                  <h3 className="font-bold text-lg mb-2">{svc.title}</h3>
+                  <p className={`${t.muted} text-sm mb-3`}>{svc.description}</p>
+                  {svc.price && (
+                    <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>

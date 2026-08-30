@@ -110,19 +110,25 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
 
       {/* Hero */}
       {hero && (
-        <section className={`${t.primary} text-white py-20 px-6 text-center`}>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 max-w-3xl mx-auto leading-tight">
-            {hero.headline}
-          </h1>
-          <p className="text-lg mb-8 max-w-xl mx-auto opacity-90">{hero.subheadline}</p>
-          <Link
-            href={pages.includes("contact") ? `/sites/${slug}/contact` : "#contact"}
-            onClick={() => trackEvent(slug, "home", "cta_click")}
-            className="inline-block bg-white font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
-            style={{ color: "inherit" }}
-          >
-            {hero.cta_text || "Get Started"}
-          </Link>
+        <section className={`${t.primary} text-white py-20 px-6 text-center relative overflow-hidden`}>
+          {hero.image_url && (
+            <img src={hero.image_url} alt="Hero"
+              className="absolute inset-0 w-full h-full object-cover opacity-20" />
+          )}
+          <div className="relative">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 max-w-3xl mx-auto leading-tight">
+              {hero.headline}
+            </h1>
+            <p className="text-lg mb-8 max-w-xl mx-auto opacity-90">{hero.subheadline}</p>
+            <Link
+              href={pages.includes("contact") ? `/sites/${slug}/contact` : "#contact"}
+              onClick={() => trackEvent(slug, "home", "cta_click")}
+              className="inline-block bg-white font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
+              style={{ color: "inherit" }}
+            >
+              {hero.cta_text || "Get Started"}
+            </Link>
+          </div>
         </section>
       )}
 
@@ -172,8 +178,16 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
             {(socialProof.testimonials as Array<Record<string, string>>).map((t2, i) => (
               <div key={i} className={`${t.cardBg} rounded-xl p-6 border ${t.border}`}>
                 <p className={`${t.muted} italic mb-4`}>&ldquo;{t2.text}&rdquo;</p>
-                <p className="font-semibold text-sm">{t2.name}</p>
-                <p className={`${t.muted} text-xs`}>{t2.role}</p>
+                <div className="flex items-center gap-3">
+                  {t2.avatar_url && (
+                    <img src={t2.avatar_url} alt={t2.name}
+                      className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-semibold text-sm">{t2.name}</p>
+                    <p className={`${t.muted} text-xs`}>{t2.role}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
