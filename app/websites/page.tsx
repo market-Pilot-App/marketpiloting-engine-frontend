@@ -202,16 +202,14 @@ export default function WebsitesDashboard() {
                     {copied === w.id ? "✅ Copied!" : "Copy Link"}
                   </button>
 
-                  {w.is_published && (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
-                    >
-                      Preview ↗
-                    </a>
-                  )}
+                  <a
+                    href={w.is_published ? url : `/sites/${w.slug}?preview=${w.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition"
+                  >
+                    {w.is_published ? "View Site ↗" : "Preview ↗"}
+                  </a>
 
                   <button
                     onClick={() => loadAnalytics(w)}

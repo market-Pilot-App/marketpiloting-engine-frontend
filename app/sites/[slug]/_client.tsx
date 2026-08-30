@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -41,17 +42,26 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
   const [lead, setLead] = useState<LeadForm>({ name: "", email: "", whatsapp: "" });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const searchParams = useSearchParams();
+  const previewId = searchParams.get("preview");
 
   useEffect(() => {
-    fetch(`${API_URL}/sites/${slug}`)
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const url = previewId
+      ? `${API_URL}/websites/${previewId}/preview`
+      : `${API_URL}/sites/${slug}`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (previewId && token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch(url, { headers })
       .then((r) => { if (!r.ok) { setNotFound(true); return null; } return r.json(); })
       .then((d) => {
         if (d) {
           setSite(d);
-          trackEvent(slug, "home", "view");
+          if (!previewId) trackEvent(slug, "home", "view");
         }
       });
-  }, [slug]);
+  }, [slug, previewId]);
 
   const submitLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +99,12 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
   return (
     <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
 
-      {/* Navbar */}
+      {/* Draft preview banner */}
+      {previewId && (
+        <div className="bg-yellow-500 text-black text-xs font-semibold text-center py-2 px-4">
+          🔍 Draft Preview — this site is not yet published. <a href="/websites" className="underline ml-2">Go back to Website Builder →</a>
+        </div>
+      )}
       <nav className={`${t.primary} text-white px-6 py-4`}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
