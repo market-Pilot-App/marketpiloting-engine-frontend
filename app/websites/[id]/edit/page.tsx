@@ -217,9 +217,17 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
   const [story, setStory] = useState(s(data.story));
   const [mission, setMission] = useState(s(data.mission));
   const [imageUrl, setImageUrl] = useState(s(data.image_url));
+  const [values, setValues] = useState<string[]>(
+    Array.isArray(data.values) ? (data.values as unknown[]).map((v) => s(v)) : []
+  );
   const [saving, setSaving] = useState(false);
 
-  const save = async () => { setSaving(true); await onSave({ heading, story, mission, image_url: imageUrl }); setSaving(false); };
+  const updateValue = (idx: number, val: string) =>
+    setValues((prev) => prev.map((v, i) => i === idx ? val : v));
+  const addValue = () => setValues((prev) => [...prev, ""]);
+  const removeValue = (idx: number) => setValues((prev) => prev.filter((_, i) => i !== idx));
+
+  const save = async () => { setSaving(true); await onSave({ heading, story, mission, image_url: imageUrl, values }); setSaving(false); };
 
   return (
     <div className="space-y-4">
@@ -227,6 +235,20 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
       <ImageUpload label="Team / Founder Photo (optional)" url={imageUrl} onChange={setImageUrl} />
       <Field label="Our Story" value={story} onChange={setStory} multiline rows={4} />
       <Field label="Mission Statement" value={mission} onChange={setMission} multiline rows={3} />
+      <hr className="border-gray-800" />
+      <p className="text-white font-semibold text-sm">Our Values</p>
+      {values.map((v, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={v}
+            onChange={(e) => updateValue(idx, e.target.value)}
+            className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500"
+          />
+          <button onClick={() => removeValue(idx)} className="text-red-400 text-xs hover:text-red-300 transition flex-shrink-0">Remove</button>
+        </div>
+      ))}
+      <button onClick={addValue} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Value</button>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
