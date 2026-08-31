@@ -26,6 +26,13 @@ function RegisterContent() {
   const [promoCode, setPromoCode] = useState("");
   const [promoStatus, setPromoStatus] = useState<{ valid: boolean; message: string; discounted_amount_kobo?: number; original_amount_kobo?: number } | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
+
+  // Read affiliate ref code from cookie on mount
+  const [refCode] = useState<string>(() => {
+    if (typeof document === "undefined") return "";
+    const match = document.cookie.match(/(?:^|;\s*)mp_ref=([^;]*)/);
+    return match ? match[1] : "";
+  });
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
@@ -106,7 +113,7 @@ function RegisterContent() {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos, promo_code: promoCode.trim() || undefined, verified_token: vToken }),
+        body: JSON.stringify({ ...form, plan, billing, terms_accepted: agreedToTos, promo_code: promoCode.trim() || undefined, ref_code: refCode || undefined, verified_token: vToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Registration failed");

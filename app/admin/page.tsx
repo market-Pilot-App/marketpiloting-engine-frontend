@@ -54,7 +54,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup" | "revenue" | "promo">("clients");
+  const [tab, setTab] = useState<"clients" | "audit" | "leads" | "approvals" | "backup" | "revenue" | "promo" | "affiliates">("clients");
   const [revenueData, setRevenueData] = useState<{
     total_mrr: number; arr: number; active_clients: number;
     new_this_month_count: number; churned_count: number;
@@ -116,6 +116,9 @@ export default function AdminPage() {
     if (tab === "promo") {
       api.get<typeof promoCodes>("/admin/promo-codes").then(setPromoCodes).catch(() => {});
     }
+    if (tab === "affiliates") {
+      fetchAffiliates();
+    }
   }, [tab]);
 
   const createPromoCode = async () => {
@@ -168,6 +171,51 @@ export default function AdminPage() {
     } finally {
       setPromoUsageLoading(false);
     }
+  };
+
+  const [affiliates, setAffiliates] = useState<{
+    id: number; name: string; email: string; ref_code: string;
+    bank_name: string | null; account_number: string | null; account_name: string | null;
+    status: string; total_referrals: number;
+    total_earnings_ngn: number; pending_earnings_ngn: number; total_paid_ngn: number;
+    created_at: string | null;
+  }[]>([]);
+  const [affiliatePayouts, setAffiliatePayouts] = useState<{
+    id: number; affiliate_name: string; affiliate_email: string; ref_code: string;
+    bank_name: string | null; account_number: string | null; account_name: string | null;
+    amount_ngn: number; status: string; requested_at: string | null; paid_at: string | null; admin_note: string | null;
+  }[]>([]);
+  const [affiliatePayoutNote, setAffiliatePayoutNote] = useState<Record<number, string>>({});
+  const [affiliateActionStatus, setAffiliateActionStatus] = useState<Record<number | string, string>>({});
+
+  const fetchAffiliates = async () => {
+    const [affs, pays] = await Promise.all([
+      api.get<typeof affiliates>("/admin/affiliates"),
+      api.get<typeof affiliatePayouts>("/admin/affiliate-payouts"),
+    ]);
+    setAffiliates(affs);
+    setAffiliatePayouts(pays);
+  };
+
+  const setAffiliateStatus = async (id: number, status: string) => {
+    setAffiliateActionStatus((s) => ({ ...s, [id]: "saving" }));
+    await api.patch(`/admin/affiliates/${id}/status`, { status });
+    setAffiliates((prev) => prev.map((a) => a.id === id ? { ...a, status } : a));
+    setAffiliateActionStatus((s) => ({ ...s, [id]: "" }));
+  };
+
+  const approvePayout = async (id: number) => {
+    setAffiliateActionStatus((s) => ({ ...s, [`pay_${id}`]: "saving" }));
+    await api.patch(`/admin/affiliate-payouts/${id}/approve`, {});
+    setAffiliatePayouts((prev) => prev.map((p) => p.id === id ? { ...p, status: "approved" } : p));
+    setAffiliateActionStatus((s) => ({ ...s, [`pay_${id}`]: "" }));
+  };
+
+  const markPayoutPaid = async (id: number) => {
+    setAffiliateActionStatus((s) => ({ ...s, [`pay_${id}`]: "saving" }));
+    await api.patch(`/admin/affiliate-payouts/${id}/mark-paid`, { admin_note: affiliatePayoutNote[id] || null });
+    setAffiliatePayouts((prev) => prev.map((p) => p.id === id ? { ...p, status: "paid" } : p));
+    setAffiliateActionStatus((s) => ({ ...s, [`pay_${id}`]: "" }));
   };
 
   const fetchAuditLog = useCallback(async () => {
@@ -387,7 +435,7 @@ const saveBudget = async (clientId: number) => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(["clients", "audit", "leads", "approvals", "backup", "revenue", "promo"] as const).map((t) => (
+        {(["clients", "audit", "leads", "approvals", "backup", "revenue", "promo", "affiliates"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -395,7 +443,7 @@ const saveBudget = async (clientId: number) => {
               tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : t === "backup" ? "🗄️ Backup" : t === "revenue" ? "💰 Revenue" : "🎟️ Promo Codes"}
+            {t === "clients" ? "All Clients" : t === "audit" ? "Audit Log" : t === "leads" ? "Lead Magnet" : t === "approvals" ? "Approvals" : t === "backup" ? "🗄️ Backup" : t === "revenue" ? "💰 Revenue" : t === "promo" ? "🎟️ Promo Codes" : "🤝 Affiliates"}
           </button>
         ))}
       </div>
@@ -1215,6 +1263,139 @@ const saveBudget = async (clientId: number) => {
                       <td className="px-5 py-3 text-right text-orange-500 text-xs">-₦{u.discount_ngn.toLocaleString()}</td>
                       <td className="px-5 py-3 text-center">{u.payment_confirmed ? "✅" : "⏳"}</td>
                       <td className="px-5 py-3 text-right text-xs text-gray-400">{u.used_at ? new Date(u.used_at).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Affiliates Tab */}
+      {tab === "affiliates" && (
+        <div className="space-y-6">
+          {/* Affiliates list */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-700">🤝 Affiliates ({affiliates.length})</p>
+            </div>
+            {affiliates.length === 0 ? (
+              <p className="text-center py-10 text-gray-400 text-sm">No affiliates yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Affiliate</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Ref Code</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Referrals</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Total Earned</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Pending</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Paid Out</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {affiliates.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3"><p className="font-medium text-gray-900">{a.name}</p><p className="text-xs text-gray-400">{a.email}</p></td>
+                      <td className="px-4 py-3 font-mono font-bold text-indigo-600">{a.ref_code}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">{a.total_referrals}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900">₦{a.total_earnings_ngn.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-yellow-600">₦{a.pending_earnings_ngn.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-green-600">₦{a.total_paid_ngn.toLocaleString()}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          a.status === "active" ? "bg-green-50 text-green-700" :
+                          a.status === "pending" ? "bg-yellow-50 text-yellow-700" :
+                          "bg-red-50 text-red-600"
+                        }`}>{a.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1.5">
+                          {a.status !== "active" && (
+                            <button onClick={() => setAffiliateStatus(a.id, "active")} disabled={affiliateActionStatus[a.id] === "saving"} className="text-xs px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition font-medium">
+                              Activate
+                            </button>
+                          )}
+                          {a.status !== "suspended" && (
+                            <button onClick={() => setAffiliateStatus(a.id, "suspended")} disabled={affiliateActionStatus[a.id] === "saving"} className="text-xs px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition font-medium">
+                              Suspend
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Payout requests */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-700">💸 Payout Requests</p>
+            </div>
+            {affiliatePayouts.length === 0 ? (
+              <p className="text-center py-10 text-gray-400 text-sm">No payout requests yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Affiliate</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Bank Details</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Amount</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+                    <th className="text-right px-4 py-3 text-gray-500 font-medium">Requested</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {affiliatePayouts.map((p) => (
+                    <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3"><p className="font-medium text-gray-900">{p.affiliate_name}</p><p className="text-xs text-gray-400">{p.affiliate_email} · {p.ref_code}</p></td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        <p>{p.bank_name || "—"}</p>
+                        <p className="font-mono">{p.account_number || "—"}</p>
+                        <p>{p.account_name || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">₦{p.amount_ngn.toLocaleString()}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          p.status === "paid" ? "bg-green-50 text-green-700" :
+                          p.status === "approved" ? "bg-blue-50 text-blue-700" :
+                          "bg-yellow-50 text-yellow-700"
+                        }`}>{p.status}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-gray-400">{p.requested_at ? new Date(p.requested_at).toLocaleDateString() : "—"}</td>
+                      <td className="px-4 py-3">
+                        {p.status === "paid" ? (
+                          <span className="text-xs text-gray-400">{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : "Paid"}</span>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
+                            {p.status === "requested" && (
+                              <button onClick={() => approvePayout(p.id)} disabled={affiliateActionStatus[`pay_${p.id}`] === "saving"} className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition font-medium">
+                                Approve
+                              </button>
+                            )}
+                            {p.status === "approved" && (
+                              <div className="flex gap-1">
+                                <input
+                                  value={affiliatePayoutNote[p.id] || ""}
+                                  onChange={(e) => setAffiliatePayoutNote((n) => ({ ...n, [p.id]: e.target.value }))}
+                                  placeholder="Note (optional)"
+                                  className="text-xs border border-gray-200 rounded px-2 py-1 w-28"
+                                />
+                                <button onClick={() => markPayoutPaid(p.id)} disabled={affiliateActionStatus[`pay_${p.id}`] === "saving"} className="text-xs px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 transition font-medium">
+                                  Mark Paid
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
