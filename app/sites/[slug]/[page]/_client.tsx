@@ -109,11 +109,11 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
       <p>© {new Date().getFullYear()} {pageData.business_name}</p>
       <p className="mt-2">
         Powered by{" "}
-        <a href="https://marketpiloting.com" className={`${t.primaryText} hover:underline`}>
+        <a href="https://marketpiloting.com" target="_blank" rel="noopener noreferrer" className={`${t.primaryText} hover:underline`}>
           MarketPiloting
         </a>
         {" · "}
-        <a href="https://marketpiloting.com/#pricing" className={`${t.primaryText} hover:underline`}>
+        <a href="https://marketpiloting.com/#pricing" target="_blank" rel="noopener noreferrer" className={`${t.primaryText} hover:underline`}>
           Get your own website
         </a>
       </p>
@@ -185,7 +185,18 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
                   <h3 className="font-bold text-lg mb-2">{svc.title}</h3>
                   <p className={`${t.muted} text-sm mb-3`}>{svc.description}</p>
                   {svc.price && (
-                    <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+                    <div className="flex items-center justify-between mt-4">
+                      <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+                      {pages.includes("contact") && (
+                        <Link
+                          href={`/sites/${slug}/contact`}
+                          onClick={() => trackEvent(slug, "services", "cta_click")}
+                          className={`text-xs font-bold px-4 py-2 rounded-full ${t.primary} text-white hover:opacity-90 transition`}
+                        >
+                          Get Started
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
