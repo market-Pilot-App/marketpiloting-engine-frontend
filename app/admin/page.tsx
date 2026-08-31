@@ -147,6 +147,23 @@ export default function AdminPage() {
     setPromoCodes((prev) => prev.map((p) => p.id === id ? { ...p, active: !active } : p));
   };
 
+  const [promoUsageModal, setPromoUsageModal] = useState<null | {
+    code: string; total_uses: number; confirmed_payments: number;
+    total_revenue_ngn: number; total_discount_given_ngn: number;
+    usages: { id: number; client_name: string; client_email: string; plan: string; billing: string; original_amount_ngn: number; paid_amount_ngn: number; discount_ngn: number; payment_confirmed: boolean; used_at: string | null }[];
+  }>(null);
+  const [promoUsageLoading, setPromoUsageLoading] = useState(false);
+
+  const viewPromoUsages = async (id: number) => {
+    setPromoUsageLoading(true);
+    try {
+      const data = await api.get<typeof promoUsageModal>(`/admin/promo-codes/${id}/usages`);
+      setPromoUsageModal(data);
+    } finally {
+      setPromoUsageLoading(false);
+    }
+  };
+
   const fetchAuditLog = useCallback(async () => {
     const data = await api.get<AuditLog[]>("/admin/audit-log");
     setLogs(data);
@@ -1005,6 +1022,7 @@ const saveBudget = async (clientId: number) => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        <div className="flex gap-2">
                         <button
                           onClick={() => togglePromo(p.id, p.active)}
                           className={`text-xs px-3 py-1.5 rounded-lg transition font-medium ${
@@ -1015,6 +1033,14 @@ const saveBudget = async (clientId: number) => {
                         >
                           {p.active ? "Deactivate" : "Activate"}
                         </button>
+                        <button
+                          onClick={() => viewPromoUsages(p.id)}
+                          disabled={promoUsageLoading}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition font-medium"
+                        >
+                          📊 Sales
+                        </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1127,6 +1153,61 @@ const saveBudget = async (clientId: number) => {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promo Usage Modal */}
+      {promoUsageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPromoUsageModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Sales — {promoUsageModal.code}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{promoUsageModal.confirmed_payments} confirmed payments · {promoUsageModal.total_uses} total attempts</p>
+              </div>
+              <button onClick={() => setPromoUsageModal(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 p-6 border-b border-gray-100">
+              <div className="bg-green-50 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-green-700">₦{promoUsageModal.total_revenue_ngn.toLocaleString()}</p>
+                <p className="text-xs text-green-600 mt-1">Total Revenue Generated</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-orange-600">₦{promoUsageModal.total_discount_given_ngn.toLocaleString()}</p>
+                <p className="text-xs text-orange-500 mt-1">Total Discount Given</p>
+              </div>
+            </div>
+            {promoUsageModal.usages.length === 0 ? (
+              <p className="text-center py-10 text-gray-400 text-sm">No usages yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Client</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Plan</th>
+                    <th className="text-right px-5 py-3 text-gray-500 font-medium">Original</th>
+                    <th className="text-right px-5 py-3 text-gray-500 font-medium">Paid</th>
+                    <th className="text-right px-5 py-3 text-gray-500 font-medium">Discount</th>
+                    <th className="text-center px-5 py-3 text-gray-500 font-medium">Paid?</th>
+                    <th className="text-right px-5 py-3 text-gray-500 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {promoUsageModal.usages.map((u) => (
+                    <tr key={u.id} className={`hover:bg-gray-50 ${!u.payment_confirmed ? "opacity-50" : ""}`}>
+                      <td className="px-5 py-3"><p className="font-medium text-gray-900">{u.client_name}</p><p className="text-xs text-gray-400">{u.client_email}</p></td>
+                      <td className="px-5 py-3 capitalize text-gray-600">{u.plan} · {u.billing}</td>
+                      <td className="px-5 py-3 text-right text-gray-500 line-through text-xs">₦{u.original_amount_ngn.toLocaleString()}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-gray-900">₦{u.paid_amount_ngn.toLocaleString()}</td>
+                      <td className="px-5 py-3 text-right text-orange-500 text-xs">-₦{u.discount_ngn.toLocaleString()}</td>
+                      <td className="px-5 py-3 text-center">{u.payment_confirmed ? "✅" : "⏳"}</td>
+                      <td className="px-5 py-3 text-right text-xs text-gray-400">{u.used_at ? new Date(u.used_at).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
