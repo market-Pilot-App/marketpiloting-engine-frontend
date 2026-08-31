@@ -28,6 +28,11 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get("host") || "";
   const bareHost = host.split(":")[0];
 
+  // Affiliate domain — all traffic is public, next.config.mjs handles the rewrite
+  if (bareHost === AFFILIATE_HOST) {
+    return NextResponse.next();
+  }
+
   // Affiliate domain handled by next.config.mjs rewrites
 
   // Custom domain rewrite — if host is not one of our own domains,
