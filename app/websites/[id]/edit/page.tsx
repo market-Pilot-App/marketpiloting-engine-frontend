@@ -256,15 +256,15 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
 }
 
 function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
-  type Item = { title: string; description: string; price: string; icon_emoji: string; image_url?: string };
+  type Item = { title: string; description: string; price: string; price_link: string; icon_emoji: string; image_url?: string };
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
-  const [items, setItems] = useState<Item[]>(raw.map((i) => ({ title: s(i.title), description: s(i.description), price: s(i.price), icon_emoji: s(i.icon_emoji), image_url: s(i.image_url) })));
+  const [items, setItems] = useState<Item[]>(raw.map((i) => ({ title: s(i.title), description: s(i.description), price: s(i.price), price_link: s(i.price_link), icon_emoji: s(i.icon_emoji), image_url: s(i.image_url) })));
   const [saving, setSaving] = useState(false);
 
   const update = (idx: number, field: keyof Item, val: string) =>
     setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
-  const addItem = () => setItems((prev) => [...prev, { title: "", description: "", price: "", icon_emoji: "✨", image_url: "" }]);
+  const addItem = () => setItems((prev) => [...prev, { title: "", description: "", price: "", price_link: "", icon_emoji: "✨", image_url: "" }]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
   const save = async () => { setSaving(true); await onSave({ heading, items }); setSaving(false); };
@@ -283,6 +283,7 @@ function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkn
             <Field label="Emoji" value={item.icon_emoji} onChange={(v) => update(idx, "icon_emoji", v)} />
             <Field label="Price" value={item.price} onChange={(v) => update(idx, "price", v)} />
           </div>
+          <Field label="Price Link URL (optional)" value={item.price_link} onChange={(v) => update(idx, "price_link", v)} />
           <Field label="Title" value={item.title} onChange={(v) => update(idx, "title", v)} />
           <Field label="Description" value={item.description} onChange={(v) => update(idx, "description", v)} multiline rows={2} />
         </div>

@@ -186,7 +186,19 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
                   <p className={`${t.muted} text-sm mb-3`}>{svc.description}</p>
                   {svc.price && (
                     <div className="flex items-center justify-between mt-4">
-                      <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+                      {svc.price_link ? (
+                        <a
+                          href={svc.price_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackEvent(slug, "services", "price_click")}
+                          className={`font-bold text-sm ${t.primaryText} hover:underline`}
+                        >
+                          {svc.price}
+                        </a>
+                      ) : (
+                        <p className={`font-bold text-sm ${t.primaryText}`}>{svc.price}</p>
+                      )}
                       {pages.includes("contact") && (
                         <Link
                           href={`/sites/${slug}/contact`}
