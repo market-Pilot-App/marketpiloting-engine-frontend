@@ -147,6 +147,12 @@ export default function AdminPage() {
     setPromoCodes((prev) => prev.map((p) => p.id === id ? { ...p, active: !active } : p));
   };
 
+  const deletePromo = async (id: number, code: string) => {
+    if (!confirm(`Delete promo code "${code}"? This will remove all usage records and cannot be undone.`)) return;
+    await api.del(`/admin/promo-codes/${id}`);
+    setPromoCodes((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const [promoUsageModal, setPromoUsageModal] = useState<null | {
     code: string; total_uses: number; confirmed_payments: number;
     total_revenue_ngn: number; total_discount_given_ngn: number;
@@ -1039,6 +1045,12 @@ const saveBudget = async (clientId: number) => {
                           className="text-xs px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition font-medium"
                         >
                           📊 Sales
+                        </button>
+                        <button
+                          onClick={() => deletePromo(p.id, p.code)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition font-medium"
+                        >
+                          🗑️ Delete
                         </button>
                         </div>
                       </td>
