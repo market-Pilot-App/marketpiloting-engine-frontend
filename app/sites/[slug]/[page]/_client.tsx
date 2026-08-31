@@ -318,7 +318,7 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
         <PageHero title={s(d.heading, "Blog")} subtitle={s(d.subheading) || undefined}
           imageUrl={s(d.banner_image_url) || undefined} imageStyle={s(d.banner_image_style)}
           imageHeight={s(d.banner_image_height)} imageWidth={s(d.banner_image_width)} primary={t.primary} />
-        <div className="max-w-4xl mx-auto py-16 px-6">
+        <div className="w-full py-16 px-6">
           {!posts || posts.length === 0 ? (
             <p className={`text-center ${t.muted}`}>No blog posts yet. Check back soon.</p>
           ) : (
