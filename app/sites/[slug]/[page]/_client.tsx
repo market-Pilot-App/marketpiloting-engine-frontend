@@ -20,6 +20,7 @@ interface PageData {
   logo_url: string | null;
   pages_config: string[];
   seo_title: string | null;
+  mobile_responsive: boolean;
   data: Record<string, unknown>;
 }
 
@@ -148,17 +149,18 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
   const t = THEMES[pageData.theme] || THEMES.indigo;
   const d = pageData.data;
   const pages = pageData.pages_config;
+  const mr = pageData.mobile_responsive !== false;
 
   const Navbar = () => (
     <nav className={`${t.primary} text-white px-6 py-4`}>
-      <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <div className={`${mr ? "max-w-6xl" : "max-w-5xl"} mx-auto flex items-center justify-between`}>
         <Link href={`/sites/${slug}`} className="flex items-center gap-3">
           {pageData.logo_url && (
             <img src={pageData.logo_url} alt="Logo" className="h-8 w-auto object-contain" />
           )}
           <span className="font-bold text-lg">{pageData.business_name}</span>
         </Link>
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <div className={`${mr ? "hidden md:flex" : "flex"} items-center gap-6 text-sm font-medium`}>
           <Link href={`/sites/${slug}`} className="hover:opacity-80 transition">Home</Link>
           {pages.filter((p) => p !== "home").map((p) => (
             <Link key={p} href={`/sites/${slug}/${p}`}
@@ -167,6 +169,23 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
             </Link>
           ))}
         </div>
+        {mr && (
+          <details className="md:hidden relative">
+            <summary className="list-none cursor-pointer p-1">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </summary>
+            <div className="absolute right-0 top-8 bg-white text-gray-900 rounded-xl shadow-xl py-2 min-w-40 z-50">
+              <Link href={`/sites/${slug}`} className="block px-4 py-2 text-sm hover:bg-gray-50">Home</Link>
+              {pages.filter((p) => p !== "home").map((p) => (
+                <Link key={p} href={`/sites/${slug}/${p}`} className="block px-4 py-2 text-sm hover:bg-gray-50 capitalize">
+                  {p === "faq" ? "FAQ" : p.charAt(0).toUpperCase() + p.slice(1)}
+                </Link>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
     </nav>
   );
@@ -240,7 +259,7 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           imageStyle={s(d.banner_image_style)} imageHeight={s(d.banner_image_height)}
           imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className="max-w-4xl mx-auto py-16 px-6">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2" : "md:grid-cols-2"} gap-6`}>
             {items?.map((svc, i) => (
               <div key={i} className={`${t.cardBg} rounded-xl overflow-hidden border ${t.border}`}>
                 {svc.image_url && (
@@ -322,7 +341,7 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           {!posts || posts.length === 0 ? (
             <p className={`text-center ${t.muted}`}>No blog posts yet. Check back soon.</p>
           ) : (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "md:grid-cols-3"} gap-6`}>
               {posts.map((post, i) => (
                 <Link key={i} href={`/sites/${slug}/blog/${s(post.slug)}`}
                   className={`${t.cardBg} rounded-xl overflow-hidden border ${t.border} hover:shadow-md transition block`}>

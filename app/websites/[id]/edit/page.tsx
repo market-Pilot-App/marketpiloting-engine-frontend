@@ -29,6 +29,7 @@ interface Website {
   seo_title: string | null;
   seo_description: string | null;
   logo_url: string | null;
+  mobile_responsive: boolean;
 }
 
 // ── Reusable field ────────────────────────────────────────────────────────────
@@ -478,6 +479,7 @@ export default function EditWebsite() {
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDesc, setSeoDesc] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [mobileResponsive, setMobileResponsive] = useState(true);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -496,6 +498,7 @@ export default function EditWebsite() {
       setSeoTitle(w.seo_title || "");
       setSeoDesc(w.seo_description || "");
       setLogoUrl(w.logo_url || "");
+      setMobileResponsive(w.mobile_responsive !== false);
       setDomain(w.custom_domain || "");
       if (w.pages_config.length > 0) setActivePage(w.pages_config[0]);
     } catch {
@@ -569,6 +572,7 @@ export default function EditWebsite() {
     try {
       const updated = await api.patch<Website>(`/websites/${websiteId}/settings`, {
         theme, seo_title: seoTitle, seo_description: seoDesc, logo_url: logoUrl,
+        mobile_responsive: mobileResponsive,
       });
       setWebsite(updated);
       setSettingsMsg("✅ Saved");
@@ -602,7 +606,7 @@ export default function EditWebsite() {
     : `/sites/${website.slug}?preview=${website.id}`;
 
   return (
-    <div className="max-w-3xl">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -714,6 +718,24 @@ export default function EditWebsite() {
                 </button>
               ))}
             </div>
+          </div>
+          <hr className="border-gray-800" />
+          {/* Mobile Responsive Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold text-sm">Mobile Responsive</p>
+              <p className="text-gray-500 text-xs mt-0.5">When enabled, your website adapts to all screen sizes.</p>
+            </div>
+            <button
+              onClick={() => setMobileResponsive(!mobileResponsive)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                mobileResponsive ? "bg-indigo-600" : "bg-gray-700"
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                mobileResponsive ? "translate-x-6" : "translate-x-1"
+              }`} />
+            </button>
           </div>
           <hr className="border-gray-800" />
           <div className="space-y-4">

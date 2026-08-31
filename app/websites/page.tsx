@@ -124,7 +124,7 @@ export default function WebsitesDashboard() {
   if (loading) return <p className="text-gray-400">Loading...</p>;
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">AI Website Builder</h1>

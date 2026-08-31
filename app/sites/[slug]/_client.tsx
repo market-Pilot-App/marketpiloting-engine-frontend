@@ -24,6 +24,7 @@ interface SiteData {
   logo_url: string | null;
   seo_title: string | null;
   seo_description: string | null;
+  mobile_responsive: boolean;
 }
 
 interface LeadForm { name: string; email: string; whatsapp: string; }
@@ -95,6 +96,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
   const servicesPreview = home?.services_preview as Array<Record<string, string>> | undefined;
   const socialProof = home?.social_proof as Record<string, unknown> | undefined;
   const pages = site.pages_config;
+  const mr = site.mobile_responsive !== false;
 
   return (
     <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
@@ -106,20 +108,37 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
         </div>
       )}
       <nav className={`${t.primary} text-white px-6 py-4`}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className={`${mr ? "max-w-6xl" : "max-w-5xl"} mx-auto flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             {site.logo_url && (
               <img src={site.logo_url} alt="Logo" className="h-8 w-auto object-contain" />
             )}
             <span className="font-bold text-lg">{site.business_name}</span>
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+          <div className={`${mr ? "hidden md:flex" : "flex"} items-center gap-6 text-sm font-medium`}>
             {pages.filter((p) => p !== "home").map((p) => (
               <Link key={p} href={`/sites/${slug}/${p}`} className="hover:opacity-80 capitalize transition">
                 {p === "faq" ? "FAQ" : p.charAt(0).toUpperCase() + p.slice(1)}
               </Link>
             ))}
           </div>
+          {mr && (
+            <details className="md:hidden relative">
+              <summary className="list-none cursor-pointer p-1">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </summary>
+              <div className="absolute right-0 top-8 bg-white text-gray-900 rounded-xl shadow-xl py-2 min-w-40 z-50">
+                <Link href={`/sites/${slug}`} className="block px-4 py-2 text-sm hover:bg-gray-50">Home</Link>
+                {pages.filter((p) => p !== "home").map((p) => (
+                  <Link key={p} href={`/sites/${slug}/${p}`} className="block px-4 py-2 text-sm hover:bg-gray-50 capitalize">
+                    {p === "faq" ? "FAQ" : p.charAt(0).toUpperCase() + p.slice(1)}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       </nav>
 
@@ -177,7 +196,7 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
         if (imageStyle === "side" && hero.image_url) {
           return (
             <section className={`${t.primary} text-white py-20 px-6`}>
-              <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
+              <div className={`${mr ? "max-w-6xl" : "max-w-5xl"} mx-auto flex ${mr ? "flex-col md:flex-row" : "flex-row"} items-center gap-10`}>
                 <div className="flex-1">{textBlock}</div>
                 <div className="flex-1">
                   <img src={hero.image_url} alt="Hero"
@@ -215,9 +234,9 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
       {/* Services preview */}
       {servicesPreview && servicesPreview.length > 0 && (
         <section className={`${t.cardBg} py-16 px-6`}>
-          <div className="max-w-4xl mx-auto">
+          <div className={`${mr ? "max-w-6xl" : "max-w-4xl"} mx-auto`}>
             <h2 className="text-2xl font-bold text-center mb-10">What We Offer</h2>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "md:grid-cols-3"} gap-6`}>
               {servicesPreview.slice(0, 3).map((sv, i) => (
                 <div key={i} className={`${t.bg} rounded-xl p-6 shadow-sm border ${t.border}`}>
                   <p className="text-3xl mb-3">{sv.icon_emoji}</p>
@@ -239,9 +258,9 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
 
       {/* Testimonials */}
       {socialProof && Array.isArray(socialProof.testimonials) && (socialProof.testimonials as unknown[]).length > 0 && (
-        <section className="py-16 px-6 max-w-4xl mx-auto">
+        <section className={`py-16 px-6 ${mr ? "max-w-6xl" : "max-w-4xl"} mx-auto`}>
           <h2 className="text-2xl font-bold text-center mb-10">{socialProof.heading as string}</h2>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2" : "md:grid-cols-2"} gap-6`}>
             {(socialProof.testimonials as Array<Record<string, string>>).map((t2, i) => (
               <div key={i} className={`${t.cardBg} rounded-xl p-6 border ${t.border}`}>
                 <p className={`${t.muted} italic mb-4`}>&ldquo;{t2.text}&rdquo;</p>
