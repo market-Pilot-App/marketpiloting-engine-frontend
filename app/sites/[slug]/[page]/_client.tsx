@@ -322,7 +322,7 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           {!posts || posts.length === 0 ? (
             <p className={`text-center ${t.muted}`}>No blog posts yet. Check back soon.</p>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               {posts.map((post, i) => (
                 <Link key={i} href={`/sites/${slug}/blog/${s(post.slug)}`}
                   className={`${t.cardBg} rounded-xl overflow-hidden border ${t.border} hover:shadow-md transition block`}>
