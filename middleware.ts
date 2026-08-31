@@ -29,11 +29,10 @@ export async function middleware(req: NextRequest) {
   const bareHost = host.split(":")[0];
 
   // Affiliate domain — rewrite affiliates.marketpiloting.com/* → /affiliate/*
+  // Must return immediately before any auth check
   if (bareHost === AFFILIATE_HOST) {
-    const target = pathname === "/" ? "/affiliate" : `/affiliate${pathname}`;
     const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.host = "dashboard.marketpiloting.com";
-    rewriteUrl.pathname = target;
+    rewriteUrl.pathname = pathname === "/" ? "/affiliate" : `/affiliate${pathname}`;
     return NextResponse.rewrite(rewriteUrl);
   }
 
@@ -63,7 +62,7 @@ export async function middleware(req: NextRequest) {
   // It contains no sensitive data — just signals that a session exists.
   const session = req.cookies.get("mp_session")?.value;
   if (!session) {
-    const loginUrl = new URL("/login", req.url);
+    const loginUrl = new URL("/login", "https://dashboard.marketpiloting.com");
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
