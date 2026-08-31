@@ -32,6 +32,7 @@ export async function middleware(req: NextRequest) {
   if (bareHost === AFFILIATE_HOST) {
     const target = pathname === "/" ? "/affiliate" : `/affiliate${pathname}`;
     const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.host = "dashboard.marketpiloting.com";
     rewriteUrl.pathname = target;
     return NextResponse.rewrite(rewriteUrl);
   }
