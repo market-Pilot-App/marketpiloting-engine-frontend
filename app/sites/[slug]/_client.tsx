@@ -124,31 +124,68 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
       </nav>
 
       {/* Hero */}
-      {hero && (
-        <section className={`${t.primary} text-white py-20 px-6 text-center relative overflow-hidden`}>
-          {hero.image_url && (
-            <img src={hero.image_url} alt="Hero"
-              className="absolute inset-0 w-full h-full object-cover opacity-20" />
-          )}
-          <div className="relative">
+      {hero && (() => {
+        const imageStyle = hero.image_style || (hero.image_url ? "side" : "none");
+        const ctaHref = hero.cta_url && hero.cta_url.startsWith("/sites/") ? hero.cta_url : (pages.includes("contact") ? `/sites/${slug}/contact` : `#contact`);
+        const textBlock = (
+          <div className={imageStyle === "side" ? "text-left" : "text-center max-w-3xl mx-auto"}>
             {site.logo_url && (
               <img src={site.logo_url} alt={site.business_name}
-                className="h-14 w-auto object-contain mx-auto mb-6" />
+                className={`h-14 w-auto object-contain mb-6 ${imageStyle === "side" ? "" : "mx-auto"}`} />
             )}
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 max-w-3xl mx-auto leading-tight">
-              {hero.headline}
-            </h1>
-            <p className="text-lg mb-8 max-w-xl mx-auto opacity-90">{hero.subheadline}</p>
-            <Link
-              href={hero.cta_url && hero.cta_url.startsWith("/sites/") ? hero.cta_url : (pages.includes("contact") ? `/sites/${slug}/contact` : `#contact`)}
-              onClick={() => trackEvent(slug, "home", "cta_click")}
-              className="inline-block bg-white text-indigo-700 font-bold px-8 py-3 rounded-full hover:opacity-90 transition"
-            >
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">{hero.headline}</h1>
+            <p className="text-lg mb-8 opacity-90">{hero.subheadline}</p>
+            <Link href={ctaHref} onClick={() => trackEvent(slug, "home", "cta_click")}
+              className="inline-block bg-white text-indigo-700 font-bold px-8 py-3 rounded-full hover:opacity-90 transition">
               {hero.cta_text || "Get Started"}
             </Link>
           </div>
-        </section>
-      )}
+        );
+
+        if (imageStyle === "background") {
+          return (
+            <section className={`${t.primary} text-white py-20 px-6 text-center relative overflow-hidden`}>
+              <img src={hero.image_url} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+              <div className="relative">{textBlock}</div>
+            </section>
+          );
+        }
+        if (imageStyle === "above" && hero.image_url) {
+          return (
+            <section className={`${t.primary} text-white py-20 px-6`}>
+              <div className="max-w-3xl mx-auto text-center">
+                <img src={hero.image_url} alt="Hero"
+                  className="w-full rounded-2xl object-cover mb-8"
+                  style={{ maxHeight: hero.image_height ? `${hero.image_height}px` : "400px" }} />
+                {textBlock}
+              </div>
+            </section>
+          );
+        }
+        if (imageStyle === "side" && hero.image_url) {
+          return (
+            <section className={`${t.primary} text-white py-20 px-6`}>
+              <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1">{textBlock}</div>
+                <div className="flex-1">
+                  <img src={hero.image_url} alt="Hero"
+                    className="w-full rounded-2xl object-cover shadow-xl"
+                    style={{
+                      maxHeight: hero.image_height ? `${hero.image_height}px` : "420px",
+                      maxWidth: hero.image_width ? `${hero.image_width}px` : "100%",
+                    }} />
+                </div>
+              </div>
+            </section>
+          );
+        }
+        // no image
+        return (
+          <section className={`${t.primary} text-white py-20 px-6 text-center`}>
+            {textBlock}
+          </section>
+        );
+      })()}
 
       {/* About preview */}
       {aboutPreview && (

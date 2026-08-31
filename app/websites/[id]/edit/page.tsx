@@ -153,6 +153,9 @@ function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
   const [ctaText, setCtaText] = useState(s(hero.cta_text));
   const [ctaUrl, setCtaUrl] = useState(s(hero.cta_url));
   const [heroImage, setHeroImage] = useState(s(hero.image_url));
+  const [imageStyle, setImageStyle] = useState(s(hero.image_style) || "side");
+  const [imageHeight, setImageHeight] = useState(s(hero.image_height));
+  const [imageWidth, setImageWidth] = useState(s(hero.image_width));
   const [aboutHeading, setAboutHeading] = useState(s(about.heading));
   const [aboutBody, setAboutBody] = useState(s(about.body));
   const [spHeading, setSpHeading] = useState(s(social.heading));
@@ -169,7 +172,7 @@ function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
   const save = async () => {
     setSaving(true);
     await onSave({
-      hero: { ...hero, headline, subheadline, cta_text: ctaText, cta_url: ctaUrl, image_url: heroImage },
+      hero: { ...hero, headline, subheadline, cta_text: ctaText, cta_url: ctaUrl, image_url: heroImage, image_style: imageStyle, image_height: imageHeight, image_width: imageWidth },
       about_preview: { ...about, heading: aboutHeading, body: aboutBody },
       social_proof: { ...social, heading: spHeading, testimonials },
     });
@@ -184,6 +187,31 @@ function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
       <Field label="CTA Button Text" value={ctaText} onChange={setCtaText} />
       <Field label="CTA Button URL" value={ctaUrl} onChange={setCtaUrl} />
       <ImageUpload label="Hero Image (optional)" url={heroImage} onChange={setHeroImage} />
+      {heroImage && (
+        <>
+          <div>
+            <label className="text-gray-400 text-xs block mb-1">Image Position</label>
+            <div className="flex gap-2">
+              {(["side", "above", "background"] as const).map((opt) => (
+                <button key={opt} onClick={() => setImageStyle(opt)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border capitalize transition ${
+                    imageStyle === opt ? "border-indigo-500 bg-indigo-950/40 text-white" : "border-gray-700 text-gray-400 hover:border-gray-500"
+                  }`}>
+                  {opt === "side" ? "Side by Side" : opt === "above" ? "Above Text" : "Background"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {imageStyle !== "background" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Max Height (px, e.g. 400)" value={imageHeight} onChange={setImageHeight} />
+              {imageStyle === "side" && (
+                <Field label="Max Width (px, e.g. 500)" value={imageWidth} onChange={setImageWidth} />
+              )}
+            </div>
+          )}
+        </>
+      )}
       <hr className="border-gray-800" />
       <p className="text-white font-semibold text-sm">About Preview</p>
       <Field label="Heading" value={aboutHeading} onChange={setAboutHeading} />
