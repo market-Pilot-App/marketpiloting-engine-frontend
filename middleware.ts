@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const MP_HOSTS = ["dashboard.marketpiloting.com", "dashboard.marketpiloting.online", "localhost"];
+const AFFILIATE_HOST = "affiliates.marketpiloting.com";
 
 // Routes that never require auth
 const PUBLIC_PREFIXES = [
@@ -18,12 +19,20 @@ const PUBLIC_PREFIXES = [
   "/team/accept",
   "/auth/twitter",
   "/api/",
+  "/affiliate",
+  "/ref/",
 ];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get("host") || "";
   const bareHost = host.split(":")[0];
+
+  // Affiliate domain — rewrite affiliates.marketpiloting.com/* → /affiliate/*
+  if (bareHost === AFFILIATE_HOST) {
+    const target = pathname === "/" ? "/affiliate" : `/affiliate${pathname}`;
+    return NextResponse.rewrite(new URL(target, req.url));
+  }
 
   // Custom domain rewrite — if host is not one of our own domains,
   // look up the slug and rewrite to /sites/[slug]
