@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const MP_HOSTS = ["dashboard.marketpiloting.com", "dashboard.marketpiloting.online", "affiliates.marketpiloting.com", "localhost"];
-const AFFILIATE_HOST = "affiliates.marketpiloting.com";
+const MP_HOSTS = ["dashboard.marketpiloting.com", "dashboard.marketpiloting.online", "localhost"];
 
 // Routes that never require auth
 const PUBLIC_PREFIXES = [
@@ -19,7 +18,6 @@ const PUBLIC_PREFIXES = [
   "/team/accept",
   "/auth/twitter",
   "/api/",
-  "/affiliate",
   "/ref/",
 ];
 
@@ -27,11 +25,6 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get("host") || "";
   const bareHost = host.split(":")[0];
-
-  // Affiliate domain — all traffic is public, next.config.mjs handles the rewrite
-  if (bareHost === AFFILIATE_HOST) {
-    return NextResponse.next();
-  }
 
   // Affiliate domain handled by next.config.mjs rewrites
 

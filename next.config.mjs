@@ -3,20 +3,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  async rewrites() {
-    return [
-      {
-        source: "/",
-        destination: "/affiliate",
-        has: [{ type: "host", value: "affiliates.marketpiloting.com" }],
-      },
-      {
-        source: "/:path*",
-        destination: "/affiliate/:path*",
-        has: [{ type: "host", value: "affiliates.marketpiloting.com" }],
-      },
-    ];
-  },
   async headers() {
     return [
       {
