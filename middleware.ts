@@ -28,13 +28,7 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get("host") || "";
   const bareHost = host.split(":")[0];
 
-  // Affiliate domain — rewrite affiliates.marketpiloting.com/* → /affiliate/*
-  // Must return immediately before any auth check
-  if (bareHost === AFFILIATE_HOST) {
-    const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = pathname === "/" ? "/affiliate" : `/affiliate${pathname}`;
-    return NextResponse.rewrite(rewriteUrl);
-  }
+  // Affiliate domain handled by next.config.mjs rewrites
 
   // Custom domain rewrite — if host is not one of our own domains,
   // look up the slug and rewrite to /sites/[slug]
