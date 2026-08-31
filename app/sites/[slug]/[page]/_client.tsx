@@ -36,6 +36,73 @@ function trackEvent(slug: string, page: string, event: string) {
   }).catch(() => {});
 }
 
+// Shared page hero — supports side/above/background/fullscreen image styles
+function PageHero({
+  title, subtitle, imageUrl, imageStyle, imageHeight, imageWidth, primary,
+}: {
+  title: string; subtitle?: string; imageUrl?: string;
+  imageStyle?: string; imageHeight?: string; imageWidth?: string; primary: string;
+}) {
+  const style = imageStyle || (imageUrl ? "side" : "none");
+  const heightStyle = imageHeight ? `${imageHeight}px` : undefined;
+  const widthStyle = imageWidth ? `${imageWidth}px` : undefined;
+
+  const textBlock = (
+    <div className={style === "side" ? "text-left" : "text-center max-w-3xl mx-auto"}>
+      <h1 className="text-4xl font-bold">{title}</h1>
+      {subtitle && <p className="mt-3 opacity-90">{subtitle}</p>}
+    </div>
+  );
+
+  if (style === "fullscreen" && imageUrl) {
+    return (
+      <section className="relative text-white py-16 px-6 text-center overflow-hidden"
+        style={{ minHeight: heightStyle || "320px" }}>
+        <img src={imageUrl} alt={title} className="absolute inset-0 w-full h-full object-cover"
+          style={{ maxWidth: widthStyle }} />
+        <div className={`absolute inset-0 ${primary} opacity-60`} />
+        <div className="relative">{textBlock}</div>
+      </section>
+    );
+  }
+  if (style === "background" && imageUrl) {
+    return (
+      <section className={`${primary} text-white py-16 px-6 text-center relative overflow-hidden`}>
+        <img src={imageUrl} alt={title} className="absolute inset-0 w-full h-full object-cover opacity-20" />
+        <div className="relative">{textBlock}</div>
+      </section>
+    );
+  }
+  if (style === "above" && imageUrl) {
+    return (
+      <section className={`${primary} text-white py-16 px-6`}>
+        <div className="max-w-3xl mx-auto text-center">
+          <img src={imageUrl} alt={title} className="w-full rounded-2xl object-cover mb-6"
+            style={{ maxHeight: heightStyle || "320px" }} />
+          {textBlock}
+        </div>
+      </section>
+    );
+  }
+  if (style === "side" && imageUrl) {
+    return (
+      <section className={`${primary} text-white py-16 px-6`}>
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
+          <div className="flex-1">{textBlock}</div>
+          <div className="flex-1">
+            <img src={imageUrl} alt={title} className="w-full rounded-2xl object-cover shadow-xl"
+              style={{ maxHeight: heightStyle || "320px", maxWidth: widthStyle || "100%" }} />
+          </div>
+        </div>
+      </section>
+    );
+  }
+  // no image
+  return (
+    <section className={`${primary} text-white py-16 px-6 text-center`}>{textBlock}</section>
+  );
+}
+
 export default function PublicSitePageClient({ slug, page }: { slug: string; page: string }) {
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -125,9 +192,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <section className={`${t.primary} text-white py-16 px-6 text-center`}>
-          <h1 className="text-4xl font-bold">{s(d.heading)}</h1>
-        </section>
+        <PageHero title={s(d.heading)} imageUrl={s(d.banner_image_url) || undefined}
+          imageStyle={s(d.banner_image_style)} imageHeight={s(d.banner_image_height)}
+          imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className="max-w-3xl mx-auto py-16 px-6 space-y-8">
           {!!d.image_url && (
             <img src={s(d.image_url)} alt="Team"
@@ -169,9 +236,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <section className={`${t.primary} text-white py-16 px-6 text-center`}>
-          <h1 className="text-4xl font-bold">{s(d.heading)}</h1>
-        </section>
+        <PageHero title={s(d.heading)} imageUrl={s(d.banner_image_url) || undefined}
+          imageStyle={s(d.banner_image_style)} imageHeight={s(d.banner_image_height)}
+          imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className="max-w-4xl mx-auto py-16 px-6">
           <div className="grid md:grid-cols-2 gap-6">
             {items?.map((svc, i) => (
@@ -226,9 +293,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <section className={`${t.primary} text-white py-16 px-6 text-center`}>
-          <h1 className="text-4xl font-bold">{s(d.heading)}</h1>
-        </section>
+        <PageHero title={s(d.heading)} imageUrl={s(d.banner_image_url) || undefined}
+          imageStyle={s(d.banner_image_style)} imageHeight={s(d.banner_image_height)}
+          imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className="max-w-2xl mx-auto py-16 px-6 space-y-4">
           {items?.map((f, i) => (
             <div key={i} className={`${t.cardBg} rounded-xl p-5 border ${t.border}`}>
@@ -248,10 +315,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <section className={`${t.primary} text-white py-16 px-6 text-center`}>
-          <h1 className="text-4xl font-bold">{s(d.heading, "Blog")}</h1>
-          {!!d.subheading && <p className="mt-3 opacity-90">{s(d.subheading)}</p>}
-        </section>
+        <PageHero title={s(d.heading, "Blog")} subtitle={s(d.subheading) || undefined}
+          imageUrl={s(d.banner_image_url) || undefined} imageStyle={s(d.banner_image_style)}
+          imageHeight={s(d.banner_image_height)} imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className="max-w-4xl mx-auto py-16 px-6">
           {!posts || posts.length === 0 ? (
             <p className={`text-center ${t.muted}`}>No blog posts yet. Check back soon.</p>
@@ -284,10 +350,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
   return (
     <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
       <Navbar />
-      <section className={`${t.primary} text-white py-16 px-6 text-center`}>
-        <h1 className="text-4xl font-bold">{s(d.heading, "Contact Us")}</h1>
-        {!!d.subheading && <p className="mt-3 opacity-90">{s(d.subheading)}</p>}
-      </section>
+      <PageHero title={s(d.heading, "Contact Us")} subtitle={s(d.subheading) || undefined}
+        imageUrl={s(d.banner_image_url) || undefined} imageStyle={s(d.banner_image_style)}
+        imageHeight={s(d.banner_image_height)} imageWidth={s(d.banner_image_width)} primary={t.primary} />
       <div className="max-w-xl mx-auto py-16 px-6">
         <div className={`${t.cardBg} rounded-xl p-6 border ${t.border} mb-8 space-y-3`}>
           {!!d.whatsapp && (

@@ -139,6 +139,47 @@ function PageSeoFields({
   );
 }
 
+// Reusable banner image controls for any page editor
+function BannerImageControls({
+  imageUrl, onImageChange, imageStyle, onStyleChange, imageHeight, onHeightChange, imageWidth, onWidthChange,
+}: {
+  imageUrl: string; onImageChange: (v: string) => void;
+  imageStyle: string; onStyleChange: (v: string) => void;
+  imageHeight: string; onHeightChange: (v: string) => void;
+  imageWidth: string; onWidthChange: (v: string) => void;
+}) {
+  return (
+    <>
+      <hr className="border-gray-800" />
+      <p className="text-white font-semibold text-sm">Page Banner Image</p>
+      <ImageUpload label="Banner Image (optional)" url={imageUrl} onChange={onImageChange} />
+      {imageUrl && (
+        <>
+          <div>
+            <label className="text-gray-400 text-xs block mb-1">Image Style</label>
+            <div className="flex flex-wrap gap-2">
+              {(["side", "above", "background", "fullscreen"] as const).map((opt) => (
+                <button key={opt} onClick={() => onStyleChange(opt)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border capitalize transition ${
+                    imageStyle === opt ? "border-indigo-500 bg-indigo-950/40 text-white" : "border-gray-700 text-gray-400 hover:border-gray-500"
+                  }`}>
+                  {opt === "side" ? "Side by Side" : opt === "above" ? "Above Text" : opt === "fullscreen" ? "Full Screen" : "Background"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Height (px, e.g. 400)" value={imageHeight} onChange={onHeightChange} />
+            {(imageStyle === "side" || imageStyle === "fullscreen") && (
+              <Field label="Width (px, e.g. 600)" value={imageWidth} onChange={onWidthChange} />
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // ── Page editors ──────────────────────────────────────────────────────────────
 
 function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
@@ -192,12 +233,12 @@ function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
           <div>
             <label className="text-gray-400 text-xs block mb-1">Image Position</label>
             <div className="flex gap-2">
-              {(["side", "above", "background"] as const).map((opt) => (
+              {(["side", "above", "background", "fullscreen"] as const).map((opt) => (
                 <button key={opt} onClick={() => setImageStyle(opt)}
                   className={`text-xs px-3 py-1.5 rounded-lg border capitalize transition ${
                     imageStyle === opt ? "border-indigo-500 bg-indigo-950/40 text-white" : "border-gray-700 text-gray-400 hover:border-gray-500"
                   }`}>
-                  {opt === "side" ? "Side by Side" : opt === "above" ? "Above Text" : "Background"}
+                  {opt === "side" ? "Side by Side" : opt === "above" ? "Above Text" : opt === "fullscreen" ? "Full Screen" : "Background"}
                 </button>
               ))}
             </div>
@@ -205,7 +246,7 @@ function HomeEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
           {imageStyle !== "background" && (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Max Height (px, e.g. 400)" value={imageHeight} onChange={setImageHeight} />
-              {imageStyle === "side" && (
+              {(imageStyle === "side" || imageStyle === "fullscreen") && (
                 <Field label="Max Width (px, e.g. 500)" value={imageWidth} onChange={setImageWidth} />
               )}
             </div>
@@ -245,6 +286,10 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
   const [story, setStory] = useState(s(data.story));
   const [mission, setMission] = useState(s(data.mission));
   const [imageUrl, setImageUrl] = useState(s(data.image_url));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [values, setValues] = useState<string[]>(
     Array.isArray(data.values) ? (data.values as unknown[]).map((v) => s(v)) : []
   );
@@ -255,7 +300,7 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
   const addValue = () => setValues((prev) => [...prev, ""]);
   const removeValue = (idx: number) => setValues((prev) => prev.filter((_, i) => i !== idx));
 
-  const save = async () => { setSaving(true); await onSave({ heading, story, mission, image_url: imageUrl, values }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, story, mission, image_url: imageUrl, values, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
 
   return (
     <div className="space-y-4">
@@ -267,16 +312,13 @@ function AboutEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown
       <p className="text-white font-semibold text-sm">Our Values</p>
       {values.map((v, idx) => (
         <div key={idx} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={v}
-            onChange={(e) => updateValue(idx, e.target.value)}
-            className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500"
-          />
+          <input type="text" value={v} onChange={(e) => updateValue(idx, e.target.value)}
+            className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500" />
           <button onClick={() => removeValue(idx)} className="text-red-400 text-xs hover:text-red-300 transition flex-shrink-0">Remove</button>
         </div>
       ))}
       <button onClick={addValue} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Value</button>
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
@@ -288,6 +330,10 @@ function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkn
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
   const [items, setItems] = useState<Item[]>(raw.map((i) => ({ title: s(i.title), description: s(i.description), price: s(i.price), price_link: s(i.price_link), icon_emoji: s(i.icon_emoji), image_url: s(i.image_url) })));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
 
   const update = (idx: number, field: keyof Item, val: string) =>
@@ -295,7 +341,7 @@ function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkn
   const addItem = () => setItems((prev) => [...prev, { title: "", description: "", price: "", price_link: "", icon_emoji: "✨", image_url: "" }]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
-  const save = async () => { setSaving(true); await onSave({ heading, items }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, items, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
 
   return (
     <div className="space-y-4">
@@ -317,6 +363,7 @@ function ServicesEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkn
         </div>
       ))}
       <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Service</button>
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
@@ -329,9 +376,13 @@ function ContactEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
   const [whatsapp, setWhatsapp] = useState(s(data.whatsapp));
   const [email, setEmail] = useState(s(data.email));
   const [address, setAddress] = useState(s(data.address));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
 
-  const save = async () => { setSaving(true); await onSave({ heading, subheading, whatsapp, email, address }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, whatsapp, email, address, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
 
   return (
     <div className="space-y-4">
@@ -340,6 +391,7 @@ function ContactEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
       <Field label="WhatsApp Number" value={whatsapp} onChange={setWhatsapp} />
       <Field label="Email" value={email} onChange={setEmail} />
       <Field label="Address" value={address} onChange={setAddress} />
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
@@ -351,6 +403,10 @@ function FaqEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>;
   const raw = (data.items as Item[]) || [];
   const [heading, setHeading] = useState(s(data.heading));
   const [items, setItems] = useState<Item[]>(raw.map((i) => ({ question: s(i.question), answer: s(i.answer) })));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
 
   const update = (idx: number, field: keyof Item, val: string) =>
@@ -358,7 +414,7 @@ function FaqEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>;
   const addItem = () => setItems((prev) => [...prev, { question: "", answer: "" }]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
-  const save = async () => { setSaving(true); await onSave({ heading, items }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, items, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
 
   return (
     <div className="space-y-4">
@@ -374,6 +430,7 @@ function FaqEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>;
         </div>
       ))}
       <button onClick={addItem} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add FAQ</button>
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
@@ -383,15 +440,20 @@ function FaqEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>;
 function BlogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const [heading, setHeading] = useState(s(data.heading));
   const [subheading, setSubheading] = useState(s(data.subheading));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
 
-  const save = async () => { setSaving(true); await onSave({ heading, subheading }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
 
   return (
     <div className="space-y-4">
       <p className="text-gray-400 text-xs">Blog posts are auto-published by the AI blog engine. Edit the section header below.</p>
       <Field label="Section Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>

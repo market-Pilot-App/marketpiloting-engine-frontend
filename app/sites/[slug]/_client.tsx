@@ -142,6 +142,18 @@ export default function PublicSiteHomeClient({ slug }: { slug: string }) {
           </div>
         );
 
+        if (imageStyle === "fullscreen" && hero.image_url) {
+          return (
+            <section className="relative text-white py-20 px-6 text-center overflow-hidden"
+              style={{ minHeight: hero.image_height ? `${hero.image_height}px` : "480px" }}>
+              <img src={hero.image_url} alt="Hero"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ maxWidth: hero.image_width ? `${hero.image_width}px` : undefined }} />
+              <div className={`absolute inset-0 ${t.primary} opacity-60`} />
+              <div className="relative">{textBlock}</div>
+            </section>
+          );
+        }
         if (imageStyle === "background") {
           return (
             <section className={`${t.primary} text-white py-20 px-6 text-center relative overflow-hidden`}>
