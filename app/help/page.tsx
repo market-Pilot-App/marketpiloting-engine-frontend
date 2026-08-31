@@ -50,6 +50,14 @@ const TUTORIALS = [
     videoId: "JrUkQDsIXRw",
     duration: "3 min",
   },
+  {
+    id: "website-builder",
+    icon: "🌐",
+    label: "How to Create & Edit Your Website on MarketPiloting",
+    description: "Full guide to building, customising, and publishing your AI-generated website on MarketPiloting.",
+    videoId: "WNclAMfUwYU",
+    duration: "Full guide",
+  },
 ];
 
 const FAQS = [
