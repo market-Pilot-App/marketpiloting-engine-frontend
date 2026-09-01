@@ -489,17 +489,71 @@ function CatalogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
 }
 
 function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
+  type GalleryItem = { type: "image" | "video"; url: string; caption: string };
+  const raw = (data.items as GalleryItem[]) || [];
   const [heading, setHeading] = useState(s(data.heading) || "Gallery");
   const [subheading, setSubheading] = useState(s(data.subheading));
+  const [items, setItems] = useState<GalleryItem[]>(raw.map((i) => ({ type: i.type === "video" ? "video" : "image", url: s(i.url), caption: s(i.caption) })));
   const [saving, setSaving] = useState(false);
-  const save = async () => { setSaving(true); await onSave({ heading, subheading }); setSaving(false); };
+  const [uploading, setUploading] = useState<number | null>(null);
+
+  const update = (idx: number, field: keyof GalleryItem, val: string) =>
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  const addImage = () => setItems((prev) => [...prev, { type: "image", url: "", caption: "" }]);
+  const addVideo = () => setItems((prev) => [...prev, { type: "video", url: "", caption: "" }]);
+  const remove = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+
+  const uploadFile = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(idx);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const result = await api.upload<{ public_url: string }>("/media/upload", form);
+      update(idx, "url", result.public_url);
+    } finally {
+      setUploading(null);
+      e.target.value = "";
+    }
+  };
+
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, items }); setSaving(false); };
+
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-950/30 border border-indigo-700/30 rounded-lg p-3">
-        <p className="text-indigo-300 text-xs">🖼️ Images are pulled live from your <strong>Media Library</strong>. Videos come from product entries in your Catalog. Upload images or add product videos there and they appear here automatically.</p>
-      </div>
       <Field label="Page Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading (optional)" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <hr className="border-gray-800" />
+      <p className="text-white font-semibold text-sm">Gallery Items</p>
+      {items.map((item, idx) => (
+        <div key={idx} className="bg-gray-800/50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400 text-xs font-semibold">{item.type === "video" ? "🎬 Video" : "🖼️ Image"} {idx + 1}</span>
+            <button onClick={() => remove(idx)} className="text-red-400 text-xs hover:text-red-300 transition">Remove</button>
+          </div>
+          {item.type === "image" ? (
+            <div>
+              <label className="text-gray-400 text-xs block mb-2">Image</label>
+              <div className="flex items-center gap-3">
+                {item.url && <img src={item.url} alt="" className="h-12 w-20 object-cover rounded-lg bg-gray-700" />}
+                <label className="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
+                  {uploading === idx ? "Uploading…" : item.url ? "Change" : "Upload Image"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={uploading === idx} onChange={(e) => uploadFile(idx, e)} />
+                </label>
+                {item.url && <button onClick={() => update(idx, "url", "")} className="text-xs text-red-400 hover:text-red-300">Remove</button>}
+              </div>
+            </div>
+          ) : (
+            <Field label="Video URL (mp4, YouTube, etc.)" value={item.url} onChange={(v) => update(idx, "url", v)} />
+          )}
+          <Field label="Caption (optional)" value={item.caption} onChange={(v) => update(idx, "caption", v)} />
+        </div>
+      ))}
+      <div className="flex gap-3">
+        <button onClick={addImage} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Image</button>
+        <button onClick={addVideo} className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">+ Add Video</button>
+      </div>
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>

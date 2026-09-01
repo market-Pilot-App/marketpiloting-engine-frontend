@@ -450,68 +450,54 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
 
   // ── Gallery ────────────────────────────────────────────────────────────────
   if (page === "gallery") {
-    type GalleryImage = { url: string; caption: string };
-    type GalleryVideo = { title: string; url: string; thumbnail: string };
-    const images = (d.images as GalleryImage[]) || [];
-    const videos = (d.videos as GalleryVideo[]) || [];
+    type GalleryItem = { type: "image" | "video"; url: string; caption: string };
+    const items = (d.items as GalleryItem[]) || [];
+    const images = items.filter((i) => i.type !== "video");
+    const videos = items.filter((i) => i.type === "video");
     const [lightbox, setLightbox] = useState<number | null>(null);
-    const [videoModal, setVideoModal] = useState<GalleryVideo | null>(null);
+    const [videoModal, setVideoModal] = useState<GalleryItem | null>(null);
+
+    const isYoutube = (url: string) => /youtube\.com|youtu\.be/.test(url);
+    const youtubeEmbed = (url: string) => {
+      const m = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
+      return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1` : url;
+    };
 
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
         <PageHero title={s(d.heading, "Gallery")} subtitle={s(d.subheading) || undefined} primary={t.primary} />
         <div className={`${mr ? "max-w-6xl" : "max-w-4xl"} mx-auto py-16 px-6`}>
-
-          {images.length === 0 && videos.length === 0 ? (
+          {items.length === 0 ? (
             <p className={`text-center ${t.muted} py-12`}>No gallery items yet.</p>
           ) : (
             <>
-              {/* Image grid */}
               {images.length > 0 && (
                 <>
                   <h2 className="text-xl font-bold mb-6">Photos</h2>
                   <div className={`grid ${mr ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4" : "grid-cols-4"} gap-3 mb-12`}>
                     {images.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setLightbox(i)}
-                        className={`relative overflow-hidden rounded-xl border ${t.border} hover:opacity-90 transition aspect-square`}
-                      >
-                        <img src={img.url} alt={img.caption || `Photo ${i + 1}`}
-                          className="w-full h-full object-cover" />
+                      <button key={i} onClick={() => setLightbox(i)}
+                        className={`relative overflow-hidden rounded-xl border ${t.border} hover:opacity-90 transition aspect-square`}>
+                        <img src={img.url} alt={img.caption || `Photo ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
                 </>
               )}
-
-              {/* Video grid */}
               {videos.length > 0 && (
                 <>
                   <h2 className="text-xl font-bold mb-6">Videos</h2>
                   <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "md:grid-cols-3"} gap-6`}>
                     {videos.map((vid, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setVideoModal(vid)}
-                        className={`relative overflow-hidden rounded-xl border ${t.border} hover:opacity-90 transition`}
-                      >
-                        <div className="relative aspect-video bg-gray-900">
-                          {vid.thumbnail ? (
-                            <img src={vid.thumbnail} alt={vid.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-4xl">🎬</div>
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
-                              <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
+                      <button key={i} onClick={() => setVideoModal(vid)}
+                        className={`relative overflow-hidden rounded-xl border ${t.border} hover:opacity-90 transition`}>
+                        <div className="relative aspect-video bg-gray-900 flex items-center justify-center">
+                          <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                           </div>
                         </div>
-                        <p className={`${t.muted} text-sm p-3 text-left truncate`}>{vid.title}</p>
+                        {vid.caption && <p className={`${t.muted} text-sm p-3 text-left truncate`}>{vid.caption}</p>}
                       </button>
                     ))}
                   </div>
@@ -523,25 +509,14 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
 
         {/* Lightbox */}
         {lightbox !== null && (
-          <div
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-            onClick={() => setLightbox(null)}
-          >
+          <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
             <button className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70" onClick={() => setLightbox(null)}>×</button>
-            <button
-              className="absolute left-4 text-white text-3xl leading-none hover:opacity-70 px-2"
-              onClick={(e) => { e.stopPropagation(); setLightbox((i) => i !== null ? Math.max(0, i - 1) : null); }}
-            >‹</button>
-            <img
-              src={images[lightbox]?.url}
-              alt={images[lightbox]?.caption || ""}
-              className="max-h-[85vh] max-w-full rounded-xl object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              className="absolute right-4 text-white text-3xl leading-none hover:opacity-70 px-2"
-              onClick={(e) => { e.stopPropagation(); setLightbox((i) => i !== null ? Math.min(images.length - 1, i + 1) : null); }}
-            >›</button>
+            <button className="absolute left-4 text-white text-3xl leading-none hover:opacity-70 px-2"
+              onClick={(e) => { e.stopPropagation(); setLightbox((i) => i !== null ? Math.max(0, i - 1) : null); }}>‹</button>
+            <img src={images[lightbox]?.url} alt={images[lightbox]?.caption || ""}
+              className="max-h-[85vh] max-w-full rounded-xl object-contain" onClick={(e) => e.stopPropagation()} />
+            <button className="absolute right-4 text-white text-3xl leading-none hover:opacity-70 px-2"
+              onClick={(e) => { e.stopPropagation(); setLightbox((i) => i !== null ? Math.min(images.length - 1, i + 1) : null); }}>›</button>
             {images[lightbox]?.caption && (
               <p className="absolute bottom-6 text-white text-sm text-center px-4">{images[lightbox].caption}</p>
             )}
@@ -553,8 +528,12 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setVideoModal(null)}>
             <button className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70" onClick={() => setVideoModal(null)}>×</button>
             <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
-              <video src={videoModal.url} controls autoPlay className="w-full rounded-xl" />
-              <p className="text-white text-sm mt-3 text-center">{videoModal.title}</p>
+              {isYoutube(videoModal.url) ? (
+                <iframe src={youtubeEmbed(videoModal.url)} className="w-full aspect-video rounded-xl" allow="autoplay" allowFullScreen />
+              ) : (
+                <video src={videoModal.url} controls autoPlay className="w-full rounded-xl" />
+              )}
+              {videoModal.caption && <p className="text-white text-sm mt-3 text-center">{videoModal.caption}</p>}
             </div>
           </div>
         )}
