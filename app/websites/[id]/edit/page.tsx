@@ -534,6 +534,7 @@ function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
     <div className="space-y-4">
       <Field label="Page Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading (optional)" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <hr className="border-gray-800" />
       <p className="text-white font-semibold text-sm">Gallery Items</p>
       {items.map((item, idx) => (
