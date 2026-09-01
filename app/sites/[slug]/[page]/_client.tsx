@@ -458,9 +458,13 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     const videos = items.filter((i) => i.type === "video");
 
     const isYoutube = (url: string) => /youtube\.com|youtu\.be/.test(url);
-    const youtubeEmbed = (url: string) => {
-      const m = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
-      return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1` : url;
+
+    const handleVideoClick = (vid: { type: "image" | "video"; url: string; caption: string }) => {
+      if (isYoutube(vid.url)) {
+        window.open(vid.url, "_blank", "noopener,noreferrer");
+      } else {
+        setVideoModal(vid);
+      }
     };
 
     return (
@@ -490,12 +494,15 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
                   <h2 className="text-xl font-bold mb-6">Videos</h2>
                   <div className={`grid ${mr ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "md:grid-cols-3"} gap-6`}>
                     {videos.map((vid, i) => (
-                      <button key={i} onClick={() => setVideoModal(vid)}
+                      <button key={i} onClick={() => handleVideoClick(vid)}
                         className={`relative overflow-hidden rounded-xl border ${t.border} hover:opacity-90 transition`}>
                         <div className="relative aspect-video bg-gray-900 flex items-center justify-center">
                           <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
                             <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                           </div>
+                          {isYoutube(vid.url) && (
+                            <span className="absolute bottom-2 right-2 text-xs bg-red-600 text-white px-2 py-0.5 rounded font-semibold">YouTube ↗</span>
+                          )}
                         </div>
                         {vid.caption && <p className={`${t.muted} text-sm p-3 text-left truncate`}>{vid.caption}</p>}
                       </button>
@@ -528,11 +535,7 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
           <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setVideoModal(null)}>
             <button className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70" onClick={() => setVideoModal(null)}>×</button>
             <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
-              {isYoutube(videoModal.url) ? (
-                <iframe src={youtubeEmbed(videoModal.url)} className="w-full aspect-video rounded-xl" allow="autoplay" allowFullScreen />
-              ) : (
-                <video src={videoModal.url} controls autoPlay className="w-full rounded-xl" />
-              )}
+              <video src={videoModal.url} controls autoPlay className="w-full rounded-xl" />
               {videoModal.caption && <p className="text-white text-sm mt-3 text-center">{videoModal.caption}</p>}
             </div>
           </div>
