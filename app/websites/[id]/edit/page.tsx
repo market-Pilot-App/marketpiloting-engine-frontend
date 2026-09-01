@@ -510,7 +510,8 @@ function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
     try {
       const form = new FormData();
       form.append("file", file);
-      const result = await api.upload<{ public_url: string }>("/media/upload", form);
+      const endpoint = file.type.startsWith("video/") ? "/media/upload-video" : "/media/upload";
+      const result = await api.upload<{ public_url: string }>(endpoint, form);
       update(idx, "url", result.public_url);
     } finally {
       setUploading(null);
@@ -545,7 +546,22 @@ function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
               </div>
             </div>
           ) : (
-            <Field label="Video URL (mp4, YouTube, etc.)" value={item.url} onChange={(v) => update(idx, "url", v)} />
+            <div>
+              <label className="text-gray-400 text-xs block mb-2">Video</label>
+              <div className="flex items-center gap-3 flex-wrap">
+                {item.url && !item.url.startsWith("http") === false && (
+                  <span className="text-gray-400 text-xs truncate max-w-[140px]">{item.url.split("/").pop()}</span>
+                )}
+                <label className="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
+                  {uploading === idx ? "Uploading…" : item.url ? "Replace Video" : "Upload Video (mp4)"}
+                  <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" disabled={uploading === idx} onChange={(e) => uploadFile(idx, e)} />
+                </label>
+                {item.url && <button onClick={() => update(idx, "url", "")} className="text-xs text-red-400 hover:text-red-300">Remove</button>}
+              </div>
+              <p className="text-gray-600 text-xs mt-1">Or paste a YouTube URL below</p>
+              <input type="text" placeholder="https://youtube.com/watch?v=..." value={item.url} onChange={(e) => update(idx, "url", e.target.value)}
+                className="w-full mt-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-indigo-500" />
+            </div>
           )}
           <Field label="Caption (optional)" value={item.caption} onChange={(v) => update(idx, "caption", v)} />
         </div>
