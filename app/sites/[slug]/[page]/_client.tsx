@@ -110,6 +110,8 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
   const [lead, setLead] = useState<LeadForm>({ name: "", email: "", whatsapp: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  const [videoModal, setVideoModal] = useState<{ type: "image" | "video"; url: string; caption: string } | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/sites/${slug}/${page}`)
@@ -454,8 +456,6 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     const items = (d.items as GalleryItem[]) || [];
     const images = items.filter((i) => i.type !== "video");
     const videos = items.filter((i) => i.type === "video");
-    const [lightbox, setLightbox] = useState<number | null>(null);
-    const [videoModal, setVideoModal] = useState<GalleryItem | null>(null);
 
     const isYoutube = (url: string) => /youtube\.com|youtu\.be/.test(url);
     const youtubeEmbed = (url: string) => {
