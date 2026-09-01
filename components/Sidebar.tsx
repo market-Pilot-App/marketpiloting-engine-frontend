@@ -125,7 +125,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
 
   const sidebarContent = (collapsed: boolean) => (
     <aside
-      className={`h-screen bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-300 ${
+      className={`relative h-screen bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-300 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
@@ -297,6 +297,71 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           {!collapsed && <span className="font-medium">More</span>}
         </button>
       </div>
+
+      {/* More drawer — pops up inside the sidebar, above the More button */}
+      {drawerOpen && (
+        <div className="absolute bottom-[72px] left-0 right-0 z-50 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-3 space-y-0.5 mx-2 animate-slide-up">
+          <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-gray-700">
+            <span className="text-white font-semibold text-xs uppercase tracking-wider">More</span>
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="text-gray-500 hover:text-white transition text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                pathname === "/admin"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              <span>⚙️</span>
+              {!collapsed && "Admin Panel"}
+            </Link>
+          )}
+
+          {role !== "viewer" && (
+            <Link
+              href="/help"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                pathname === "/help"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              <span>❓</span>
+              {!collapsed && "Help"}
+            </Link>
+          )}
+
+          {role !== "viewer" && (
+            <Link
+              href="/settings"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                pathname === "/settings"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              <span>⚙️</span>
+              {!collapsed && "Settings"}
+            </Link>
+          )}
+
+          <button
+            onClick={() => { setDrawerOpen(false); logout(); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-red-400 transition"
+          >
+            <span>🚪</span>
+            {!collapsed && "Sign out"}
+          </button>
+        </div>
+      )}
     </aside>
   );
 
@@ -315,71 +380,12 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
         </>
       )}
 
-      {/* More drawer — slides up from bottom, works on all screen sizes */}
+      {/* More drawer is rendered inside sidebarContent above — no full-screen overlay needed */}
       {drawerOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/60"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-700 rounded-t-2xl shadow-2xl p-4 space-y-1 animate-slide-up">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-white font-semibold text-sm">More options</span>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="text-gray-500 hover:text-white transition text-lg leading-none"
-              >
-                ×
-              </button>
-            </div>
-
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
-                  pathname === "/admin"
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                <span className="text-base">⚙️</span> Admin Panel
-              </Link>
-            )}
-
-            {role !== "viewer" && (
-              <Link
-                href="/help"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
-                  pathname === "/help"
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                <span className="text-base">❓</span> Help
-              </Link>
-            )}
-
-            {role !== "viewer" && (
-              <Link
-                href="/settings"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
-                  pathname === "/settings"
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
-              >
-                <span className="text-base">⚙️</span> Settings
-              </Link>
-            )}
-
-            <button
-              onClick={() => { setDrawerOpen(false); logout(); }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-red-400 transition"
-            >
-              <span className="text-base">🚪</span> Sign out
-            </button>
-          </div>
-        </>
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setDrawerOpen(false)}
+        />
       )}
     </>
   );
