@@ -460,11 +460,8 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     const isYoutube = (url: string) => /youtube\.com|youtu\.be/.test(url);
 
     const handleVideoClick = (vid: { type: "image" | "video"; url: string; caption: string }) => {
-      if (isYoutube(vid.url)) {
-        window.open(vid.url, "_blank", "noopener,noreferrer");
-      } else {
-        setVideoModal(vid);
-      }
+      // Open all videos in new tab — avoids CORS/CSP issues with R2 and YouTube
+      window.open(vid.url, "_blank", "noopener,noreferrer");
     };
 
     return (
@@ -500,8 +497,10 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
                           <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center">
                             <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                           </div>
-                          {isYoutube(vid.url) && (
+                          {isYoutube(vid.url) ? (
                             <span className="absolute bottom-2 right-2 text-xs bg-red-600 text-white px-2 py-0.5 rounded font-semibold">YouTube ↗</span>
+                          ) : (
+                            <span className="absolute bottom-2 right-2 text-xs bg-black/60 text-white px-2 py-0.5 rounded font-semibold">▶ Play ↗</span>
                           )}
                         </div>
                         {vid.caption && <p className={`${t.muted} text-sm p-3 text-left truncate`}>{vid.caption}</p>}
