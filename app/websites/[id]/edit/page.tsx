@@ -473,8 +473,12 @@ function BlogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
 function CatalogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
   const [heading, setHeading] = useState(s(data.heading) || "Our Products & Services");
   const [subheading, setSubheading] = useState(s(data.subheading));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
-  const save = async () => { setSaving(true); await onSave({ heading, subheading }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth }); setSaving(false); };
   return (
     <div className="space-y-4">
       <div className="bg-indigo-950/30 border border-indigo-700/30 rounded-lg p-3">
@@ -482,6 +486,7 @@ function CatalogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
       </div>
       <Field label="Page Heading" value={heading} onChange={setHeading} />
       <Field label="Subheading (optional)" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <BannerImageControls imageUrl={bannerUrl} onImageChange={setBannerUrl} imageStyle={bannerStyle} onStyleChange={setBannerStyle} imageHeight={bannerHeight} onHeightChange={setBannerHeight} imageWidth={bannerWidth} onWidthChange={setBannerWidth} />
       <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
       <PageSeoFields data={data} onSave={onSaveSeo} />
     </div>
@@ -494,6 +499,10 @@ function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
   const [heading, setHeading] = useState(s(data.heading) || "Gallery");
   const [subheading, setSubheading] = useState(s(data.subheading));
   const [items, setItems] = useState<GalleryItem[]>(raw.map((i) => ({ type: i.type === "video" ? "video" : "image", url: s(i.url), caption: s(i.caption) })));
+  const [bannerUrl, setBannerUrl] = useState(s(data.banner_image_url));
+  const [bannerStyle, setBannerStyle] = useState(s(data.banner_image_style) || "side");
+  const [bannerHeight, setBannerHeight] = useState(s(data.banner_image_height));
+  const [bannerWidth, setBannerWidth] = useState(s(data.banner_image_width));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<number | null>(null);
 
@@ -519,7 +528,7 @@ function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unkno
     }
   };
 
-  const save = async () => { setSaving(true); await onSave({ heading, subheading, items }); setSaving(false); };
+  const save = async () => { setSaving(true); await onSave({ heading, subheading, banner_image_url: bannerUrl, banner_image_style: bannerStyle, banner_image_height: bannerHeight, banner_image_width: bannerWidth, items }); setSaving(false); };
 
   return (
     <div className="space-y-4">

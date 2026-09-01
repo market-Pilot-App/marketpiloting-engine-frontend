@@ -387,7 +387,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <PageHero title={s(d.heading, "Our Products & Services")} subtitle={s(d.subheading) || undefined} primary={t.primary} />
+        <PageHero title={s(d.heading, "Our Products & Services")} subtitle={s(d.subheading) || undefined}
+          imageUrl={s(d.banner_image_url) || undefined} imageStyle={s(d.banner_image_style)}
+          imageHeight={s(d.banner_image_height)} imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className={`${mr ? "max-w-6xl" : "max-w-4xl"} mx-auto py-16 px-6`}>
           {products.length === 0 ? (
             <p className={`text-center ${t.muted} py-12`}>No products or services listed yet.</p>
@@ -467,7 +469,9 @@ export default function PublicSitePageClient({ slug, page }: { slug: string; pag
     return (
       <div className={`min-h-screen ${t.bg} ${t.text} font-sans`}>
         <Navbar />
-        <PageHero title={s(d.heading, "Gallery")} subtitle={s(d.subheading) || undefined} primary={t.primary} />
+        <PageHero title={s(d.heading, "Gallery")} subtitle={s(d.subheading) || undefined}
+          imageUrl={s(d.banner_image_url) || undefined} imageStyle={s(d.banner_image_style)}
+          imageHeight={s(d.banner_image_height)} imageWidth={s(d.banner_image_width)} primary={t.primary} />
         <div className={`${mr ? "max-w-6xl" : "max-w-4xl"} mx-auto py-16 px-6`}>
           {items.length === 0 ? (
             <p className={`text-center ${t.muted} py-12`}>No gallery items yet.</p>
