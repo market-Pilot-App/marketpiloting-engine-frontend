@@ -461,6 +461,42 @@ function BlogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>
   );
 }
 
+function CatalogEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
+  const [heading, setHeading] = useState(s(data.heading) || "Our Products & Services");
+  const [subheading, setSubheading] = useState(s(data.subheading));
+  const [saving, setSaving] = useState(false);
+  const save = async () => { setSaving(true); await onSave({ heading, subheading }); setSaving(false); };
+  return (
+    <div className="space-y-4">
+      <div className="bg-indigo-950/30 border border-indigo-700/30 rounded-lg p-3">
+        <p className="text-indigo-300 text-xs">🛍️ Products & services are pulled live from your <strong>Catalog</strong> page. Add or edit items there and they appear here automatically.</p>
+      </div>
+      <Field label="Page Heading" value={heading} onChange={setHeading} />
+      <Field label="Subheading (optional)" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
+    </div>
+  );
+}
+
+function GalleryEditor({ data, onSave, onSaveSeo }: { data: Record<string, unknown>; onSave: (u: Record<string, unknown>) => Promise<void>; onSaveSeo: (s: { seo_title: string; seo_description: string }) => void }) {
+  const [heading, setHeading] = useState(s(data.heading) || "Gallery");
+  const [subheading, setSubheading] = useState(s(data.subheading));
+  const [saving, setSaving] = useState(false);
+  const save = async () => { setSaving(true); await onSave({ heading, subheading }); setSaving(false); };
+  return (
+    <div className="space-y-4">
+      <div className="bg-indigo-950/30 border border-indigo-700/30 rounded-lg p-3">
+        <p className="text-indigo-300 text-xs">🖼️ Images are pulled live from your <strong>Media Library</strong>. Videos come from product entries in your Catalog. Upload images or add product videos there and they appear here automatically.</p>
+      </div>
+      <Field label="Page Heading" value={heading} onChange={setHeading} />
+      <Field label="Subheading (optional)" value={subheading} onChange={setSubheading} multiline rows={2} />
+      <div className="flex justify-end"><SaveBtn saving={saving} onClick={save} /></div>
+      <PageSeoFields data={data} onSave={onSaveSeo} />
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function EditWebsite() {
@@ -693,6 +729,8 @@ export default function EditWebsite() {
             {activePage === "contact"  && <ContactEditor  data={pageData} onSave={(u) => saveContent("contact", u)}  onSaveSeo={(s) => savePageSeo("contact", s)} />}
             {activePage === "faq"      && <FaqEditor      data={pageData} onSave={(u) => saveContent("faq", u)}      onSaveSeo={(s) => savePageSeo("faq", s)} />}
             {activePage === "blog"     && <BlogEditor     data={pageData} onSave={(u) => saveContent("blog", u)}     onSaveSeo={(s) => savePageSeo("blog", s)} />}
+            {activePage === "catalog"  && <CatalogEditor  data={pageData} onSave={(u) => saveContent("catalog", u)}  onSaveSeo={(s) => savePageSeo("catalog", s)} />}
+            {activePage === "gallery"  && <GalleryEditor  data={pageData} onSave={(u) => saveContent("gallery", u)}  onSaveSeo={(s) => savePageSeo("gallery", s)} />}
           </div>
         </div>
       )}
