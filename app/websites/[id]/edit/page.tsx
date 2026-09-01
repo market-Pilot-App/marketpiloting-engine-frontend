@@ -16,6 +16,15 @@ const THEMES = [
   { id: "orange", label: "Orange", color: "bg-orange-500" },
 ];
 
+const ALL_PAGES = ["home", "about", "services", "contact", "faq", "blog", "catalog", "gallery"] as const;
+type PageKey = typeof ALL_PAGES[number];
+
+const PAGE_LABELS: Record<PageKey, string> = {
+  home: "🏠 Home", about: "👤 About", services: "🛠 Services",
+  contact: "📞 Contact", faq: "❓ FAQ", blog: "📝 Blog",
+  catalog: "🛍 Catalog", gallery: "🖼 Gallery",
+};
+
 type Tab = "content" | "settings" | "domain";
 
 interface Website {
@@ -509,6 +518,8 @@ export default function EditWebsite() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("content");
   const [activePage, setActivePage] = useState("home");
+  const [managePages, setManagePages] = useState(false);
+  const [pagesSaving, setPagesSaving] = useState(false);
   const [subscriptionActive, setSubscriptionActive] = useState(true);
 
   const [theme, setTheme] = useState("indigo");
@@ -564,6 +575,17 @@ export default function EditWebsite() {
 
   if (loading) return <p className="text-gray-400">Loading…</p>;
   if (!website) return null;
+
+  const savePages = async (pages: string[]) => {
+    setPagesSaving(true);
+    try {
+      const updated = await api.patch<Website>(`/websites/${websiteId}/pages`, { pages });
+      setWebsite(updated);
+      if (!pages.includes(activePage)) setActivePage(pages[0] ?? "home");
+    } finally {
+      setPagesSaving(false);
+    }
+  };
 
   const saveContent = async (pageKey: string, updates: Record<string, unknown>) => {
     const updated = await api.patch<Website>(`/websites/${websiteId}/content`, {
@@ -697,6 +719,42 @@ export default function EditWebsite() {
 
       {tab === "content" && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          {/* Manage Pages panel */}
+          {managePages ? (
+            <div className="p-4 border-b border-gray-800 space-y-3">
+              <p className="text-white font-semibold text-sm">Manage Pages</p>
+              <div className="grid grid-cols-2 gap-2">
+                {ALL_PAGES.map((pg) => {
+                  const active = website.pages_config.includes(pg);
+                  const locked = pg === "home";
+                  return (
+                    <button
+                      key={pg}
+                      disabled={locked || pagesSaving}
+                      onClick={() => {
+                        const next = active
+                          ? website.pages_config.filter((p) => p !== pg)
+                          : [...website.pages_config, pg];
+                        savePages(next);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition ${
+                        active
+                          ? "border-indigo-500 bg-indigo-950/40 text-white"
+                          : "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300"
+                      } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${active ? "bg-indigo-400" : "bg-gray-600"}`} />
+                      {PAGE_LABELS[pg]}
+                      {locked && <span className="ml-auto text-gray-600 text-xs">locked</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => setManagePages(false)} className="text-xs text-gray-500 hover:text-gray-300 transition">
+                ← Back to editing
+              </button>
+            </div>
+          ) : (
           <div className="flex items-center justify-between gap-2 p-3 border-b border-gray-800">
             <div className="flex gap-1 overflow-x-auto">
               {website.pages_config.map((pg) => (
@@ -713,15 +771,24 @@ export default function EditWebsite() {
                 </button>
               ))}
             </div>
-            {!!((website.content_json._original as Record<string, unknown>)?.[activePage]) && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!!((website.content_json._original as Record<string, unknown>)?.[activePage]) && (
+                <button
+                  onClick={revertToAI}
+                  className="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap transition"
+                >
+                  ↺ Revert to AI
+                </button>
+              )}
               <button
-                onClick={revertToAI}
-                className="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap transition flex-shrink-0"
+                onClick={() => setManagePages(true)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition whitespace-nowrap"
               >
-                ↺ Revert to AI
+                + Pages
               </button>
-            )}
+            </div>
           </div>
+          )}
           <div className="p-5">
             {activePage === "home"     && <HomeEditor     data={pageData} onSave={(u) => saveContent("home", u)}     onSaveSeo={(s) => savePageSeo("home", s)} />}
             {activePage === "about"    && <AboutEditor    data={pageData} onSave={(u) => saveContent("about", u)}    onSaveSeo={(s) => savePageSeo("about", s)} />}
