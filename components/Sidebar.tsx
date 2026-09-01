@@ -78,6 +78,17 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const [brands, setBrands] = useState<CampaignSummary[]>([]);
   const [brandOpen, setBrandOpen] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Close drawer on ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Close drawer on route change
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (isAgency) {
@@ -273,55 +284,17 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
         </div>
       )}
 
-      {/* Settings + Sign out */}
-      <div className="px-3 py-4 border-t border-gray-800 space-y-0.5">
-        {isAdmin && (
-          <Link
-            href="/admin"
-            title={collapsed ? "Admin Panel" : undefined}
-            className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
-              collapsed ? "justify-center" : ""
-            } ${pathname === "/admin" ? "bg-indigo-600 text-white" : ""}`}
-          >
-            <span className="text-base">⚙️</span>
-            {!collapsed && "Admin Panel"}
-          </Link>
-        )}
-        {/* Help — hidden from viewers (nothing to set up) */}
-        {role !== "viewer" && (
-        <Link
-          href="/help"
-          title={collapsed ? "Help" : undefined}
-          className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
-            collapsed ? "justify-center" : ""
-          } ${pathname === "/help" ? "bg-indigo-600 text-white" : ""}`}
-        >
-          <span className="text-base">❓</span>
-          {!collapsed && "Help"}
-        </Link>
-        )}
-        {/* Settings — hidden from viewers (page guard already blocks access) */}
-        {role !== "viewer" && (
-        <Link
-          href="/settings"
-          title={collapsed ? "Settings" : undefined}
-          className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
-            collapsed ? "justify-center" : ""
-          } ${pathname === "/settings" ? "bg-indigo-600 text-white" : ""}`}
-        >
-          <span className="text-base">⚙️</span>
-          {!collapsed && "Settings"}
-        </Link>
-        )}
+      {/* More button — opens drawer */}
+      <div className="px-3 py-4 border-t border-gray-800">
         <button
-          onClick={logout}
-          title={collapsed ? "Sign out" : undefined}
-          className={`w-full text-sm text-gray-500 hover:text-red-400 transition px-3 py-2 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
+          onClick={() => setDrawerOpen(true)}
+          title={collapsed ? "More" : undefined}
+          className={`w-full text-sm text-gray-400 hover:text-white transition px-3 py-2.5 rounded-lg hover:bg-gray-800 flex items-center gap-3 ${
             collapsed ? "justify-center" : ""
           }`}
         >
-          <span className="text-base">🚪</span>
-          {!collapsed && "Sign out"}
+          <span className="text-base">☰</span>
+          {!collapsed && <span className="font-medium">More</span>}
         </button>
       </div>
     </aside>
@@ -338,6 +311,73 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
           <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={onClose} />
           <div className="fixed inset-y-0 left-0 z-50 lg:hidden flex">
             {sidebarContent(false)}
+          </div>
+        </>
+      )}
+
+      {/* More drawer — slides up from bottom, works on all screen sizes */}
+      {drawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-700 rounded-t-2xl shadow-2xl p-4 space-y-1 animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-white font-semibold text-sm">More options</span>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="text-gray-500 hover:text-white transition text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+                  pathname === "/admin"
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+              >
+                <span className="text-base">⚙️</span> Admin Panel
+              </Link>
+            )}
+
+            {role !== "viewer" && (
+              <Link
+                href="/help"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+                  pathname === "/help"
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+              >
+                <span className="text-base">❓</span> Help
+              </Link>
+            )}
+
+            {role !== "viewer" && (
+              <Link
+                href="/settings"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${
+                  pathname === "/settings"
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`}
+              >
+                <span className="text-base">⚙️</span> Settings
+              </Link>
+            )}
+
+            <button
+              onClick={() => { setDrawerOpen(false); logout(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-red-400 transition"
+            >
+              <span className="text-base">🚪</span> Sign out
+            </button>
           </div>
         </>
       )}

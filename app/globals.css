@@ -24,6 +24,13 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  .animate-slide-up {
+    animation: slideUp 0.22s ease-out;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
 }
 
 /* ── React Big Calendar dark theme overrides ── */
