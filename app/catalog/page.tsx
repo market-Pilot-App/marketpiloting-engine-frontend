@@ -171,8 +171,14 @@ export default function CatalogPage() {
     if (!postNowItem || postNowPlatforms.length === 0) return;
     setPostingNow(true); setPostNowMsg("");
     try {
-      const r = await api.post(`/catalog/${postNowItem.id}/post-now`, { platforms: postNowPlatforms }) as { posts_queued?: number };
-      setPostNowMsg(`✓ Queued for ${r.posts_queued} platform${(r.posts_queued ?? 0) > 1 ? "s" : ""}`);
+      const r = await api.post(`/catalog/${postNowItem.id}/post-now`, { platforms: postNowPlatforms }) as { posted_to?: string[]; failed?: string[]; posts_queued?: number };
+      const ok = r.posted_to?.length ?? 0;
+      const fail = r.failed?.length ?? 0;
+      setPostNowMsg(
+        ok > 0
+          ? `Posted to ${r.posted_to?.join(", ")}${fail > 0 ? ` | Failed: ${r.failed?.join(", ")}` : ""}`
+          : `Failed to post to ${r.failed?.join(", ")}`
+      );
       setTimeout(() => { setPostNowItem(null); setPostNowMsg(""); setPostNowPlatforms([]); }, 3000);
       await load();
     } catch (e: unknown) {
