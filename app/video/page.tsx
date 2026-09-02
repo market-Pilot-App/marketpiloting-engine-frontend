@@ -173,7 +173,7 @@ function PostNowTab({ token }: { token: string | null }) {
 
   const stageLabel: Record<string, string> = {
     uploading:   "Uploading to Cloudinary...",
-    transcribing: "Transcribing audio with Groq Whisper...",
+    transcribing: "AI is transcribing your audio...",
     posting:     "Generating captions & posting to platforms...",
   };
 
