@@ -45,6 +45,8 @@ function SuccessContent() {
   const { setSession } = useAuth();
   const email = searchParams.get("email") || "";
   const [step, setStep] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const pollingRef = useRef(false);
 
   useEffect(() => {
@@ -52,7 +54,11 @@ function SuccessContent() {
     pollingRef.current = true;
     const pendingEmail = sessionStorage.getItem("mp_pending_email");
     const pendingPassword = sessionStorage.getItem("mp_pending_password");
-    if (!pendingEmail || !pendingPassword) return;
+    if (!pendingEmail || !pendingPassword) {
+      // No credentials in storage — came from a direct URL visit, allow manual navigation
+      setReady(true);
+      return;
+    }
     let attempts = 0;
     const maxAttempts = 20; // 20 × 3s = 60s max
     const interval = setInterval(async () => {
@@ -69,9 +75,16 @@ function SuccessContent() {
           sessionStorage.removeItem("mp_pending_email");
           sessionStorage.removeItem("mp_pending_password");
           setSession(data);
+          setReady(true);
+          // Auto-redirect to dashboard after session is set
+          window.location.href = "/";
         }
       } catch { /* keep polling */ }
-      if (attempts >= maxAttempts) clearInterval(interval);
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setTimedOut(true);
+        setReady(true);
+      }
     }, 3000);
     return () => clearInterval(interval);
   }, [setSession]);
@@ -147,26 +160,43 @@ function SuccessContent() {
           })}
         </div>
 
+        {/* Activation status */}
+        {!ready && (
+          <div className="flex items-center justify-center gap-3 mb-6 py-3 px-4 bg-indigo-950 border border-indigo-800 rounded-xl">
+            <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <p className="text-indigo-300 text-sm">Activating your account... this takes a few seconds</p>
+          </div>
+        )}
+
+        {timedOut && (
+          <div className="mb-6 py-3 px-4 bg-yellow-950 border border-yellow-800 rounded-xl text-center">
+            <p className="text-yellow-300 text-sm">Taking longer than expected.</p>
+            <a href="/login" className="text-indigo-400 text-sm hover:underline mt-1 inline-block">Login manually →</a>
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="flex gap-3">
           {!isLast && (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-xl transition"
+              disabled={!ready}
+              className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 text-sm rounded-xl transition"
             >
               Skip for now
             </button>
           )}
           <button
             onClick={handleAction}
-            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl transition"
+            disabled={!ready}
+            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition"
           >
-            {current.action}
+            {!ready ? "Activating..." : current.action}
           </button>
         </div>
 
         {/* Skip all */}
-        {step < STEPS.length - 1 && (
+        {step < STEPS.length - 1 && ready && (
           <p className="text-center mt-4">
             <Link href="/" className="text-gray-600 text-xs hover:text-gray-400 transition">
               Skip setup — go straight to dashboard
