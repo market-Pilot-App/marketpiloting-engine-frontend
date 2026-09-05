@@ -25,6 +25,7 @@ interface AdInsights {
   reach: number;
   clicks: number;
   reactions: Record<string, number>;
+  note?: string;
 }
 
 const PLATFORMS = ["facebook", "instagram", "linkedin"];
@@ -392,20 +393,25 @@ export default function AdsPage() {
                     </button>
                   </div>
                   {insights[ad.id] ? (
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.likes ?? 0}</p>
-                        <p className="text-xs text-gray-500">👍 Likes</p>
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-gray-50 rounded-lg p-2 text-center">
+                          <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.likes ?? 0}</p>
+                          <p className="text-xs text-gray-500">👍 Likes</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2 text-center">
+                          <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.comments ?? 0}</p>
+                          <p className="text-xs text-gray-500">💬 Comments</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2 text-center">
+                          <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.shares ?? 0}</p>
+                          <p className="text-xs text-gray-500">🔄 Shares</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.comments ?? 0}</p>
-                        <p className="text-xs text-gray-500">💬 Comments</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.shares ?? 0}</p>
-                        <p className="text-xs text-gray-500">🔄 Shares</p>
-                      </div>
-                    </div>
+                      {insights[ad.id].note && (
+                        <p className="text-xs text-amber-600 mt-2">⚠️ {insights[ad.id].note}</p>
+                      )}
+                    </>
                   ) : (
                     <button
                       onClick={() => fetchInsights(ad)}
