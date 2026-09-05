@@ -26,12 +26,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(`${API_URL}${path}`, { ...options, headers });
   } catch {
-    // Backend may be cold-starting on Render — wait 4s and retry once silently
-    await sleep(4000);
+    await sleep(2000);
     try {
       res = await fetch(`${API_URL}${path}`, { ...options, headers });
     } catch {
-      throw new Error("Network error — backend may be sleeping");
+      throw new Error("Network error — please check your connection and try again.");
     }
   }
 

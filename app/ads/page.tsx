@@ -17,6 +17,7 @@ interface Ad {
   variation_group: string | null;
   published_at: string | null;
   fb_post_id: string | null;
+  website_url: string | null;
   created_at: string;
 }
 interface AdInsights {
@@ -332,9 +333,20 @@ export default function AdsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">CTA</p>
-                  <span className="inline-block bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">
-                    {ad.cta}
-                  </span>
+                  {ad.website_url ? (
+                    <a
+                      href={ad.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition"
+                    >
+                      {ad.cta} →
+                    </a>
+                  ) : (
+                    <span className="inline-block bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">
+                      {ad.cta}
+                    </span>
+                  )}
                 </div>
                 {!ad.image_url && (
                   <details>
