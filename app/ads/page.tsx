@@ -60,6 +60,7 @@ export default function AdsPage() {
   const [publishError, setPublishError] = useState<Record<number, string>>({});
   const [insights, setInsights] = useState<Record<number, AdInsights>>({});
   const [loadingInsights, setLoadingInsights] = useState<number | null>(null);
+  const [insightsError, setInsightsError] = useState<Record<number, string>>({});
   // Track which variation groups are in "pending selection" mode
   const [pendingGroups, setPendingGroups] = useState<Record<string, Ad[]>>({});
 
@@ -137,11 +138,12 @@ export default function AdsPage() {
 
   const fetchInsights = async (ad: Ad) => {
     setLoadingInsights(ad.id);
+    setInsightsError((prev) => ({ ...prev, [ad.id]: "" }));
     try {
       const data = await api.get<AdInsights>(`/ads/${ad.id}/insights`);
       setInsights((prev) => ({ ...prev, [ad.id]: data }));
     } catch (e: any) {
-      setPublishError((prev) => ({ ...prev, [ad.id]: e.message || "Failed to load insights" }));
+      setInsightsError((prev) => ({ ...prev, [ad.id]: e.message || "Failed to load insights" }));
     } finally {
       setLoadingInsights(null);
     }
@@ -412,8 +414,8 @@ export default function AdsPage() {
                       Load performance stats
                     </button>
                   )}
-                  {publishError[ad.id] && (
-                    <p className="text-red-500 text-xs mt-1.5">{publishError[ad.id]}</p>
+                  {insightsError[ad.id] && (
+                    <p className="text-red-500 text-xs mt-1.5">{insightsError[ad.id]}</p>
                   )}
                 </div>
               )}
