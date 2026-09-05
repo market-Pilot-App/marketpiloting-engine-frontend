@@ -4,17 +4,18 @@ import PublicSiteHomeClient from "./_client";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function generateMetadata(
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
+  const { slug } = await params;
   try {
-    const res = await fetch(`${API_URL}/sites/${params.slug}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${API_URL}/sites/${slug}`, { next: { revalidate: 60 } });
     if (!res.ok) return {};
     const site = await res.json();
     const title = site.seo_title || site.business_name || "Website";
     const description = site.seo_description || `Welcome to ${site.business_name}`;
     const canonical = site.custom_domain
       ? `https://${site.custom_domain}`
-      : `https://dashboard.marketpiloting.com/sites/${params.slug}`;
+      : `https://dashboard.marketpiloting.com/sites/${slug}`;
     return {
       title,
       description,
@@ -31,6 +32,7 @@ export async function generateMetadata(
   }
 }
 
-export default function PublicSiteHome({ params }: { params: { slug: string } }) {
-  return <PublicSiteHomeClient slug={params.slug} />;
+export default async function PublicSiteHome({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <PublicSiteHomeClient slug={slug} />;
 }

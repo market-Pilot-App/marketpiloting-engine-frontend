@@ -4,10 +4,11 @@ import PublicBlogPostClient from "./_client";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function generateMetadata(
-  { params }: { params: { slug: string; post_slug: string } }
+  { params }: { params: Promise<{ slug: string; post_slug: string }> }
 ): Promise<Metadata> {
+  const { slug, post_slug } = await params;
   try {
-    const res = await fetch(`${API_URL}/sites/${params.slug}/blog/${params.post_slug}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${API_URL}/sites/${slug}/blog/${post_slug}`, { next: { revalidate: 60 } });
     if (!res.ok) return {};
     const post = await res.json();
     return {
@@ -24,6 +25,7 @@ export async function generateMetadata(
   }
 }
 
-export default function PublicBlogPost({ params }: { params: { slug: string; post_slug: string } }) {
-  return <PublicBlogPostClient slug={params.slug} postSlug={params.post_slug} />;
+export default async function PublicBlogPost({ params }: { params: Promise<{ slug: string; post_slug: string }> }) {
+  const { slug, post_slug } = await params;
+  return <PublicBlogPostClient slug={slug} postSlug={post_slug} />;
 }
