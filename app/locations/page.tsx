@@ -14,7 +14,14 @@ interface Location {
   posts_count: number;
 }
 
-const PLAN_LIMITS: Record<string, number> = { growth: 3, pro: 5, agency: 999, admin: 999 };
+interface ParentInfo {
+  is_location: boolean;
+  parent_campaign_id?: number;
+  parent_campaign_name?: string;
+  current_location_name?: string;
+}
+
+const PLAN_LIMITS: Record<string, number> = { growth: 3, agency: 999, admin: 999 };
 
 export default function LocationsPage() {
   const canAccess = useCanAccess("editor");
@@ -32,6 +39,7 @@ export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [locName, setLocName] = useState("");
@@ -40,11 +48,15 @@ export default function LocationsPage() {
   const [createError, setCreateError] = useState("");
 
   const [switching, setSwitching] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     if (!limit) { setLoading(false); return; }
-    api.get<Location[]>("/campaigns/locations")
-      .then(setLocations)
+    Promise.all([
+      api.get<Location[]>("/campaigns/locations"),
+      api.get<ParentInfo>("/campaigns/locations/parent"),
+    ])
+      .then(([locs, parent]) => { setLocations(locs); setParentInfo(parent); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [limit]);
@@ -67,6 +79,44 @@ export default function LocationsPage() {
       setCreateError(e instanceof Error ? e.message : "Failed to create location");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const switchToParent = async () => {
+    if (!parentInfo?.parent_campaign_id) return;
+    setSwitching(-1);
+    try {
+      const data = await api.post<{
+        access_token: string; campaign_id: number;
+        campaign_name: string; plan: string;
+      }>(`/campaigns/locations/switch-to-parent`);
+      const stored = localStorage.getItem("mp_client");
+      const base = stored ? JSON.parse(stored) : {};
+      setSession({
+        ...base,
+        access_token: data.access_token,
+        campaign_id: data.campaign_id,
+        campaign_name: data.campaign_name,
+        location_name: undefined,
+        plan: data.plan,
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Switch failed");
+    } finally {
+      setSwitching(null);
+    }
+  };
+
+  const deleteLocation = async (locId: number) => {
+    if (!confirm("Delete this location? This cannot be undone.")) return;
+    setDeleting(locId);
+    try {
+      await api.del(`/campaigns/locations/${locId}`);
+      setLocations((prev) => prev.filter((l) => l.id !== locId));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -113,6 +163,20 @@ export default function LocationsPage() {
 
   return (
     <div className="max-w-3xl">
+      {/* GAP 1: Parent banner — shown when currently inside a location branch */}
+      {parentInfo?.is_location && (
+        <div className="flex items-center gap-3 bg-indigo-950 border border-indigo-700 rounded-xl px-5 py-3 mb-6">
+          <span className="text-indigo-300 text-sm flex-1">
+            You are viewing <span className="font-semibold text-white">{parentInfo.current_location_name}</span>
+          </span>
+          <button
+            onClick={switchToParent}
+            disabled={switching === -1}
+            className="px-4 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition shrink-0">
+            {switching === -1 ? "Switching..." : `← Back to ${parentInfo.parent_campaign_name}`}
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">Locations</h1>
         {locations.length < limit && (
@@ -196,6 +260,12 @@ export default function LocationsPage() {
                 className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition shrink-0">
                 {switching === loc.id ? "Switching..." : "Switch to →"}
               </button>
+              <button
+                onClick={() => deleteLocation(loc.id)}
+                disabled={deleting === loc.id}
+                className="px-3 py-2 bg-gray-800 hover:bg-red-900 disabled:opacity-50 text-gray-400 hover:text-red-400 text-sm rounded-lg transition shrink-0">
+                {deleting === loc.id ? "..." : "🗑"}
+              </button>
             </div>
           ))}
         </div>
@@ -209,7 +279,7 @@ export default function LocationsPage() {
           <li>• AI automatically adds location context to every generated post</li>
           <li>• Switch to a location to manage its schedule and analytics independently</li>
           <li>• Each location has its own posting schedule and analytics</li>
-          <li>• {plan === "growth" ? "Growth plan: up to 3 locations" : plan === "pro" ? "Pro plan: up to 5 locations" : "Agency plan: unlimited locations"}</li>
+          <li>• {plan === "growth" ? "Growth plan: up to 3 locations" : "Agency plan: unlimited locations"}</li>
         </ul>
       </div>
     </div>
