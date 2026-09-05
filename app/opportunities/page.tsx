@@ -93,10 +93,12 @@ export default function OpportunitiesPage() {
     finally { setTrendLoading(false); }
   }, []);
 
-  const fetchOpps = useCallback(async () => {
+  const fetchOpps = useCallback(async (overrideStatus?: string, overrideType?: string) => {
     const params = new URLSearchParams();
-    if (filterType) params.set("type", filterType);
-    if (filterStatus) params.set("status", filterStatus);
+    const st = overrideStatus !== undefined ? overrideStatus : filterStatus;
+    const tp = overrideType !== undefined ? overrideType : filterType;
+    if (tp) params.set("type", tp);
+    if (st) params.set("status", st);
     const data = await api.get<Opportunity[]>(`/opportunities?${params}`);
     setOpps(data);
     if (selected) setSelected(data.find((o) => o.id === selected.id) ?? null);
@@ -116,7 +118,7 @@ export default function OpportunitiesPage() {
       showToast(`✅ Post generated for "${topic}" — check Opportunity Inbox`);
       setTab("inbox");
       setFilterStatus("pending_approval");
-      fetchOpps();
+      fetchOpps("pending_approval", "");
     } catch { showToast("Generation failed", false); }
     finally { setGenerating(null); }
   };
@@ -545,7 +547,7 @@ export default function OpportunitiesPage() {
                           showToast("✅ Counter-ad generated — check Opportunity Inbox");
                           setTab("inbox");
                           setFilterStatus("pending_approval");
-                          fetchOpps();
+                          fetchOpps("pending_approval", "");
                         } catch { showToast("Generation failed", false); }
                         finally { setCounterLoading(null); }
                       }}
