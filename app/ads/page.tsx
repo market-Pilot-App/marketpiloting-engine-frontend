@@ -181,7 +181,7 @@ export default function AdsPage() {
             <select
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-800"
             >
               {OBJECTIVES.map((o) => (
                 <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>
@@ -195,7 +195,7 @@ export default function AdsPage() {
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value ? Number(e.target.value) : "")}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 bg-white text-gray-800"
               >
                 <option value="">— Custom —</option>
                 {products.map((p) => (
