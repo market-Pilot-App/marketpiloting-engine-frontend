@@ -91,6 +91,14 @@ interface ROIData {
   total_spend: number;
   direct_revenue: number;
   boost_engagement_value: number;
+  organic_engagement_value: number;
+  organic_likes: number;
+  organic_comments: number;
+  organic_reach: number;
+  telegram_members: number;
+  telegram_value: number;
+  youtube_subscribers: number;
+  youtube_value: number;
   boost_value_breakdown: Record<string, { quantity: number; value_ngn: number }>;
   total_estimated_value: number;
   roi_multiplier: number;
@@ -103,6 +111,7 @@ interface ROIData {
     likes_value_ngn: number;
     views_value_ngn: number;
     followers_value_ngn: number;
+    members_value_ngn: number;
   };
 }
 
@@ -443,12 +452,13 @@ export default function AnalyticsPage() {
             </div>
           ) : (() => {
             const roi = roiData;
-            const isGood = roi.roi_multiplier >= 2;
-            const isOk = roi.roi_multiplier >= 1;
-            const multiplierColor = isGood ? "text-emerald-600" : isOk ? "text-amber-500" : "text-red-500";
-            const heroBg = isGood ? "from-emerald-50 to-white border-emerald-100" : isOk ? "from-amber-50 to-white border-amber-100" : "from-red-50 to-white border-red-100";
-            const badge = isGood ? "bg-emerald-100 text-emerald-700" : isOk ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
-            const badgeText = isGood ? "Strong ROI" : isOk ? "Positive ROI" : "Building up";
+            const noSpend = roi.total_spend === 0;
+            const isGood = !noSpend && roi.roi_multiplier >= 2;
+            const isOk = !noSpend && roi.roi_multiplier >= 1;
+            const multiplierColor = noSpend ? "text-indigo-600" : isGood ? "text-emerald-600" : isOk ? "text-amber-500" : "text-red-500";
+            const heroBg = noSpend ? "from-indigo-50 to-white border-indigo-100" : isGood ? "from-emerald-50 to-white border-emerald-100" : isOk ? "from-amber-50 to-white border-amber-100" : "from-red-50 to-white border-red-100";
+            const badge = noSpend ? "bg-indigo-100 text-indigo-700" : isGood ? "bg-emerald-100 text-emerald-700" : isOk ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+            const badgeText = noSpend ? "Value Generated" : isGood ? "Strong ROI" : isOk ? "Positive ROI" : "Building up";
             return (
               <div className="space-y-4">
                 {/* Hero banner */}
@@ -459,7 +469,7 @@ export default function AnalyticsPage() {
                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge}`}>{badgeText}</span>
                         <span className="text-xs text-gray-400">{roi.month} · {roi.business_name}</span>
                       </div>
-                      <p className={`text-6xl font-black tracking-tight ${multiplierColor}`}>{roi.roi_multiplier}x</p>
+                      <p className={`text-6xl font-black tracking-tight ${multiplierColor}`}>{noSpend ? "∞" : `${roi.roi_multiplier}x`}</p>
                       <p className="text-base font-medium text-gray-600 mt-1">Return on Investment</p>
                       <p className="text-sm text-gray-500 mt-3 max-w-lg leading-relaxed">{roi.narrative}</p>
                     </div>
@@ -480,21 +490,60 @@ export default function AnalyticsPage() {
                 <div className="bg-white border border-gray-100 rounded-2xl p-6">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Value Breakdown</h3>
                   <div className="space-y-3">
-                    {/* Boost delivered value per service type */}
+                    {/* Boosted value per service type */}
                     {Object.entries(roi.boost_value_breakdown).map(([stype, data]) => (
-                      <div key={stype} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+                      <div key={stype} className="flex items-center justify-between py-2.5 border-b border-gray-50">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-sm">
-                            {stype === "likes" ? "❤️" : stype === "views" ? "👁️" : stype === "followers" ? "👥" : stype === "subscribers" ? "🔔" : "🌐"}
+                            {stype === "likes" ? "❤️" : stype === "views" ? "👁️" : stype === "followers" ? "👥" : stype === "subscribers" ? "🔔" : stype === "members" ? "✈️" : "🌐"}
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-800 capitalize">{stype} delivered</p>
-                            <p className="text-xs text-gray-400">{data.quantity.toLocaleString()} {stype} × ₦{roi.methodology[`${stype}_value_ngn` as keyof typeof roi.methodology] ?? "—"} each</p>
+                            <p className="text-xs text-gray-400">{data.quantity.toLocaleString()} {stype} × ₦{(roi.methodology as Record<string, number>)[`${stype}_value_ngn`] ?? "—"} each</p>
                           </div>
                         </div>
                         <span className="text-sm font-semibold text-gray-900">₦{data.value_ngn.toLocaleString()}</span>
                       </div>
                     ))}
+                    {/* Organic engagement value (FB / IG / Twitter synced likes) */}
+                    {roi.organic_engagement_value > 0 && (
+                      <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center text-sm">📊</div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Organic engagement</p>
+                            <p className="text-xs text-gray-400">{roi.organic_likes.toLocaleString()} likes · {roi.organic_comments.toLocaleString()} comments · {roi.organic_reach.toLocaleString()} reach</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">₦{roi.organic_engagement_value.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {/* Telegram member value */}
+                    {roi.telegram_members > 0 && (
+                      <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-sm">✈️</div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Telegram members</p>
+                            <p className="text-xs text-gray-400">{roi.telegram_members.toLocaleString()} members × ₦{roi.methodology.members_value_ngn} each</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">₦{roi.telegram_value.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {/* YouTube subscriber value */}
+                    {roi.youtube_subscribers > 0 && (
+                      <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-sm">▶️</div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">YouTube subscribers</p>
+                            <p className="text-xs text-gray-400">{roi.youtube_subscribers.toLocaleString()} subscribers × ₦{roi.methodology["subscribers_value_ngn" as keyof typeof roi.methodology] ?? 300} each</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">₦{roi.youtube_value.toLocaleString()}</span>
+                      </div>
+                    )}
                     {roi.direct_revenue > 0 && (
                       <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
                         <div className="flex items-center gap-3">
@@ -517,10 +566,10 @@ export default function AnalyticsPage() {
                 {/* Activity stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: "Posts Published",   value: roi.posts_count.toLocaleString(),            icon: "✍️",  color: "bg-indigo-50" },
-                    { label: "Likes Delivered",   value: roi.total_boosted_likes.toLocaleString(),    icon: "❤️",  color: "bg-pink-50" },
-                    { label: "Views Delivered",   value: roi.total_boosted_views.toLocaleString(),    icon: "👁️",  color: "bg-blue-50" },
-                    { label: "Followers Gained",  value: roi.total_boosted_followers.toLocaleString(), icon: "👥",  color: "bg-emerald-50" },
+                    { label: "Posts Published",   value: roi.posts_count.toLocaleString(),                                              icon: "✍️",  color: "bg-indigo-50" },
+                    { label: "Total Likes",        value: (roi.total_boosted_likes + roi.organic_likes).toLocaleString(),               icon: "❤️",  color: "bg-pink-50" },
+                    { label: "Views Delivered",   value: roi.total_boosted_views.toLocaleString(),                                      icon: "👁️",  color: "bg-blue-50" },
+                    { label: "Followers + Members", value: (roi.total_boosted_followers + roi.telegram_members + roi.youtube_subscribers).toLocaleString(), icon: "👥",  color: "bg-emerald-50" },
                   ].map(({ label, value, icon, color }) => (
                     <div key={label} className="bg-white border border-gray-100 rounded-xl p-4">
                       <div className={`w-9 h-9 ${color} rounded-lg flex items-center justify-center text-base mb-3`}>{icon}</div>
@@ -539,11 +588,13 @@ export default function AnalyticsPage() {
                   </button>
                   {roiMethodologyOpen && (
                     <div className="mt-3 space-y-1.5 text-xs text-gray-500">
-                      <p>• <strong>Likes</strong>: ₦{roi.methodology.likes_value_ngn} per like (Nigerian agency retail rate)</p>
+                      <p>• <strong>Likes</strong>: ₦{roi.methodology.likes_value_ngn} per like — boosted + organic (FB/IG/Twitter)</p>
                       <p>• <strong>Views</strong>: ₦{roi.methodology.views_value_ngn} per view</p>
                       <p>• <strong>Followers</strong>: ₦{roi.methodology.followers_value_ngn} per follower</p>
+                      <p>• <strong>Telegram members</strong>: ₦{roi.methodology.members_value_ngn} per member</p>
+                      <p>• <strong>YouTube subscribers</strong>: ₦300 per subscriber</p>
                       <p>• <strong>Direct revenue</strong>: counted only if Paystack revenue tracking is connected in Settings</p>
-                      <p className="text-gray-400 pt-1">Values reflect standard Nigerian social media agency pricing benchmarks.</p>
+                      <p className="text-gray-400 pt-1">Midpoint Nigerian SMM agency market rates. Covers boosted + organic engagement across all connected platforms.</p>
                     </div>
                   )}
                 </div>
