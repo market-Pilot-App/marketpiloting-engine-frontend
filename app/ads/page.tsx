@@ -394,16 +394,16 @@ export default function AdsPage() {
                   {insights[ad.id] ? (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{insights[ad.id].reach.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">👁 Reach</p>
+                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.likes ?? 0}</p>
+                        <p className="text-xs text-gray-500">👍 Likes</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{insights[ad.id].impressions.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">📊 Impressions</p>
+                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.comments ?? 0}</p>
+                        <p className="text-xs text-gray-500">💬 Comments</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
-                        <p className="text-lg font-bold text-gray-900">{insights[ad.id].clicks.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">👆 Clicks</p>
+                        <p className="text-lg font-bold text-gray-900">{(insights[ad.id].reactions as any)?.shares ?? 0}</p>
+                        <p className="text-xs text-gray-500">🔄 Shares</p>
                       </div>
                     </div>
                   ) : (
