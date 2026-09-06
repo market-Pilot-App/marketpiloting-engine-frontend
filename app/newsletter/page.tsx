@@ -64,7 +64,7 @@ export default function NewsletterPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Send failed";
       if (msg.toLowerCase().includes("no leads")) {
-        setSendError((prev) => ({ ...prev, [id]: "No leads yet — share your landing page to capture leads first." }));
+        setSendError((prev) => ({ ...prev, [id]: "No leads yet — capture leads via your landing page, bio page, or website first." }));
       } else {
         setError(msg);
       }
