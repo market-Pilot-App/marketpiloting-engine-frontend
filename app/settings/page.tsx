@@ -578,6 +578,11 @@ export default function SettingsPage() {
                       {p.key === "instagram" && !connections?.facebook && (
                         <p className="text-xs text-yellow-500 mb-3">⚠️ Connect Facebook first — Instagram links automatically via your Facebook Page.</p>
                       )}
+                      {p.key === "facebook" && connected && (
+                        <div className="mb-3 p-3 bg-amber-950/40 border border-amber-700/40 rounded-lg">
+                          <p className="text-amber-400 text-xs font-medium">⚠️ If ad performance stats show zero or a permission error, your token may be outdated. Click Reconnect below — it takes 30 seconds and fixes it.</p>
+                        </div>
+                      )}
                       <button
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
@@ -606,8 +611,8 @@ export default function SettingsPage() {
                         disabled={p.key === "instagram" && !connections?.facebook}
                         className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
                       >
-                        {p.key === "twitter" && "🐦 Connect X / Twitter Account"}
-                        {p.key === "facebook" && "📘 Connect Facebook Page"}
+                        {p.key === "twitter" && (connected ? "🔄 Reconnect X / Twitter" : "🐦 Connect X / Twitter Account")}
+                        {p.key === "facebook" && (connected ? "🔄 Reconnect Facebook Page" : "📘 Connect Facebook Page")}
                         {p.key === "instagram" && "📸 Connect Instagram (via Facebook)"}
                       </button>
                       {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
