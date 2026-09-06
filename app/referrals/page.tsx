@@ -12,7 +12,7 @@ interface ReferralLink {
   created_at: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ?? "";
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://api.marketpiloting.com").replace("/api", "");
 
 export default function ReferralsPage() {
   const canAccess = useCanAccess("editor");
@@ -155,10 +155,10 @@ export default function ReferralsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-indigo-600 font-mono text-xs">/r/{link.short_code}</span>
+                        <span className="text-indigo-600 font-mono text-xs truncate max-w-[160px]">{shortUrl}</span>
                         <button
                           onClick={() => copyLink(link.short_code)}
-                          className="text-gray-400 hover:text-indigo-600 transition-colors text-xs"
+                          className="text-gray-400 hover:text-indigo-600 transition-colors text-xs flex-shrink-0"
                         >
                           {copied === link.short_code ? "✓ Copied" : "Copy"}
                         </button>
