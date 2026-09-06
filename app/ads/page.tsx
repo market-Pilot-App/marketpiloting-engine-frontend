@@ -177,6 +177,9 @@ export default function AdsPage() {
               ))}
             </div>
             <p className="text-xs text-gray-400 mt-1 capitalize">{platform}</p>
+            {platform === "linkedin" && (
+              <p className="text-xs text-amber-500 mt-1">📋 Copy only — direct publishing not available for LinkedIn</p>
+            )}
           </div>
 
           <div>
