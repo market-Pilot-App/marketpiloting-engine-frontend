@@ -40,6 +40,10 @@ const SOURCE_LABELS: Record<string, string> = {
   landing_page: "Landing Page",
   subscribe_page: "Subscribe Page",
   referral: "Referral Link",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  telegram: "Telegram",
+  instagram: "Instagram",
 };
 
 const SCORE_CONFIG: Record<string, { label: string; emoji: string; cls: string }> = {
@@ -230,7 +234,7 @@ export default function LeadsPage() {
                   <tr>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Score</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Name</th>
-                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Email</th>
+                    <th className="text-left px-4 py-3 text-gray-500 font-medium">Contact</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Source</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Intent</th>
                     <th className="text-left px-4 py-3 text-gray-500 font-medium">Date</th>
@@ -247,7 +251,18 @@ export default function LeadsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-800 font-medium">{lead.name || "—"}</td>
-                        <td className="px-4 py-3 text-gray-600">{lead.email}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {lead.whatsapp ? (
+                            <div>
+                              <p className="text-xs text-gray-500">📱 {lead.whatsapp}</p>
+                              {!lead.email.includes("@whatsapp.noemail") && (
+                                <p className="text-xs text-gray-400">{lead.email}</p>
+                              )}
+                            </div>
+                          ) : (
+                            lead.email
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-gray-500">
                           {SOURCE_LABELS[lead.source] ?? lead.source}
                         </td>
