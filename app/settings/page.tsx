@@ -583,6 +583,11 @@ export default function SettingsPage() {
                           <p className="text-amber-400 text-xs font-medium">⚠️ If ad performance stats show zero or a permission error, your token may be outdated. Click Reconnect below — it takes 30 seconds and fixes it.</p>
                         </div>
                       )}
+                      {p.key === "twitter" && connected && (
+                        <div className="mb-3 p-3 bg-amber-950/40 border border-amber-700/40 rounded-lg">
+                          <p className="text-amber-400 text-xs font-medium">⚠️ If Twitter/X posting stops working or DM replies fail, your token may have expired. Click Reconnect to refresh it.</p>
+                        </div>
+                      )}
                       <button
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
@@ -620,6 +625,11 @@ export default function SettingsPage() {
                   ) : (
                     <>
                       <div className="space-y-3">
+                        {p.key === "linkedin" && connected && (
+                          <div className="p-3 bg-amber-950/40 border border-amber-700/40 rounded-lg">
+                            <p className="text-amber-400 text-xs font-medium">⚠️ LinkedIn access tokens expire every 60 days. If posting stops working, paste a fresh token below and save.</p>
+                          </div>
+                        )}
                         {p.fields.map((f) => (
                           <div key={f.name}>
                             <label className="block text-xs text-gray-400 mb-1">{f.label}</label>
