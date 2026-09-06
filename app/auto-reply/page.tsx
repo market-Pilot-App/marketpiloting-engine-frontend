@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import { useCanAccess } from "@/lib/use-role-guard";
 import Link from "next/link";
@@ -39,6 +39,7 @@ const STATUS_STYLE: Record<string, string> = {
   ignored: "bg-gray-800 text-gray-500",
   failed: "bg-red-900 text-red-400",
   processing: "bg-blue-900 text-blue-400",
+  otp: "bg-gray-800 text-gray-400",
 };
 
 const SENTIMENT_BADGE: Record<string, string> = {
@@ -69,6 +70,7 @@ export default function AutoReplyPage() {
   const [actionMsg, setActionMsg] = useState("");
   const [requireApproval, setRequireApproval] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const prevThreshold = useRef<number>(0.75);
 
   const fetchMessages = useCallback(async () => {
     const params = new URLSearchParams();
@@ -88,6 +90,7 @@ export default function AutoReplyPage() {
   const fetchSettings = async () => {
     try {
       const data = await api.get<{ confidence_threshold: number }>("/auto-reply/settings");
+      if (data.confidence_threshold < 1.0) prevThreshold.current = data.confidence_threshold;
       setRequireApproval(data.confidence_threshold >= 1.0);
     } catch { /* silently ignore */ }
   };
@@ -135,10 +138,12 @@ export default function AutoReplyPage() {
   const toggleRequireApproval = async () => {
     setToggleLoading(true);
     const next = !requireApproval;
+    const threshold = next ? 1.0 : prevThreshold.current;
     try {
-      await api.patch("/auto-reply/settings", { confidence_threshold: next ? 1.0 : 0.75 });
+      await api.patch("/auto-reply/settings", { confidence_threshold: threshold });
+      if (next) prevThreshold.current = prevThreshold.current;
       setRequireApproval(next);
-      flash(next ? "🔒 Manual approval ON — all replies need your sign-off" : "⚡ Auto-send ON — replies above 75% send automatically");
+      flash(next ? "🔒 Manual approval ON — all replies need your sign-off" : `⚡ Auto-send ON — replies above ${Math.round(prevThreshold.current * 100)}% send automatically`);
     } catch { flash("❌ Failed to update setting"); }
     finally { setToggleLoading(false); }
   };
@@ -303,6 +308,13 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
+              {/* OTP system message banner */}
+              {selected.status === "otp" && (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 flex items-center gap-2">
+                  🔒 System message — this is an OTP code for your use only. It has not been sent to anyone.
+                </div>
+              )}
+
               {/* Sent automatically banner */}
               {selected.status === "sent" && (
                 <div className="bg-green-950 border border-green-800 rounded-lg p-3 text-sm text-green-300 flex items-center gap-2">
@@ -310,7 +322,7 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
-              {/* Actions for pending */}
+              {/* Actions for pending — hidden for otp */}
               {selected.status === "pending" && (
                 <div className="flex gap-2">
                   <button onClick={() => approve(selected.id)} disabled={loading}
@@ -324,7 +336,7 @@ export default function AutoReplyPage() {
                 </div>
               )}
 
-              {/* Override — pending, escalated, and sent (follow-up correction) */}
+              {/* Override — pending, escalated, sent only — never otp */}
               {(selected.status === "pending" || selected.status === "escalated" || selected.status === "sent") && (
                 <div>
                   <p className="text-xs text-gray-500 mb-1">
