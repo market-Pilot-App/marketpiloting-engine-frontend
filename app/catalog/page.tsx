@@ -126,7 +126,7 @@ export default function CatalogPage() {
     setPromoting(id);
     try {
       const r = await api.post(`/catalog/${id}/promote-now`) as { posts_scheduled?: number; skipped?: string };
-      setPromoteMsg((m) => ({ ...m, [id]: r.posts_scheduled ? `✓ ${r.posts_scheduled} posts scheduled` : (r.skipped || "Done") }));
+      setPromoteMsg((m) => ({ ...m, [id]: r.posts_scheduled ? `✓ ${r.posts_scheduled} posts scheduled for tomorrow` : (r.skipped || "Done") }));
       setTimeout(() => setPromoteMsg((m) => { const n = { ...m }; delete n[id]; return n; }), 4000);
       await load();
     } catch (e: unknown) {
@@ -468,7 +468,7 @@ export default function CatalogPage() {
                     disabled={promoting === p.id}
                     className="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 px-3 py-1 rounded-lg transition disabled:opacity-50"
                   >
-                    {promoting === p.id ? "Promoting..." : "🚀 Promote"}
+                    {promoting === p.id ? "Scheduling..." : "🗓 Schedule"}
                   </button>
                   <button
                     onClick={() => { setPostNowItem(p); setPostNowPlatforms([]); setPostNowMsg(""); }}
