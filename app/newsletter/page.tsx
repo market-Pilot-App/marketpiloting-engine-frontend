@@ -26,6 +26,7 @@ export default function NewsletterPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState<number | null>(null);
+  const [sendError, setSendError] = useState<{ [id: number]: string }>({});
   const [preview, setPreview] = useState<Newsletter | null>(null);
   const [error, setError] = useState("");
 
@@ -53,6 +54,7 @@ export default function NewsletterPage() {
 
   const send = async (id: number) => {
     setSending(id);
+    setSendError((prev) => { const n = { ...prev }; delete n[id]; return n; });
     setError("");
     try {
       const result = await api.post<{ sent: number }>(`/newsletter/${id}/send`, {});
@@ -60,7 +62,12 @@ export default function NewsletterPage() {
       if (preview?.id === id) setPreview((p) => p ? { ...p, status: "sent" } : p);
       alert(`Sent to ${result.sent} leads`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Send failed");
+      const msg = e instanceof Error ? e.message : "Send failed";
+      if (msg.toLowerCase().includes("no leads")) {
+        setSendError((prev) => ({ ...prev, [id]: "No leads yet — share your landing page to capture leads first." }));
+      } else {
+        setError(msg);
+      }
     }
     setSending(null);
   };
@@ -129,13 +136,18 @@ export default function NewsletterPage() {
                   Preview
                 </button>
                 {nl.status === "draft" && (
-                  <button
-                    onClick={() => send(nl.id)}
-                    disabled={sending === nl.id}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
-                  >
-                    {sending === nl.id ? "Sending..." : "Send"}
-                  </button>
+                  <div className="flex flex-col items-end gap-1">
+                    <button
+                      onClick={() => send(nl.id)}
+                      disabled={sending === nl.id}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      {sending === nl.id ? "Sending..." : "Send"}
+                    </button>
+                    {sendError[nl.id] && (
+                      <p className="text-yellow-400 text-xs max-w-[180px] text-right">{sendError[nl.id]}</p>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={() => del(nl.id)}
