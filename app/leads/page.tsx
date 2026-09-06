@@ -44,6 +44,8 @@ const SOURCE_LABELS: Record<string, string> = {
   facebook: "Facebook",
   telegram: "Telegram",
   instagram: "Instagram",
+  website: "Website",
+  bio: "Bio Page",
 };
 
 const SCORE_CONFIG: Record<string, { label: string; emoji: string; cls: string }> = {

@@ -38,6 +38,7 @@ export default function SequencesPage() {
   const [tab, setTab] = useState<"list" | "create">("list");
   const [name, setName] = useState("");
   const [steps, setSteps] = useState<Step[]>([{ day_offset: 0, subject: "", body: "" }]);
+  const [triggerEvent, setTriggerEvent] = useState<"manual" | "lead_captured">("manual");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [creatingRecovery, setCreatingRecovery] = useState(false);
@@ -70,10 +71,11 @@ export default function SequencesPage() {
     setSaving(true);
     setSaveMsg("");
     try {
-      await api.post("/sequences/", { name, steps });
+      await api.post("/sequences/", { name, steps, trigger_event: triggerEvent });
       setSaveMsg("✓ Sequence created");
       setName("");
       setSteps([{ day_offset: 0, subject: "", body: "" }]);
+      setTriggerEvent("manual");
       await fetchSequences();
       setTab("list");
     } catch {
@@ -211,6 +213,21 @@ export default function SequencesPage() {
               placeholder="e.g. Welcome Series, Product Launch"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
             />
+          </div>
+
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Trigger</label>
+            <select
+              value={triggerEvent}
+              onChange={(e) => setTriggerEvent(e.target.value as "manual" | "lead_captured")}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="manual">Manual enroll only</option>
+              <option value="lead_captured">Auto-enroll new leads on capture</option>
+            </select>
+            {triggerEvent === "lead_captured" && (
+              <p className="text-xs text-indigo-600 mt-1">New leads from landing page, website, bio page and offer pages will be auto-enrolled.</p>
+            )}
           </div>
 
           <div className="space-y-4 mb-5">
