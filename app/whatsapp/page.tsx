@@ -14,7 +14,11 @@ interface WASettings {
 interface BroadcastResult {
   sent: number;
   failed: number;
+  total: number;
+  status: "running" | "done";
   message?: string;
+  queued?: boolean;
+  job_id?: number;
 }
 
 export default function WhatsAppBroadcastPage() {
@@ -44,12 +48,32 @@ export default function WhatsAppBroadcastPage() {
     setResult(null);
     try {
       const r = await api.post<BroadcastResult>("/whatsapp/broadcast", { message: message.trim() });
-      setResult(r);
-      setMessage("");
-      setCharCount(0);
+      // No leads case — backend returns sent:0 with a message, no job created
+      if (!r.queued) {
+        setResult(r);
+        setSending(false);
+        return;
+      }
+      // Job queued — poll until done
+      const jobId = r.job_id!;
+      setResult({ queued: true, job_id: jobId, sent: 0, failed: 0, total: r.total, status: "running" });
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.get<BroadcastResult>(`/whatsapp/broadcast/${jobId}`);
+          setResult(status);
+          if (status.status === "done") {
+            clearInterval(poll);
+            setSending(false);
+            setMessage("");
+            setCharCount(0);
+          }
+        } catch {
+          clearInterval(poll);
+          setSending(false);
+        }
+      }, 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Broadcast failed");
-    } finally {
       setSending(false);
     }
   };
@@ -105,23 +129,65 @@ export default function WhatsAppBroadcastPage() {
       )}
 
       {result && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
-          <p className="text-green-400 font-semibold text-sm">Broadcast complete!</p>
-          {result.message ? (
-            <p className="text-gray-400 text-sm mt-1">{result.message}</p>
-          ) : (
-            <div className="flex gap-6 mt-2">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-400">{result.sent}</p>
-                <p className="text-xs text-gray-400">Sent</p>
-              </div>
-              {result.failed > 0 && (
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-red-400">{result.failed}</p>
-                  <p className="text-xs text-gray-400">Failed</p>
-                </div>
-              )}
+        <div className={`rounded-xl p-4 mb-4 border ${
+          result.status === "running"
+            ? "bg-indigo-500/10 border-indigo-500/30"
+            : result.message
+            ? "bg-yellow-500/10 border-yellow-500/30"
+            : result.sent > 0 && result.failed === 0
+            ? "bg-green-500/10 border-green-500/30"
+            : result.sent > 0 && result.failed > 0
+            ? "bg-yellow-500/10 border-yellow-500/30"
+            : "bg-red-500/10 border-red-500/30"
+        }`}>
+          <p className={`font-semibold text-sm ${
+            result.status === "running"
+              ? "text-indigo-400"
+              : result.message
+              ? "text-yellow-400"
+              : result.sent > 0 && result.failed === 0
+              ? "text-green-400"
+              : result.sent > 0 && result.failed > 0
+              ? "text-yellow-400"
+              : "text-red-400"
+          }`}>
+            {result.status === "running"
+              ? `Sending... ${result.sent + result.failed} / ${result.total}`
+              : result.message
+              ? "No recipients"
+              : result.sent > 0 && result.failed === 0
+              ? "Broadcast complete!"
+              : result.sent > 0 && result.failed > 0
+              ? "Broadcast partially complete"
+              : "Broadcast failed"}
+          </p>
+          {result.status === "running" && result.total > 0 && (
+            <div className="mt-2 w-full bg-gray-800 rounded-full h-1.5">
+              <div
+                className="bg-indigo-500 h-1.5 rounded-full transition-all"
+                style={{ width: `${Math.round(((result.sent + result.failed) / result.total) * 100)}%` }}
+              />
             </div>
+          )}
+          {result.status === "done" && (
+            result.message ? (
+              <p className="text-gray-400 text-sm mt-1">{result.message}</p>
+            ) : (
+              <div className="flex gap-6 mt-2">
+                {result.sent > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-400">{result.sent}</p>
+                    <p className="text-xs text-gray-400">Sent</p>
+                  </div>
+                )}
+                {result.failed > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-red-400">{result.failed}</p>
+                    <p className="text-xs text-gray-400">Failed</p>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
       )}
@@ -135,7 +201,7 @@ export default function WhatsAppBroadcastPage() {
       </button>
 
       <p className="text-xs text-gray-600 text-center mt-3">
-        Only leads with saved WhatsApp numbers will receive this message.
+        Only leads who messaged you on WhatsApp will receive this broadcast (opted-in contacts only).
         Available on Starter plan and above.
       </p>
     </div>
