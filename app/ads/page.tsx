@@ -25,6 +25,7 @@ interface AdInsights {
   reach: number;
   clicks: number;
   reactions: Record<string, number>;
+  error?: string;
 }
 
 const PLATFORMS = ["facebook", "instagram", "linkedin"];
@@ -409,6 +410,9 @@ export default function AdsPage() {
                         <p className="text-xs text-gray-500">🔄 Shares</p>
                       </div>
                     </div>
+                    {insights[ad.id].error && (
+                      <p className="text-xs text-amber-500 mt-2">⚠️ Stats unavailable — Facebook app is in development mode. Live stats will appear once the app is approved.</p>
+                    )}
                   ) : (
                     <button
                       onClick={() => fetchInsights(ad)}
