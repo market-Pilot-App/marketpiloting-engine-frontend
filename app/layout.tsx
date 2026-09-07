@@ -9,6 +9,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Marketpiloting — Autonomous Marketing Engine",
   description: "Autonomous marketing on autopilot. AI generates content, posts to your platforms, boosts your reach, and sends you weekly reports — all on autopilot.",
+  robots: {
+    index: false,
+    follow: false,
+  },
   metadataBase: new URL("https://dashboard.marketpiloting.com"),
   openGraph: {
     title: "Marketpiloting — Autonomous Marketing Engine",
