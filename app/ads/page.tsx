@@ -412,7 +412,7 @@ export default function AdsPage() {
                         </div>
                       </div>
                       {insights[ad.id].error && (
-                        <p className="text-xs text-amber-500 mt-2">⚠️ Stats unavailable — Facebook app is in development mode. Live stats will appear once the app is approved.</p>
+                        <p className="text-xs text-amber-500 mt-2">⚠️ Could not load stats. Try reconnecting Facebook in Settings.</p>
                       )}
                     </>
                   ) : (
