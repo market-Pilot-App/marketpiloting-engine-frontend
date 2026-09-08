@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 const NAV = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/brand-dna", label: "Brand DNA", icon: "🧬" },
+  { href: "/brand-intelligence", label: "Brand Intelligence", icon: "🔍" },
   { href: "/content", label: "Content", icon: "✍️" },
   { href: "/opportunities", label: "AI Inbox", icon: "💡" },
   { href: "/scheduler", label: "Scheduler", icon: "📅" },
