@@ -1128,7 +1128,7 @@ const saveBudget = async (clientId: number) => {
                   value={(promoForm as any)[key]}
                   onChange={(e) => setPromoForm((f) => ({ ...f, [key]: e.target.value.toUpperCase() }))}
                   placeholder={placeholder}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 uppercase"
                 />
               </div>
             ))}
@@ -1137,7 +1137,7 @@ const saveBudget = async (clientId: number) => {
               <select
                 value={promoForm.discount_type}
                 onChange={(e) => setPromoForm((f) => ({ ...f, discount_type: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
               >
                 <option value="percentage">Percentage (%)</option>
                 <option value="fixed">Fixed Amount (kobo)</option>
@@ -1152,7 +1152,7 @@ const saveBudget = async (clientId: number) => {
                 value={promoForm.discount_value}
                 onChange={(e) => setPromoForm((f) => ({ ...f, discount_value: e.target.value }))}
                 placeholder={promoForm.discount_type === "percentage" ? "50" : "5000000"}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
               />
             </div>
             <div>
@@ -1161,7 +1161,7 @@ const saveBudget = async (clientId: number) => {
                 value={promoForm.applicable_plans}
                 onChange={(e) => setPromoForm((f) => ({ ...f, applicable_plans: e.target.value }))}
                 placeholder="growth, pro (blank = all plans)"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
               />
             </div>
             <div>
@@ -1169,7 +1169,7 @@ const saveBudget = async (clientId: number) => {
               <select
                 value={promoForm.applicable_billing}
                 onChange={(e) => setPromoForm((f) => ({ ...f, applicable_billing: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
               >
                 <option value="">Both monthly & yearly</option>
                 <option value="monthly">Monthly only</option>
@@ -1184,7 +1184,7 @@ const saveBudget = async (clientId: number) => {
                   value={promoForm.max_uses}
                   onChange={(e) => setPromoForm((f) => ({ ...f, max_uses: e.target.value }))}
                   placeholder="100"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
                 />
               </div>
               <div>
@@ -1193,7 +1193,7 @@ const saveBudget = async (clientId: number) => {
                   type="date"
                   value={promoForm.expires_at}
                   onChange={(e) => setPromoForm((f) => ({ ...f, expires_at: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
                 />
               </div>
             </div>
