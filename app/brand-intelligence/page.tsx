@@ -115,6 +115,23 @@ export default function BrandIntelligencePage() {
         )}
       </div>
 
+      {/* Urgency CTA — shown when pending approvals exist */}
+      {!loading && (overview?.pending_approvals ?? 0) > 0 && (
+        <Link
+          href="/brand-intelligence/opportunities"
+          className="flex items-center justify-between bg-yellow-900/30 border border-yellow-700/40 rounded-xl px-5 py-3 mb-5 hover:bg-yellow-900/50 transition"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-yellow-400 text-lg">⚠️</span>
+            <div>
+              <p className="text-yellow-300 text-sm font-medium">{overview!.pending_approvals} item{overview!.pending_approvals !== 1 ? "s" : ""} waiting for your review</p>
+              <p className="text-yellow-600 text-xs">Some may auto-post if approval window expires</p>
+            </div>
+          </div>
+          <span className="text-yellow-400 text-sm font-medium">Review now →</span>
+        </Link>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         {stats.map((s) => (

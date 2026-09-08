@@ -19,6 +19,7 @@ interface ResearchItem {
   status: string;
   rejection_reason: string | null;
   expires_at: string | null;
+  suggested_platforms: string[];
   created_at: string;
 }
 
@@ -180,6 +181,16 @@ export default function BrandIntelligenceLibraryPage() {
                   View Source →
                 </a>
               </div>
+
+              {/* Suggested platforms */}
+              {item.suggested_platforms?.length > 0 && (
+                <div className="flex gap-1 flex-wrap mb-3">
+                  <span className="text-gray-600 text-xs mr-1">Suggested:</span>
+                  {item.suggested_platforms.map((p) => (
+                    <span key={p} className="bg-gray-800 text-gray-400 text-xs px-2 py-0.5 rounded capitalize">{p}</span>
+                  ))}
+                </div>
+              )}
 
               {item.status === "under_review" && (
                 <div className="flex gap-2">

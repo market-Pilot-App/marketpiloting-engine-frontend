@@ -43,6 +43,8 @@ export default function BrandIntelligenceOpportunitiesPage() {
   const [generated, setGenerated] = useState<{ [oppId: number]: GeneratedContent[] }>({});
   const [generating, setGenerating] = useState<number | null>(null);
   const [genError, setGenError] = useState<{ [oppId: number]: string }>({});
+  const [editingHook, setEditingHook] = useState<number | null>(null);
+  const [hookDraft, setHookDraft] = useState<{ [oppId: number]: string }>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,8 +165,33 @@ export default function BrandIntelligenceOpportunitiesPage() {
                   </div>
                 </div>
 
-                {opp.hook && (
-                  <p className="text-gray-400 text-xs mb-2">🪝 <span className="italic">{opp.hook}</span></p>
+                {opp.hook && editingHook !== opp.id && (
+                  <div className="flex items-start gap-2 mb-2">
+                    <p className="text-gray-400 text-xs flex-1">🪝 <span className="italic">{hookDraft[opp.id] ?? opp.hook}</span></p>
+                    <button
+                      onClick={() => { setEditingHook(opp.id); setHookDraft((d) => ({ ...d, [opp.id]: d[opp.id] ?? opp.hook ?? "" })); }}
+                      className="text-gray-600 hover:text-indigo-400 text-xs transition whitespace-nowrap"
+                    >
+                      Edit Hook
+                    </button>
+                  </div>
+                )}
+                {editingHook === opp.id && (
+                  <div className="mb-2">
+                    <textarea
+                      value={hookDraft[opp.id] ?? ""}
+                      onChange={(e) => setHookDraft((d) => ({ ...d, [opp.id]: e.target.value }))}
+                      rows={2}
+                      className="w-full bg-gray-800 text-white text-xs rounded-lg px-3 py-2 border border-indigo-600 focus:outline-none resize-none"
+                    />
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={() => setEditingHook(null)} className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg transition">Save</button>
+                      <button onClick={() => { setEditingHook(null); setHookDraft((d) => ({ ...d, [opp.id]: opp.hook ?? "" })); }} className="text-xs text-gray-500 hover:text-white transition">Cancel</button>
+                    </div>
+                  </div>
+                )}
+                {!opp.hook && (
+                  <p className="text-gray-400 text-xs mb-2">🪝 <span className="italic text-gray-600">No hook set</span></p>
                 )}
                 {opp.cta && (
                   <p className="text-gray-400 text-xs mb-2">📣 {opp.cta}</p>
