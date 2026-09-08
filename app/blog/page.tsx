@@ -143,9 +143,11 @@ export default function BlogPage() {
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
                   <option value="wordpress">WordPress</option>
                   <option value="shopify">Shopify</option>
+                  <option value="mp_website">MarketPilot AI Website Builder</option>
                   <option value="custom">Custom / Other</option>
                 </select>
               </div>
+              {![ "mp_website"].includes(settingsForm.blog_platform) && (
               <div>
                 <label className="text-xs text-gray-400 block mb-1">
                   {settingsForm.blog_platform === "wordpress" ? "WordPress Site URL" : settingsForm.blog_platform === "shopify" ? "Shopify Store URL (e.g. mystore.myshopify.com)" : "API Endpoint URL"}
@@ -154,6 +156,8 @@ export default function BlogPage() {
                   placeholder={settingsForm.blog_platform === "wordpress" ? "https://yourblog.com" : settingsForm.blog_platform === "shopify" ? "https://mystore.myshopify.com" : "https://api.yourblog.com/posts"}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
               </div>
+              )}
+              {!["mp_website"].includes(settingsForm.blog_platform) && (
               <div>
                 <label className="text-xs text-gray-400 block mb-1">
                   {settingsForm.blog_platform === "wordpress" ? "Application Password (user:password)" : settingsForm.blog_platform === "shopify" ? "Shopify Admin API Access Token" : "API Key / Bearer Token"}
@@ -162,12 +166,16 @@ export default function BlogPage() {
                   placeholder={settings?.blog_api_key_set ? "••••••••  (set — enter new to change)" : "Paste your key here"}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
               </div>
+              )}
               {settingsForm.blog_platform === "shopify" && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Shopify Blog ID (from Admin → Online Store → Blog Posts)</label>
                   <input value={settingsForm.shopify_blog_id} onChange={(e) => setSettingsForm((f) => ({ ...f, shopify_blog_id: e.target.value }))}
                     placeholder="e.g. 241253187" className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm" />
                 </div>
+              )}
+              {settingsForm.blog_platform === "mp_website" && (
+                <p className="text-xs text-indigo-400 bg-indigo-900/20 border border-indigo-800 rounded-lg px-3 py-2">✅ Posts will publish to your <strong>AI-built website blog</strong> — no credentials needed.</p>
               )}
               {settingsForm.blog_platform === "wordpress" && (
                 <p className="text-xs text-gray-500">In WordPress: Users → Your Profile → Application Passwords → Add New. Format: <span className="text-gray-400">username:xxxx xxxx xxxx</span></p>
