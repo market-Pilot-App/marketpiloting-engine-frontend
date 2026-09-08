@@ -6,8 +6,10 @@ import Link from "next/link";
 
 interface Overview {
   last_run: { status: string; completed_at: string | null; items_collected: number } | null;
+  next_scheduled_run: string | null;
   pending_approvals: number;
   approved_items: number;
+  approved_this_week: number;
   content_published_from_research: number;
 }
 
@@ -50,7 +52,7 @@ export default function BrandIntelligencePage() {
 
   const stats = [
     { label: "Pending Approvals", value: overview?.pending_approvals ?? 0, href: "/brand-intelligence/opportunities", color: "text-yellow-400" },
-    { label: "Approved Items", value: overview?.approved_items ?? 0, href: "/brand-intelligence/library", color: "text-green-400" },
+    { label: "Approved This Week", value: overview?.approved_this_week ?? 0, href: "/brand-intelligence/library", color: "text-green-400" },
     { label: "Content Published", value: overview?.content_published_from_research ?? 0, href: "/content", color: "text-indigo-400" },
   ];
 
@@ -97,9 +99,15 @@ export default function BrandIntelligencePage() {
                 {overview.last_run.status}
               </span>
               <p className="text-white text-sm mt-2 font-medium">{overview.last_run.items_collected} items collected</p>
+              {overview.last_run.completed_at && (
+                <p className="text-gray-500 text-xs mt-0.5">{new Date(overview.last_run.completed_at).toLocaleString()}</p>
+              )}
             </div>
-            {overview.last_run.completed_at && (
-              <p className="text-gray-500 text-xs">{new Date(overview.last_run.completed_at).toLocaleString()}</p>
+            {overview.next_scheduled_run && (
+              <div className="text-right">
+                <p className="text-gray-500 text-xs">Next run</p>
+                <p className="text-indigo-400 text-xs font-medium mt-0.5">{new Date(overview.next_scheduled_run).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</p>
+              </div>
             )}
           </div>
         ) : (

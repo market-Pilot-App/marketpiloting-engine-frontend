@@ -18,10 +18,11 @@ interface ResearchItem {
   actionability_score: number;
   status: string;
   rejection_reason: string | null;
+  expires_at: string | null;
   created_at: string;
 }
 
-const STATUS_FILTERS = ["all", "pending", "approved", "rejected", "used"];
+const STATUS_FILTERS = ["all", "under_review", "approved", "rejected", "used"];
 
 function ScoreBadge({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
@@ -87,7 +88,17 @@ export default function BrandIntelligenceLibraryPage() {
     if (s === "approved") return "bg-green-900 text-green-400";
     if (s === "rejected") return "bg-red-900 text-red-400";
     if (s === "used") return "bg-indigo-900 text-indigo-400";
-    return "bg-yellow-900 text-yellow-400";
+    if (s === "under_review") return "bg-yellow-900 text-yellow-400";
+    return "bg-gray-800 text-gray-400";
+  };
+
+  const expiryLabel = (expires_at: string | null) => {
+    if (!expires_at) return null;
+    const diff = new Date(expires_at).getTime() - Date.now();
+    if (diff <= 0) return { text: "Expired", color: "text-red-400" };
+    const days = Math.floor(diff / 86400000);
+    if (days <= 2) return { text: `Expires in ${days}d`, color: "text-yellow-400" };
+    return { text: `Expires ${new Date(expires_at).toLocaleDateString()}`, color: "text-gray-500" };
   };
 
   return (
@@ -157,7 +168,20 @@ export default function BrandIntelligenceLibraryPage() {
                 <p className="text-gray-500 text-xs mb-3">💬 {item.key_claims[0]?.claim}</p>
               )}
 
-              {item.status === "pending" && (
+              {/* Expiry + View Source row */}
+              <div className="flex items-center justify-between mb-3">
+                {(() => { const e = expiryLabel(item.expires_at); return e ? <span className={`text-xs ${e.color}`}>⏳ {e.text}</span> : <span />; })()}
+                <a
+                  href={item.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                >
+                  View Source →
+                </a>
+              </div>
+
+              {item.status === "under_review" && (
                 <div className="flex gap-2">
                   <button
                     onClick={() => approve(item.id)}
