@@ -137,6 +137,23 @@ interface BIPerf {
   lift: number | null;
 }
 
+interface AttributionData {
+  model: string;
+  total_conversions: number;
+  attributed_conversions: number;
+  total_attributed_revenue: number;
+  top_sources: { source: string; revenue: number }[];
+  top_campaigns: { campaign: string; revenue: number }[];
+  coverage: {
+    total_leads: number;
+    leads_with_source: number;
+    leads_coverage_pct: number;
+    total_conversions: number;
+    conversions_with_source: number;
+    conversions_coverage_pct: number;
+  };
+}
+
 export default function AnalyticsPage() {
   const { role } = useAuth();
   const isOwner   = role === null;
@@ -145,8 +162,8 @@ export default function AnalyticsPage() {
   const canActions = isOwner || role === "admin" || role === "editor"; // Sync/Generate buttons
   const canWrite   = isOwner || role === "admin" || role === "editor"; // Add competitor
 
-  type TabKey = "engagement" | "revenue" | "roi" | "heatmap" | "benchmark" | "hashtags";
-  const ALL_TABS: TabKey[] = ["engagement", "revenue", "roi", "heatmap", "benchmark", "hashtags"];
+  type TabKey = "engagement" | "revenue" | "roi" | "heatmap" | "benchmark" | "hashtags" | "attribution";
+  const ALL_TABS: TabKey[] = ["engagement", "revenue", "roi", "heatmap", "benchmark", "hashtags", "attribution"];
   const visibleTabs = ALL_TABS.filter((t) => {
     if (t === "revenue") return canRevenue;
     if (t === "roi")     return canROI;
@@ -187,6 +204,14 @@ export default function AnalyticsPage() {
   const [addingComp, setAddingComp] = useState(false);
   const [hashtagStats, setHashtagStats] = useState<{ hashtag: string; platform: string; uses: number }[]>([]);
   const [hashtagPlatform, setHashtagPlatform] = useState("all");
+
+  const [attrModel, setAttrModel] = useState("last_touch");
+  const [attrData, setAttrData] = useState<AttributionData | null>(null);
+  const [attrLoading, setAttrLoading] = useState(false);
+  const [convModal, setConvModal] = useState(false);
+  const [convForm, setConvForm] = useState({ email: "", value: "", source: "", confidence: "customer_entered" });
+  const [convSaving, setConvSaving] = useState(false);
+  const [convMsg, setConvMsg] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -280,6 +305,25 @@ export default function AnalyticsPage() {
     }
   }, [activeTab, heatmapPlatform, loadHeatmap]);
 
+  useEffect(() => {
+    if (activeTab === "attribution") {
+      setAttrLoading(true);
+      api.get<AttributionData>(`/analytics/attribution?model=${attrModel}`)
+        .then(setAttrData).catch(() => {}).finally(() => setAttrLoading(false));
+    }
+  }, [activeTab, attrModel]);
+
+  const saveConversion = async () => {
+    if (!convForm.email || !convForm.value) return;
+    setConvSaving(true); setConvMsg("");
+    try {
+      await api.post("/analytics/conversions", { ...convForm, value: parseFloat(convForm.value) });
+      setConvMsg("✓ Saved");
+      setConvForm({ email: "", value: "", source: "", confidence: "customer_entered" });
+    } catch (e: any) { setConvMsg(e.message || "Failed"); }
+    setConvSaving(false);
+  };
+
   const addCompetitor = async () => {
     if (!newCompetitor.url.trim()) return;
     setAddingComp(true);
@@ -311,7 +355,7 @@ export default function AnalyticsPage() {
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
                   activeTab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
                 }`}>
-                {t === "engagement" ? "Engagement" : t === "revenue" ? "Revenue 💵" : t === "roi" ? "📈 ROI" : t === "heatmap" ? "🔥 Heat Map" : t === "benchmark" ? "🏆 Benchmark" : "#️⃣ Hashtags"}
+                {t === "engagement" ? "Engagement" : t === "revenue" ? "Revenue 💵" : t === "roi" ? "📈 ROI" : t === "heatmap" ? "🔥 Heat Map" : t === "benchmark" ? "🏆 Benchmark" : t === "attribution" ? "🎯 Attribution" : "#️⃣ Hashtags"}
               </button>
             ))}
           </div>
@@ -336,6 +380,160 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
+
+      {activeTab === "attribution" && (
+        <div className="space-y-6">
+          {/* Model selector + Record Conversion button */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex gap-2 flex-wrap">
+              {(["first_touch", "last_touch", "campaign_touch", "assisted"] as const).map((m) => (
+                <button key={m} onClick={() => setAttrModel(m)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                    attrModel === m ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}>
+                  {m.replace(/_/g, " ")}
+                </button>
+              ))}
+            </div>
+            {isOwner && (
+              <button onClick={() => setConvModal(true)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+                + Record Conversion
+              </button>
+            )}
+          </div>
+
+          {attrLoading ? (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Calculating attribution…</div>
+          ) : !attrData ? (
+            <div className="bg-white border border-dashed border-gray-200 rounded-xl p-12 text-center">
+              <p className="text-gray-400 text-sm">No attribution data yet. Leads and conversions will appear here once captured.</p>
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: "Total Conversions", value: attrData.total_conversions },
+                  { label: "Attributed", value: attrData.attributed_conversions },
+                  { label: "Attributed Revenue", value: `₦${attrData.total_attributed_revenue.toLocaleString()}` },
+                  { label: "Lead Source Coverage", value: `${attrData.coverage.leads_coverage_pct}%` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-white border border-gray-200 rounded-xl p-5">
+                    <p className="text-2xl font-bold text-gray-900">{value}</p>
+                    <p className="text-sm text-gray-500 mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tracking coverage bar */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-700">Tracking Coverage</p>
+                  <span className="text-xs text-gray-400">{attrData.coverage.leads_with_source} of {attrData.coverage.total_leads} leads have a known source</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="h-3 bg-indigo-500 rounded-full transition-all"
+                    style={{ width: `${attrData.coverage.leads_coverage_pct}%` }} />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Conversions: {attrData.coverage.conversions_with_source} of {attrData.coverage.total_conversions} have a known source ({attrData.coverage.conversions_coverage_pct}%)
+                </p>
+              </div>
+
+              {/* Top sources */}
+              {attrData.top_sources.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Top Sources</h3>
+                  <div className="space-y-3">
+                    {attrData.top_sources.map((s) => {
+                      const max = attrData.top_sources[0]?.revenue || 1;
+                      return (
+                        <div key={s.source} className="flex items-center gap-3">
+                          <span className="text-sm text-gray-700 w-32 truncate capitalize">{s.source}</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-2">
+                            <div className="h-2 bg-indigo-500 rounded-full" style={{ width: `${(s.revenue / max) * 100}%` }} />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900 w-28 text-right">₦{s.revenue.toLocaleString()}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Top campaigns */}
+              {attrData.top_campaigns.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Top Campaigns</h3>
+                  <div className="space-y-3">
+                    {attrData.top_campaigns.map((c) => {
+                      const max = attrData.top_campaigns[0]?.revenue || 1;
+                      return (
+                        <div key={c.campaign} className="flex items-center gap-3">
+                          <span className="text-sm text-gray-700 w-40 truncate">{c.campaign}</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-2">
+                            <div className="h-2 bg-green-500 rounded-full" style={{ width: `${(c.revenue / max) * 100}%` }} />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900 w-28 text-right">₦{c.revenue.toLocaleString()}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Confidence note */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700">
+                <p className="font-semibold mb-1">About confidence labels</p>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { label: "confirmed", color: "bg-green-100 text-green-700", desc: "Paystack webhook" },
+                    { label: "estimated", color: "bg-yellow-100 text-yellow-700", desc: "Inferred from touchpoints" },
+                    { label: "customer-entered", color: "bg-blue-100 text-blue-700", desc: "Manually recorded" },
+                    { label: "unavailable", color: "bg-gray-100 text-gray-500", desc: "No source data" },
+                  ].map(({ label, color, desc }) => (
+                    <span key={label} className={`px-2 py-0.5 rounded-full font-medium ${color}`}>{label} — {desc}</span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Record Conversion modal */}
+          {convModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                <h3 className="font-semibold text-gray-900 mb-4">Record Conversion</h3>
+                <div className="space-y-3">
+                  <input value={convForm.email} onChange={e => setConvForm(p => ({...p, email: e.target.value}))}
+                    placeholder="Lead email *" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+                  <input value={convForm.value} onChange={e => setConvForm(p => ({...p, value: e.target.value}))}
+                    placeholder="Value in ₦ *" type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+                  <input value={convForm.source} onChange={e => setConvForm(p => ({...p, source: e.target.value}))}
+                    placeholder="Source (e.g. whatsapp, referral)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+                  <select value={convForm.confidence} onChange={e => setConvForm(p => ({...p, confidence: e.target.value}))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900">
+                    <option value="confirmed">Confirmed</option>
+                    <option value="estimated">Estimated</option>
+                    <option value="customer_entered">Customer-entered</option>
+                    <option value="unavailable">Unavailable</option>
+                  </select>
+                </div>
+                {convMsg && <p className={`text-sm mt-2 font-medium ${convMsg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{convMsg}</p>}
+                <div className="flex gap-3 mt-5">
+                  <button onClick={() => { setConvModal(false); setConvMsg(""); }}
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                  <button onClick={saveConversion} disabled={convSaving || !convForm.email || !convForm.value}
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+                    {convSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === "heatmap" ? (
         <div>
