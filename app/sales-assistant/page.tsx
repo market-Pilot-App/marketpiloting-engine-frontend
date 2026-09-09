@@ -265,17 +265,17 @@ export default function SalesAssistantPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 space-y-3">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Entry</p>
               <div className="grid grid-cols-2 gap-3">
-                <input value={kForm.name} onChange={e => setKForm(p => ({...p, name: e.target.value}))} placeholder="Product / Service name *" className="border border-gray-200 rounded-lg px-3 py-2 text-sm col-span-2" />
-                <input value={kForm.price_display} onChange={e => setKForm(p => ({...p, price_display: e.target.value}))} placeholder='Price e.g. "From ₦50,000"' className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-                <select value={kForm.availability} onChange={e => setKForm(p => ({...p, availability: e.target.value}))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <input value={kForm.name} onChange={e => setKForm(p => ({...p, name: e.target.value}))} placeholder="Product / Service name *" className="border border-gray-200 rounded-lg px-3 py-2 text-sm col-span-2 bg-white text-gray-900 placeholder-gray-400" />
+                <input value={kForm.price_display} onChange={e => setKForm(p => ({...p, price_display: e.target.value}))} placeholder='Price e.g. "From ₦50,000"' className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+                <select value={kForm.availability} onChange={e => setKForm(p => ({...p, availability: e.target.value}))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900">
                   <option value="available">Available</option>
                   <option value="limited">Limited</option>
                   <option value="unavailable">Unavailable</option>
                   <option value="by_request">By Request</option>
                 </select>
-                <textarea value={kForm.description} onChange={e => setKForm(p => ({...p, description: e.target.value}))} placeholder="Description" rows={2} className="border border-gray-200 rounded-lg px-3 py-2 text-sm col-span-2 resize-none" />
-                <input value={kForm.service_area} onChange={e => setKForm(p => ({...p, service_area: e.target.value}))} placeholder="Service area (optional)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-                <input value={kForm.booking_cta} onChange={e => setKForm(p => ({...p, booking_cta: e.target.value}))} placeholder="Booking link (optional)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <textarea value={kForm.description} onChange={e => setKForm(p => ({...p, description: e.target.value}))} placeholder="Description" rows={2} className="border border-gray-200 rounded-lg px-3 py-2 text-sm col-span-2 resize-none bg-white text-gray-900 placeholder-gray-400" />
+                <input value={kForm.service_area} onChange={e => setKForm(p => ({...p, service_area: e.target.value}))} placeholder="Service area (optional)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+                <input value={kForm.booking_cta} onChange={e => setKForm(p => ({...p, booking_cta: e.target.value}))} placeholder="Booking link (optional)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
               </div>
               <button onClick={addKnowledge} disabled={kSaving || !kForm.name} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
                 {kSaving ? "Saving..." : "+ Add Entry"}
@@ -306,9 +306,9 @@ export default function SalesAssistantPage() {
           <div>
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Approved Q&A Rules ({rules.length})</h2>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 space-y-3">
-              <input value={rForm.question} onChange={e => setRForm(p => ({...p, question: e.target.value}))} placeholder='Question e.g. "Do you offer discounts?"' className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-              <textarea value={rForm.approved_answer} onChange={e => setRForm(p => ({...p, approved_answer: e.target.value}))} placeholder="Approved answer (used verbatim)" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
-              <select value={rForm.escalation_condition} onChange={e => setRForm(p => ({...p, escalation_condition: e.target.value}))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full">
+              <input value={rForm.question} onChange={e => setRForm(p => ({...p, question: e.target.value}))} placeholder='Question e.g. "Do you offer discounts?"' className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400" />
+              <textarea value={rForm.approved_answer} onChange={e => setRForm(p => ({...p, approved_answer: e.target.value}))} placeholder="Approved answer (used verbatim)" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none bg-white text-gray-900 placeholder-gray-400" />
+              <select value={rForm.escalation_condition} onChange={e => setRForm(p => ({...p, escalation_condition: e.target.value}))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full bg-white text-gray-900">
                 <option value="">No escalation</option>
                 <option value="asks_for_human">Escalate: asks for human</option>
                 <option value="strong_purchase_intent">Escalate: strong purchase intent</option>
@@ -367,18 +367,18 @@ function SettingsTab() {
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Qualification Questions</h2>
         <p className="text-xs text-gray-500 mb-4">The assistant asks these one at a time to qualify leads.</p>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Rule set name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4" />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Rule set name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 bg-white text-gray-900 placeholder-gray-400" />
         <div className="space-y-2 mb-4">
           {questions.map((q, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="text-xs text-gray-400 w-5">{i + 1}.</span>
-              <input value={q} onChange={e => setQuestions(prev => prev.map((x, j) => j === i ? e.target.value : x))} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              <input value={q} onChange={e => setQuestions(prev => prev.map((x, j) => j === i ? e.target.value : x))} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900" />
               <button onClick={() => setQuestions(prev => prev.filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-400 text-lg">×</button>
             </div>
           ))}
         </div>
         <div className="flex gap-2 mb-4">
-          <input value={newQ} onChange={e => setNewQ(e.target.value)} placeholder="Add a question..." className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          <input value={newQ} onChange={e => setNewQ(e.target.value)} placeholder="Add a question..." className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 placeholder-gray-400"
             onKeyDown={e => { if (e.key === "Enter" && newQ) { setQuestions(p => [...p, newQ]); setNewQ(""); }}} />
           <button onClick={() => { if (newQ) { setQuestions(p => [...p, newQ]); setNewQ(""); }}} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200">Add</button>
         </div>
