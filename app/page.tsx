@@ -237,12 +237,13 @@ export default function DashboardPage() {
               {/* Checklist */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {onboarding.items.map((item) => {
-                  // Platforms item: partial if connected > 0 but < 8
                   const platformMatch = item.key === "platform_connected"
                     ? item.label.match(/(\d+)\/8/)
                     : null;
                   const connectedCount = platformMatch ? parseInt(platformMatch[1]) : 0;
-                  const isPartial = item.key === "platform_connected" && connectedCount > 0 && connectedCount < 8;
+                  const isPartial =
+                    (item.key === "platform_connected" && connectedCount > 0 && connectedCount < 8) ||
+                    (item.key === "brand_intelligence" && item.partial === true);
                   const isFullDone = item.done && !isPartial;
                   return (
                     <Link
