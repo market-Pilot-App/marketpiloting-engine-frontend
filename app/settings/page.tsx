@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
 
 interface Connections {
   facebook: boolean;
@@ -234,7 +235,16 @@ function RecyclingSettings() {
 }
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const canAccess = useCanAccess("admin"); // viewer + editor cannot access settings
+  const searchParams = useSearchParams();
   if (!canAccess) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-4xl">🔒</p>
@@ -328,6 +338,12 @@ export default function SettingsPage() {
     const stored = localStorage.getItem("mp_client");
     if (stored) setPlan(JSON.parse(stored).plan ?? "solo");
     api.get<Connections>("/campaigns/me/connections").then(setConnections);
+    // Handle mobile OAuth redirect return
+    const fbParam = searchParams.get("fb");
+    if (fbParam === "connected") {
+      api.get<Connections>("/campaigns/me/connections").then(setConnections);
+      window.history.replaceState({}, "", "/settings");
+    }
     api.get<BillingInfo>("/auth/billing").then(setBilling).catch(() => {});
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
     api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean; whatsapp_escalation_number: string }>("/whatsapp/settings")
@@ -596,6 +612,13 @@ export default function SettingsPage() {
                           const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
                           try {
                             const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            if (isMobile) {
+                              // Mobile: full-page redirect
+                              window.location.href = auth_url;
+                              return;
+                            }
+                            // Desktop: popup
                             const popup = window.open(auth_url, popupName, "width=600,height=700");
                             const handler = (e: MessageEvent) => {
                               if (e.data === msgKey) {
