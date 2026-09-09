@@ -23,6 +23,7 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/leads", label: "Leads", icon: "👥" },
   { href: "/sales-assistant", label: "Sales Assistant", icon: "🤖" },
+  { href: "/brand-protection", label: "Brand Protection", icon: "🛡️" },
   { href: "/sequences", label: "Sequences", icon: "📧" },
   { href: "/newsletter", label: "Newsletter", icon: "📬" },
   { href: "/referrals", label: "Referrals", icon: "🔗" },
