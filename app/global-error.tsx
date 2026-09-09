@@ -10,6 +10,10 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
+    if (error?.name === "ChunkLoadError" || error?.message?.includes("Loading chunk")) {
+      window.location.reload();
+      return;
+    }
     Sentry.captureException(error);
   }, [error]);
 
