@@ -33,6 +33,7 @@ const NAV = [
   { href: "/testimonials", label: "Testimonials", icon: "⭐" },
   { href: "/ads", label: "Ad Generator", icon: "🎯" },
   { href: "/whatsapp", label: "WA Broadcast", icon: "📲" },
+  { href: "/google-business", label: "Google Business", icon: "🗺️" },
 ];
 
 const VIDEO_NAV = { href: "/video", label: "Video", icon: "🎬" };
@@ -43,6 +44,7 @@ const AGENCY_NAV = [
   { href: "/team", label: "Team", icon: "👥" },
 ];
 const LOCATIONS_NAV = { href: "/locations", label: "Locations", icon: "📍" };
+
 const ADMIN_NAV = [{ href: "/admin", label: "Admin Panel", icon: "⚙️" }];
 
 interface CampaignSummary { id: number; name: string; niche: string; suspended?: boolean; }
