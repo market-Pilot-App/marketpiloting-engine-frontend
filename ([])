@@ -1,1 +1,0 @@
-188:  const [hashtagStats, setHashtagStats] = useState hashtag: string; platform: string; uses: number }[]; 

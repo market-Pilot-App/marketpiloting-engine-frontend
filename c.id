@@ -1,1 +1,0 @@
-296:    setBenchmark((b) = ? { ...b, competitors: b.competitors.filter((c) = !== id) } : b); 
