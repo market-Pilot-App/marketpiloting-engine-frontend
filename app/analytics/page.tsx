@@ -123,6 +123,20 @@ interface RevenueData {
   top_posts: { post_id: number; platform: string; sales: number; revenue: number; preview: string }[];
 }
 
+interface BIPerf {
+  available: boolean;
+  bi_posts: number;
+  bi_likes: number;
+  bi_reach: number;
+  bi_avg_engagement: number;
+  regular_posts: number;
+  regular_likes: number;
+  regular_reach: number;
+  regular_avg_engagement: number;
+  research_items: { pending: number; approved: number; used: number; rejected: number };
+  lift: number | null;
+}
+
 export default function AnalyticsPage() {
   const { role } = useAuth();
   const isOwner   = role === null;
@@ -163,6 +177,7 @@ export default function AnalyticsPage() {
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null | undefined>(undefined);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
+  const [biPerf, setBiPerf] = useState<BIPerf | null>(null);
   const [heatmapPlatform, setHeatmapPlatform] = useState("all");
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
@@ -200,6 +215,7 @@ export default function AnalyticsPage() {
     api.get<ReportPreview>("/analytics/report/preview").then(setReportPreview).catch(() => {});
     api.get<SentimentData>("/auto-reply/analytics/sentiment").then(setSentiment).catch(() => {});
     api.get<WeeklyReport>("/analytics/weekly-report/latest").then(setWeeklyReport).catch(() => setWeeklyReport(null));
+    api.get<BIPerf>("/analytics/bi-performance").then(setBiPerf).catch(() => {});
   }, []);
 
   const generateReport = async () => {
@@ -1006,6 +1022,63 @@ export default function AnalyticsPage() {
               </>
             )}
           </div>
+
+          {/* Brand Intelligence Performance */}
+          {biPerf && biPerf.available && (biPerf.bi_posts > 0 || biPerf.research_items.pending > 0 || biPerf.research_items.approved > 0) && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-semibold text-gray-900">🧠 Brand Intelligence Performance</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Research-driven content vs regular content</p>
+                </div>
+                <a href="/brand-intelligence" className="text-xs text-indigo-600 hover:underline font-medium">View Research →</a>
+              </div>
+
+              {/* Research pipeline stats */}
+              <div className="grid grid-cols-4 gap-3 mb-5">
+                {[
+                  { label: "Pending Review", value: biPerf.research_items.pending, color: "text-yellow-600", bg: "bg-yellow-50" },
+                  { label: "Approved",       value: biPerf.research_items.approved, color: "text-green-600",  bg: "bg-green-50" },
+                  { label: "Used for Posts", value: biPerf.research_items.used,     color: "text-indigo-600", bg: "bg-indigo-50" },
+                  { label: "Rejected",       value: biPerf.research_items.rejected, color: "text-gray-500",   bg: "bg-gray-50" },
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} className={`${bg} rounded-lg p-3 text-center`}>
+                    <p className={`text-xl font-bold ${color}`}>{value}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* BI vs Regular comparison */}
+              {biPerf.bi_posts > 0 && (
+                <div className="border border-gray-100 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-3 bg-gray-50 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <span>Metric</span>
+                    <span className="text-center">🧠 BI Posts ({biPerf.bi_posts})</span>
+                    <span className="text-center">Regular Posts ({biPerf.regular_posts})</span>
+                  </div>
+                  {[
+                    { label: "Total Likes",   bi: biPerf.bi_likes,   reg: biPerf.regular_likes },
+                    { label: "Total Reach",   bi: biPerf.bi_reach,   reg: biPerf.regular_reach },
+                    { label: "Avg Engagement", bi: biPerf.bi_avg_engagement, reg: biPerf.regular_avg_engagement },
+                  ].map(({ label, bi, reg }) => (
+                    <div key={label} className="grid grid-cols-3 px-4 py-3 border-t border-gray-100 text-sm">
+                      <span className="text-gray-600">{label}</span>
+                      <span className="text-center font-semibold text-indigo-700">{typeof bi === "number" && bi % 1 !== 0 ? bi.toFixed(2) : bi.toLocaleString()}</span>
+                      <span className="text-center text-gray-500">{typeof reg === "number" && reg % 1 !== 0 ? reg.toFixed(2) : reg.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {biPerf.lift !== null && (
+                    <div className="px-4 py-3 border-t border-gray-100 bg-indigo-50">
+                      <p className={`text-sm font-semibold ${biPerf.lift >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {biPerf.lift >= 0 ? "↑" : "↓"} BI posts have {Math.abs(biPerf.lift).toFixed(2)} {biPerf.lift >= 0 ? "higher" : "lower"} avg engagement score than regular posts
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* PDF Report section — owner only (contains business financials + email trigger) */}
           {reportPreview && isOwner && (

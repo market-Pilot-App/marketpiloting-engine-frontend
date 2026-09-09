@@ -40,6 +40,7 @@ interface CalendarPost {
   approval_status: string;
   text_preview: string;
   image_url: string | null;
+  angle: string;
 }
 
 interface CalEvent {
@@ -83,7 +84,7 @@ export default function CalendarPage() {
       setEvents(
         posts.map((p) => ({
           id: p.id,
-          title: `${PLATFORM_EMOJI[p.platform] || "📄"} ${p.text_preview || p.platform}`,
+          title: `${p.angle.startsWith("[BI]") ? "🧠 " : ""}${PLATFORM_EMOJI[p.platform] || "📄"} ${p.text_preview || p.platform}`,
           start: new Date(p.scheduled_time),
           end: new Date(new Date(p.scheduled_time).getTime() + 30 * 60 * 1000),
           resource: p,
@@ -272,6 +273,9 @@ export default function CalendarPage() {
                 <p>👍 {selected.likes} likes · 👁 {selected.reach} reach</p>
               )}
               {selected.is_recyclable && <p>🔄 Recycling enabled</p>}
+              {selected.angle.startsWith("[BI]") && (
+                <p className="text-purple-400">🧠 Brand Intelligence post</p>
+              )}
               {selected.approval_status === "pending" && (
                 <p className="text-yellow-400">⏳ Pending approval</p>
               )}
