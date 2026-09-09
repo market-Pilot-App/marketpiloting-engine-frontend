@@ -1,0 +1,1 @@
+1074:                        {biPerf.lift  ? "↑" : "↓"} BI posts have {Math.abs(biPerf.lift).toFixed(2)} {biPerf.lift  ? "higher" : "lower"} avg engagement score than regular posts 
