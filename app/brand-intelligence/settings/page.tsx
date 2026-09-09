@@ -13,6 +13,7 @@ interface Config {
   keywords: string[];
   competitors: string[];
   excluded_topics: string[];
+  custom_rss_feeds: string[];
   freshness_news_days: number;
 }
 
@@ -77,6 +78,7 @@ export default function BrandIntelligenceSettingsPage() {
     keywords: [],
     competitors: [],
     excluded_topics: [],
+    custom_rss_feeds: [],
     freshness_news_days: 14,
   });
   const [loading, setLoading] = useState(true);
@@ -220,6 +222,15 @@ export default function BrandIntelligenceSettingsPage() {
           <TagInput label="Keywords" values={form.keywords} onChange={(v) => set("keywords", v)} />
           <TagInput label="Competitors to monitor" values={form.competitors} onChange={(v) => set("competitors", v)} />
           <TagInput label="Excluded topics" values={form.excluded_topics} onChange={(v) => set("excluded_topics", v)} />
+        </div>
+
+        {/* Custom RSS Feeds */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+          <div>
+            <p className="text-white font-medium text-sm">Custom RSS Feeds</p>
+            <p className="text-gray-500 text-xs mt-0.5">Add your own RSS feed URLs to include in research runs</p>
+          </div>
+          <TagInput label="RSS feed URLs (e.g. https://example.com/feed)" values={form.custom_rss_feeds} onChange={(v) => set("custom_rss_feeds", v)} />
         </div>
       </div>
     </div>

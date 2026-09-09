@@ -20,10 +20,11 @@ interface ResearchItem {
   rejection_reason: string | null;
   expires_at: string | null;
   suggested_platforms: string[];
+  competitor_mention: boolean;
   created_at: string;
 }
 
-const STATUS_FILTERS = ["all", "under_review", "approved", "rejected", "used"];
+const STATUS_FILTERS = ["all", "under_review", "approved", "rejected", "used", "competitor"];
 
 function ScoreBadge({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
@@ -53,9 +54,11 @@ export default function BrandIntelligenceLibraryPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = filter !== "all" ? `?status=${filter}` : "";
-      const data = await api.get<ResearchItem[]>(`/brand-intelligence/items${params}`);
-      setItems(data);
+      // "competitor" is a client-side filter — fetch all items and filter locally
+      const apiFilter = filter === "competitor" ? "" : filter !== "all" ? `?status=${filter}` : "";
+      const data = await api.get<ResearchItem[]>(`/brand-intelligence/items${apiFilter}`);
+      const filtered = filter === "competitor" ? data.filter((i) => i.competitor_mention) : data;
+      setItems(filtered);
     } catch {
       setItems([]);
     } finally {
@@ -122,7 +125,7 @@ export default function BrandIntelligenceLibraryPage() {
             onClick={() => setFilter(s)}
             className={`text-xs px-3 py-1.5 rounded-lg transition capitalize ${filter === s ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}
           >
-            {s}
+            {s === "competitor" ? "🏢 Competitor" : s.replace("_", " ")}
           </button>
         ))}
       </div>
@@ -138,9 +141,14 @@ export default function BrandIntelligenceLibraryPage() {
       ) : (
         <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div key={item.id} className={`bg-gray-900 border rounded-xl p-5 ${item.competitor_mention ? "border-orange-800/60" : "border-gray-800"}`}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {item.competitor_mention && (
+                      <span className="bg-orange-900/50 text-orange-400 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">🏢 Competitor</span>
+                    )}
+                  </div>
                   <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="text-white font-medium text-sm hover:text-indigo-400 transition line-clamp-2">
                     {item.title}
                   </a>
