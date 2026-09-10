@@ -468,7 +468,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: Campaign; onBack: () =
       {tab === "email" && (
         <div className="grid gap-4">
           {byType("email_sequence").map(a => (
-            <AssetCard key={String(a.id)} asset={a} onApprove={approveAsset} onReject={rejectAsset} />
+            <EmailSequenceCard key={String(a.id)} asset={a} onApprove={approveAsset} onReject={rejectAsset} />
           ))}
           {byType("email_sequence").length === 0 && <EmptyTab label="No email sequence generated yet" />}
         </div>
@@ -536,6 +536,56 @@ function CampaignDetail({ campaign, onBack }: { campaign: Campaign; onBack: () =
             <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-white">{stat.value}</p>
               <p className="text-gray-400 text-xs mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmailSequenceCard({
+  asset,
+  onApprove,
+  onReject,
+}: {
+  asset: Record<string, unknown>;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+}) {
+  const status = String(asset.approval_status || "pending");
+  const statusColor = status === "approved"
+    ? "bg-green-500/20 text-green-300"
+    : status === "rejected"
+    ? "bg-red-500/20 text-red-300"
+    : "bg-yellow-500/20 text-yellow-300";
+  const steps = (asset.email_steps as Array<{ day: number; subject: string; body: string }>) || [];
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">email sequence</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>{status}</span>
+        </div>
+        {status === "pending" && (
+          <div className="flex gap-2">
+            <button onClick={() => onApprove(Number(asset.id))} className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg">Approve</button>
+            <button onClick={() => onReject(Number(asset.id))} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded-lg">Reject</button>
+          </div>
+        )}
+      </div>
+      {steps.length === 0 ? (
+        <p className="text-gray-500 text-sm">No email steps found.</p>
+      ) : (
+        <div className="space-y-3">
+          {steps.map((step, i) => (
+            <div key={i} className="border border-gray-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs bg-indigo-900/50 text-indigo-400 px-2 py-0.5 rounded">Day {step.day}</span>
+                <p className="text-white text-sm font-medium">{step.subject}</p>
+              </div>
+              <p className="text-gray-400 text-xs whitespace-pre-wrap">{step.body}</p>
             </div>
           ))}
         </div>
