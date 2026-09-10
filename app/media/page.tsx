@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useCanAccess } from "@/lib/use-role-guard";
+import { useAuth } from "@/lib/auth-context";
 
 const PLATFORMS = ["facebook", "instagram", "twitter", "linkedin", "telegram", "tiktok"];
 
@@ -16,6 +17,7 @@ interface BrandImage {
 
 export default function MediaPage() {
   const canAccess = useCanAccess("editor");
+  const { role } = useAuth();
   if (!canAccess) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <span className="text-4xl">🔒</span>
@@ -25,6 +27,7 @@ export default function MediaPage() {
   );
   const [images, setImages] = useState<BrandImage[]>([]);
   const [total, setTotal] = useState(0);
+  const [max, setMax] = useState(100);
   const [filterPlatform, setFilterPlatform] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -37,6 +40,7 @@ export default function MediaPage() {
     const data = await api.get<{ total: number; max: number; images: BrandImage[] }>(`/media/images${params}`);
     setImages(data.images);
     setTotal(data.total);
+    setMax(data.max);
   };
 
   useEffect(() => { load(); }, []);
@@ -83,8 +87,7 @@ export default function MediaPage() {
     await load();
   };
 
-  const MAX = 50;
-  const usedPct = Math.round((total / MAX) * 100);
+  const usedPct = Math.round((total / max) * 100);
 
   return (
     <div>
@@ -93,7 +96,7 @@ export default function MediaPage() {
           <h1 className="text-2xl font-bold">🖼️ Brand Image Library</h1>
           <p className="text-gray-400 text-sm mt-0.5">Upload your product images — AI uses them automatically when posting</p>
         </div>
-        <span className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full">{total} / {MAX} images</span>
+        <span className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full">{total} / {max} images</span>
       </div>
 
       {/* Usage bar */}
@@ -192,12 +195,14 @@ export default function MediaPage() {
               <div className="aspect-square relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.public_url} alt={img.filename} className="w-full h-full object-cover" />
-                <button
-                  onClick={() => deleteImage(img.id)}
-                  className="absolute top-1 right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                >
-                  ×
-                </button>
+                {(role === null || role === "admin") && (
+                  <button
+                    onClick={() => deleteImage(img.id)}
+                    className="absolute top-1 right-1 bg-red-600 hover:bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
               <div className="p-2">
                 <p className="text-xs text-gray-400 truncate">{img.filename}</p>
