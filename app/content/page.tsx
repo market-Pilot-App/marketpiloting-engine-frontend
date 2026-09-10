@@ -521,7 +521,7 @@ export default function ContentStudio() {
       )}
 
       {tab === "generate" && (<>
-        {(plan === "growth" || plan === "agency" || plan === "admin") && (
+        {(plan === "growth" || plan === "pro" || plan === "agency" || plan === "admin") && (
           <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-4 mb-6 flex items-center gap-4 flex-wrap">
             <span className="text-sm font-medium text-purple-300">📱 Story Generator</span>
             <select
@@ -543,7 +543,7 @@ export default function ContentStudio() {
             <span className="text-xs text-gray-500">Vertical format · max 8 words · auto-scheduled at 7 AM</span>
           </div>
         )}
-        {storyResult && (plan === "growth" || plan === "agency" || plan === "admin") && (
+        {storyResult && (plan === "growth" || plan === "pro" || plan === "agency" || plan === "admin") && (
           <div className="bg-gray-900 border border-purple-700 rounded-xl p-4 mb-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs text-purple-400 font-semibold uppercase tracking-wide">📱 {storyResult.platform} Story</span>
@@ -664,6 +664,7 @@ export default function ContentStudio() {
           {newsMode ? (
             <div className="bg-orange-900/20 border border-orange-800/40 rounded-lg px-4 py-3 text-sm text-orange-300">
               Will fetch your top trending keyword and rewrite it as a brand post with CTA.
+              <span className="block mt-1 text-xs text-orange-400/70">ℹ️ Generates 1 post per connected platform — counts toward your daily limit.</span>
             </div>
           ) : (
             <>
