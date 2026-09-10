@@ -41,7 +41,7 @@ const PLATFORM_EMOJI: Record<string, string> = {
 };
 
 const PLAN_LIMITS: Record<string, number> = {
-  solo: 3, starter: 5, growth: 8, agency: 12, admin: 12,
+  solo: 3, starter: 5, growth: 8, pro: 12, agency: 12, admin: 12,
 };
 
 export default function SchedulerPage() {
