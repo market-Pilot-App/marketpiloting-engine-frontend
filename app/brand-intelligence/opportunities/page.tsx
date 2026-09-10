@@ -45,6 +45,7 @@ export default function BrandIntelligenceOpportunitiesPage() {
   const [genError, setGenError] = useState<{ [oppId: number]: string }>({});
   const [editingHook, setEditingHook] = useState<number | null>(null);
   const [hookDraft, setHookDraft] = useState<{ [oppId: number]: string }>({});
+  const [hookSaving, setHookSaving] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,7 +186,22 @@ export default function BrandIntelligenceOpportunitiesPage() {
                       className="w-full bg-gray-800 text-white text-xs rounded-lg px-3 py-2 border border-indigo-600 focus:outline-none resize-none"
                     />
                     <div className="flex gap-2 mt-1">
-                      <button onClick={() => setEditingHook(null)} className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg transition">Save</button>
+                      <button
+                        disabled={hookSaving === opp.id}
+                        onClick={async () => {
+                          setHookSaving(opp.id);
+                          try {
+                            await api.patch(`/brand-intelligence/opportunities/${opp.id}`, { hook: hookDraft[opp.id] ?? "" });
+                            setOpps((prev) => prev.map((o) => o.id === opp.id ? { ...o, hook: hookDraft[opp.id] ?? o.hook } : o));
+                          } finally {
+                            setHookSaving(null);
+                            setEditingHook(null);
+                          }
+                        }}
+                        className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition"
+                      >
+                        {hookSaving === opp.id ? "Saving..." : "Save"}
+                      </button>
                       <button onClick={() => { setEditingHook(null); setHookDraft((d) => ({ ...d, [opp.id]: opp.hook ?? "" })); }} className="text-xs text-gray-500 hover:text-white transition">Cancel</button>
                     </div>
                   </div>
