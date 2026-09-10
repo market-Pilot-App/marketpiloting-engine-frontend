@@ -28,11 +28,13 @@ interface Overview {
   total_posts: number;
   total_blogs: number;
   total_referral_clicks: number;
+  total_leads: number;
   telegram_members: number;
   platform_counts: Record<string, number>;
   chart: { date: string; posts: number }[];
 }
 interface AnglePerf { angle: string; clicks: number; posts: number; ctr: number; }
+
 interface RecentPost { id: number; platform: string; status: string; posted_at: string; post_url: string; }
 interface TrendData { all_topics: string[]; relevant: string[]; }
 interface ReferralStats { total_clicks: number; top_links: { code: string; angle: string; clicks: number }[]; }
@@ -41,10 +43,21 @@ interface CampaignSummary { id: number; name: string; niche: string; platforms: 
 interface BrandDNA { consistency_score: number; business_name: string; }
 interface OnboardingItem { key: string; label: string; href: string; done: boolean; partial?: boolean; }
 interface OnboardingHealth { score: number; max: number; items: OnboardingItem[]; }
+interface RoiData { roi_multiplier: number; total_spend: number; total_estimated_value: number; narrative: string; month: string; plan: string; }
 
 const PLATFORM_ICONS: Record<string, string> = {
   facebook: "📘", linkedin: "💼", instagram: "📸", twitter: "🐦", telegram: "✈️", tiktok: "🎵",
 };
+
+function cleanAngle(angle: string): string {
+  const s = angle.trim();
+  // If it looks like a JSON blob, extract just the first quoted title value
+  if (s.startsWith('"') || s.startsWith("{")) {
+    const m = s.match(/^["']?([^"',{\n]{3,60})/);
+    if (m) return m[1].trim().replace(/_/g, " ");
+  }
+  return s.replace(/_/g, " ").slice(0, 50);
+}
 
 // ── Video Intro ───────────────────────────────────────────────────────────────
 
@@ -114,6 +127,7 @@ export default function DashboardPage() {
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingHealth | null>(null);
   const [recentBoosts, setRecentBoosts] = useState<BoostedPost[]>([]);
+  const [roi, setRoi] = useState<RoiData | null>(null);
 
   useEffect(() => {
     if (!sessionStorage.getItem("mp_intro_seen")) setShowIntro(true);
@@ -133,7 +147,8 @@ export default function DashboardPage() {
       safe(api.get("/analytics/onboarding-health")),
       safe(api.get("/boosts/posts?limit=5")),
       safe(api.get("/revenue/summary?days=30")),
-    ]).then(([s, o, ap, r, t, ref, d, ob, rb, rev]) => {
+      safe(api.get("/analytics/roi")),
+    ]).then(([s, o, ap, r, t, ref, d, ob, rb, rev, roiData]) => {
       if (s) setStats(s);
       if (o) setOverview(o);
       if (ap) setAnglePerf((ap as any).angles || []);
@@ -144,12 +159,13 @@ export default function DashboardPage() {
       if (ob) setOnboarding(ob as OnboardingHealth);
       if (rb) setRecentBoosts(rb as BoostedPost[]);
       if (rev) setRevenue(rev as RevenueData);
+      if (roiData) setRoi(roiData as RoiData);
     }).finally(() => setLoading(false));
   }, [isAgency, client?.campaign_id]);
 
-  const runAction = async (label: string, endpoint: string, msg: string) => {
+  const runAction = async (label: string, endpoint: string, msg: string, body?: object) => {
     setActionLoading(label);
-    try { await api.post(endpoint); alert(msg); }
+    try { await api.post(endpoint, body); alert(msg); }
     catch { alert("Error — check backend logs"); }
     finally { setActionLoading(null); }
   };
@@ -169,6 +185,7 @@ export default function DashboardPage() {
     { label: "Referral Clicks",      value: overview?.total_referral_clicks ?? "—",     icon: "🔗" },
     { label: "Telegram Members",     value: overview?.telegram_members ?? "—",          icon: "✈️" },
     { label: "Brand DNA Score",      value: dna ? `${dna.consistency_score}/100` : "—", icon: "🧬" },
+    { label: "Total Leads",           value: overview?.total_leads ?? "—",               icon: "🎯" },
     // Revenue cards: owner only — financial data never shown to invitees
     ...(isOwner && revenue && revenue.total_revenue > 0 ? [
       { label: "Revenue (30d)", value: `₦${revenue.total_revenue.toLocaleString()}`, icon: "💵" },
@@ -183,10 +200,10 @@ export default function DashboardPage() {
     { label: "📅 Scheduler",             href: "/scheduler" },
   ].filter(() => canEdit);
 
-  const cronActions = [
+  const cronActions: { label: string; endpoint: string; msg: string; show: boolean; body?: object }[] = [
     { label: "▶️ Run Posts Now",          endpoint: "/scheduler/run-posts",          msg: "Posts triggered!",      show: canEdit },
     { label: "🔥 Newsjack Now",           endpoint: "/opportunities/hijack-news",    msg: "Newsjack generated!",    show: canEdit },
-    { label: "📝 Auto Blog",             endpoint: "/blog/generate",                msg: "Blog post generated!",   show: canEdit },
+    { label: "📝 Auto Blog",             endpoint: "/blog/generate",                msg: "Blog post generated!",   show: canEdit, body: { topic: null } },
     { label: "📰 News → Social Posts",   endpoint: "/content/generate-from-news",   msg: "News posts generated!",  show: canEdit },
     { label: "📧 Send Report",           endpoint: "/scheduler/run-morning-report",  msg: "Report sent!",           show: canAdminR },
     { label: "⚙️ Fill Schedule",         endpoint: "/scheduler/fill-now",           msg: "Schedule filled!",       show: canEdit },
@@ -206,7 +223,12 @@ export default function DashboardPage() {
             {isAdmin ? "Super Admin — all campaigns visible" : "Your autonomous marketing engine is running"}
           </p>
         </div>
-        <span className="text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full">● Autopilot Active</span>
+        {(() => {
+          const active = (stats?.queued_posts ?? 0) > 0 || (stats?.total_posts_today ?? 0) > 0;
+          return active
+            ? <span className="text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full">● Autopilot Active</span>
+            : <span className="text-xs text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full">⚠️ Engine Idle</span>;
+        })()}
       </div>
 
       {loading ? (
@@ -282,6 +304,33 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+
+          {/* ROI Widget — owner only, shown when multiplier > 0 */}
+          <ErrorBoundary label="ROI">
+          {isOwner && roi && roi.roi_multiplier > 0 && (
+            <div className="bg-gray-900 border border-indigo-500/20 rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">🚀 ROI This Month — {roi.month}</h3>
+                <Link href="/analytics" className="text-indigo-400 text-xs hover:underline">Full report →</Link>
+              </div>
+              <div className="flex flex-wrap gap-4 mb-3">
+                <div className="bg-indigo-500/10 rounded-lg px-4 py-2 text-center">
+                  <p className="text-2xl font-bold text-indigo-400">{roi.roi_multiplier}x</p>
+                  <p className="text-xs text-gray-400">ROI multiplier</p>
+                </div>
+                <div className="bg-gray-800 rounded-lg px-4 py-2 text-center">
+                  <p className="text-lg font-bold text-white">₦{roi.total_spend.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400">Invested</p>
+                </div>
+                <div className="bg-green-500/10 rounded-lg px-4 py-2 text-center">
+                  <p className="text-lg font-bold text-green-400">₦{roi.total_estimated_value.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400">Value generated</p>
+                </div>
+              </div>
+              {roi.narrative && <p className="text-gray-400 text-sm leading-relaxed">{roi.narrative}</p>}
+            </div>
+          )}
+          </ErrorBoundary>
 
           {/* Platform Activity + Telegram */}
           <ErrorBoundary label="Platform Activity">
@@ -415,7 +464,7 @@ export default function DashboardPage() {
                     <div key={a.angle} className="flex items-center gap-3">
                       <span className="text-xs text-gray-500 w-4">{i + 1}</span>
                       <span className="text-sm text-gray-300 capitalize w-36 flex-shrink-0 truncate">
-                        {a.angle.replace(/_/g, " ")}
+                        {cleanAngle(a.angle)}
                       </span>
                       <div className="flex-1 bg-gray-800 rounded-full h-2">
                         <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${barWidth}%` }} />
@@ -487,7 +536,7 @@ export default function DashboardPage() {
               ))}
               {cronActions.map((a) => (
                 <button key={a.label}
-                  onClick={() => runAction(a.label, a.endpoint, a.msg)}
+                  onClick={() => runAction(a.label, a.endpoint, a.msg, a.body)}
                   disabled={actionLoading === a.label}
                   className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-xs text-white transition">
                   {actionLoading === a.label ? "Running..." : a.label}
