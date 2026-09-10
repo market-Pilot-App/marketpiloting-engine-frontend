@@ -68,7 +68,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   // editor  : everything except boosts, approval-queue, brands, team, agency-settings, settings
   // admin   : everything except team, agency-settings, settings
   // owner   : full access
-  const VIEWER_ALLOWED   = new Set(["/", "/analytics", "/help", "/sales-assistant"]);
+  const VIEWER_ALLOWED   = new Set(["/", "/analytics", "/help", "/sales-assistant", "/brand-protection"]);
   const EDITOR_BLOCKED   = new Set(["/boosts", "/approval-queue", "/brands", "/team", "/agency-settings", "/settings"]);
   const ADMIN_BLOCKED    = new Set(["/team", "/agency-settings", "/settings"]);
 
