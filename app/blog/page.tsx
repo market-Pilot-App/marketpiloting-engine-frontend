@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useCanAccess } from "@/lib/use-role-guard";
+import { useAuth } from "@/lib/auth-context";
 
 interface BlogSettings {
   blog_platform: string;
@@ -26,6 +27,7 @@ interface BlogPost {
 
 export default function BlogPage() {
   const canAccess = useCanAccess("editor");
+  const { role } = useAuth();
   if (!canAccess) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <span className="text-4xl">🔒</span>
@@ -298,12 +300,14 @@ export default function BlogPage() {
                     View Live ↗
                   </a>
                 )}
+                {(role === null || role === "admin") && (
                 <button
                   onClick={() => deletePost(selected.id)}
                   className="text-gray-600 hover:text-red-400 text-sm transition px-2"
                 >
                   Delete
                 </button>
+                )}
               </div>
             </div>
 
