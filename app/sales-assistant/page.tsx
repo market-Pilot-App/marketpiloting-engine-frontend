@@ -351,16 +351,32 @@ function SettingsTab() {
   const [questions, setQuestions] = useState(["What is your budget?", "Where are you located?", "How soon do you need this?"]);
   const [newQ, setNewQ] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    api.get<{ qualification_rules: { name: string; questions: string[] }[] }>("/sales-assistant/settings")
+      .then((data) => {
+        const rule = data.qualification_rules[0];
+        if (rule) {
+          setName(rule.name);
+          setQuestions(rule.questions || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const save = async () => {
     setSaving(true); setMsg("");
     try {
-      await api.post("/sales-assistant/settings", { name, questions, hot_when: [], handoff_when: [] });
+      await api.put("/sales-assistant/settings", { name, questions, hot_when: [], handoff_when: [] });
       setMsg("✓ Saved");
     } catch (e: any) { setMsg(e.message || "Failed"); }
     setSaving(false);
   };
+
+  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Loading settings...</div>;
 
   return (
     <div className="max-w-xl space-y-6">
