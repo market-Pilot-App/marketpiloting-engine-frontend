@@ -2,12 +2,38 @@
 import { useState, useEffect, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
 import withDragAndDrop, { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop";
-import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, addDays, subDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import { api } from "@/lib/api";
 import { useCanAccess } from "@/lib/use-role-guard";
+
+// WAT posting slots expressed as UTC (WAT = UTC+1, so subtract 1h)
+const VALID_SLOTS_UTC = [
+  { h: 5, m: 5 },   // 6:05 WAT
+  { h: 7, m: 5 },   // 8:05 WAT
+  { h: 9, m: 5 },   // 10:05 WAT
+  { h: 10, m: 5 },  // 11:05 WAT
+  { h: 12, m: 5 },  // 13:05 WAT
+  { h: 14, m: 5 },  // 15:05 WAT
+  { h: 16, m: 5 },  // 17:05 WAT
+  { h: 18, m: 5 },  // 19:05 WAT
+];
+
+function snapToSlot(d: Date): Date | null {
+  const now = new Date();
+  const candidates = VALID_SLOTS_UTC.map(({ h, m }) => {
+    const c = new Date(d);
+    c.setUTCHours(h, m, 0, 0);
+    return c;
+  });
+  const future = candidates.filter((c) => c > now);
+  if (!future.length) return null;
+  return future.reduce((a, b) =>
+    Math.abs(a.getTime() - d.getTime()) <= Math.abs(b.getTime() - d.getTime()) ? a : b
+  );
+}
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { "en-US": enUS } });
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -76,8 +102,8 @@ export default function CalendarPage() {
   const fetchEvents = useCallback(async (d: Date) => {
     setLoading(true);
     try {
-      const start = startOfMonth(subMonths(d, 0)).toISOString();
-      const end = endOfMonth(addMonths(d, 0)).toISOString();
+      const start = subDays(startOfMonth(d), 1).toISOString();
+      const end = addDays(endOfMonth(d), 1).toISOString();
       const posts = await api.get<CalendarPost[]>(
         `/scheduler/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
       );
@@ -102,9 +128,11 @@ export default function CalendarPage() {
   const onNavigate = (d: Date) => setDate(d);
 
   const onEventDrop = async ({ event, start }: EventInteractionArgs<CalEvent>) => {
-    const newTime = start as Date;
-    if (newTime <= new Date()) { showToast("Cannot reschedule to a past time", false); return; }
+    const dropped = start as Date;
+    if (dropped <= new Date()) { showToast("Cannot reschedule to a past time", false); return; }
     if (event.resource.status !== "queued") { showToast("Only queued posts can be rescheduled", false); return; }
+    const newTime = snapToSlot(dropped);
+    if (!newTime) { showToast("No valid posting slot available for that date", false); return; }
     // Optimistic update
     setEvents((prev) =>
       prev.map((e) =>
