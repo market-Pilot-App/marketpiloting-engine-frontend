@@ -297,6 +297,7 @@ export default function OpportunitiesPage() {
                 <option value="">All types</option>
                 <option value="COMPETITOR_INSIGHT">Competitor</option>
                 <option value="NEWS_HIJACK">News Hijack</option>
+                <option value="TREND_POST">Trend Post</option>
               </select>
             </div>
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
