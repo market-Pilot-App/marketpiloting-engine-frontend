@@ -32,9 +32,11 @@ export default function GoogleBusinessPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [status, setStatus] = useState<GBPStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [replySaving, setReplySaving] = useState<Record<string, boolean>>({});
@@ -44,11 +46,12 @@ export default function GoogleBusinessPage() {
   const [postMsg, setPostMsg] = useState("");
 
   const fetchStatus = useCallback(async () => {
+    setLoadError("");
     try {
       const data = await api.get<GBPStatus>("/google-business/status");
       setStatus(data);
-    } catch {
-      setStatus({ connected: false });
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load Google Business status");
     } finally {
       setLoading(false);
     }
@@ -62,11 +65,12 @@ export default function GoogleBusinessPage() {
 
   const loadReviews = async () => {
     setReviewsLoading(true);
+    setReviewsError("");
     try {
       const data = await api.get<{ reviews: Review[] }>("/google-business/reviews");
       setReviews(data.reviews || []);
-    } catch {
-      setReviews([]);
+    } catch (err: unknown) {
+      setReviewsError(err instanceof Error ? err.message : "Failed to load reviews");
     } finally {
       setReviewsLoading(false);
     }
@@ -149,6 +153,18 @@ export default function GoogleBusinessPage() {
 
   if (loading) return (
     <div className="p-8 text-gray-400">Loading…</div>
+  );
+
+  if (loadError) return (
+    <div className="p-8 flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-red-400 text-sm">{loadError}</p>
+      <button
+        onClick={() => { setLoading(true); fetchStatus(); }}
+        className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition"
+      >
+        Retry
+      </button>
+    </div>
   );
 
   return (
@@ -249,10 +265,17 @@ export default function GoogleBusinessPage() {
                 <p className="text-gray-400 text-sm">
                   Every post published by the scheduler is automatically mirrored to your Google Business Profile listing. No extra setup needed.
                 </p>
-                <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
-                  <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
-                  Active — posts mirror automatically
-                </div>
+                {status.location_name ? (
+                  <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                    <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                    Active — posts mirror automatically
+                  </div>
+                ) : (
+                  <div className="mt-3 flex items-center gap-2 text-amber-400 text-sm">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                    Pending — location not yet resolved
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -269,7 +292,14 @@ export default function GoogleBusinessPage() {
 
               {reviewsLoading && <p className="text-gray-400 text-sm">Loading reviews…</p>}
 
-              {!reviewsLoading && reviews.length === 0 && (
+              {!reviewsLoading && reviewsError && (
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 text-center">
+                  <p className="text-red-400 text-sm mb-2">{reviewsError}</p>
+                  <button onClick={loadReviews} className="text-xs text-indigo-400 hover:text-indigo-300 transition">↻ Retry</button>
+                </div>
+              )}
+
+              {!reviewsLoading && !reviewsError && reviews.length === 0 && (
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">
                   No reviews found yet.
                 </div>
