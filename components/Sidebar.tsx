@@ -331,8 +331,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
             </Link>
           )}
 
-          {role !== "viewer" && (
-            <Link
+          <Link
               href="/help"
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
                 pathname === "/help"
@@ -343,7 +342,6 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
               <span>❓</span>
               {!collapsed && "Help"}
             </Link>
-          )}
 
           {role !== "viewer" && (
             <Link

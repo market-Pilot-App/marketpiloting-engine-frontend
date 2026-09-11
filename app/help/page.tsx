@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const TUTORIALS = [
   {
@@ -91,16 +91,40 @@ const FAQS = [
   },
   {
     q: "How do I invite team members?",
-    a: "Go to Team → enter their email and select a role (Admin, Editor, or Viewer). They'll receive an invite email with a link to set their password and join your workspace. Viewers can only see the dashboard and analytics. Editors can create and manage content. Admins can do everything except billing and settings.",
+    a: "Go to Team → enter their email and select a role (Admin, Editor, or Viewer). They'll receive an invite email with a link to set their password and join your workspace. Viewers can only see the dashboard and analytics. Editors can create and manage content. Admins can do everything except managing team members, agency branding, and account settings.",
   },
   {
     q: "Can I connect multiple platforms at once?",
     a: "Yes. Go to Settings → Social Connections and expand each platform card one by one. Each platform saves independently so you can connect them in any order.",
   },
+  {
+    q: "What is Brand DNA and why does it matter?",
+    a: "Brand DNA is MarketPilot's knowledge base for your business — your tone of voice, target audience, value proposition, and brand keywords. Every piece of AI-generated content, every auto-reply, and every blog post is written using your Brand DNA. Go to Brand DNA → fill in your business description, tone, audience, and keywords. The more detail you add, the better the AI performs.",
+  },
+  {
+    q: "How do I set up Revenue Tracking?",
+    a: "Go to Settings → Revenue Tracking. Step 1: paste your Paystack Secret Key (from dashboard.paystack.com → Settings → API Keys). Step 2: copy the webhook URL shown and paste it into your Paystack dashboard under Settings → Webhooks. Once set up, every successful payment from a customer who clicked one of your posts will be attributed to that post in your Analytics.",
+  },
+  {
+    q: "What is Content Recycling?",
+    a: "Content Recycling automatically re-queues your top-performing posts after a set interval so they get posted again without any manual work. Go to Settings → Content Recycling to enable it and set the minimum engagement score threshold. Then on the Scheduler page, enable recycling on individual posts and set how many days before they re-queue.",
+  },
+  {
+    q: "How do I connect Google Business Profile?",
+    a: "Go to Google Business in the sidebar. MarketPilot connects to your Google Business Profile to let you schedule posts directly to your GBP listing and manage customer reviews from the dashboard. You'll need to authorise access via your Google account. Once connected, posts scheduled to the GBP platform will publish directly to your Google Business listing.",
+  },
 ];
 
 export default function HelpPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeVideo) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setActiveVideo(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeVideo]);
 
   return (
     <div className="max-w-4xl w-full">
@@ -121,14 +145,12 @@ export default function HelpPage() {
               </div>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed">{t.description}</p>
-            <a
-              href={`https://www.youtube.com/watch?v=${t.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setActiveVideo(t.videoId)}
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition"
             >
               ▶ Watch Tutorial
-            </a>
+            </button>
           </div>
         ))}
       </div>
@@ -156,7 +178,53 @@ export default function HelpPage() {
         </div>
       </div>
 
+      {/* Contact Support */}
+      <div className="mb-10 bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h2 className="text-lg font-bold text-white mb-1">Still need help?</h2>
+        <p className="text-gray-400 text-sm mb-4">Our support team is available via email and WhatsApp.</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <a
+            href="mailto:support@marketpiloting.com"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium rounded-lg transition"
+          >
+            📧 Email support@marketpiloting.com
+          </a>
+          <a
+            href="https://wa.me/2349018622185"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition"
+          >
+            💬 WhatsApp Support
+          </a>
+        </div>
+      </div>
 
+      {/* Video modal */}
+      {activeVideo && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setActiveVideo(null)}
+        >
+          <div
+            className="relative w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setActiveVideo(null)}
+              className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center text-lg leading-none transition"
+            >
+              ×
+            </button>
+            <iframe
+              src={`https://www.youtube.com/embed/${activeVideo}?autoplay=1`}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
