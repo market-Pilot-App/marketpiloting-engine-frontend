@@ -40,6 +40,7 @@ export default function TestimonialsPage() {
   const [formatting, setFormatting] = useState<Record<number, boolean>>({});
   const [scheduling, setScheduling] = useState<Record<number, boolean>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [platform, setPlatform] = useState<Record<number, string>>({});
 
   const load = () => {
     api.get<Testimonial[]>("/testimonials/").then(setTestimonials).catch(() => {}).finally(() => setLoading(false));
@@ -75,7 +76,7 @@ export default function TestimonialsPage() {
   const schedule = async (id: number) => {
     setScheduling((s) => ({ ...s, [id]: true }));
     try {
-      await api.post(`/testimonials/${id}/schedule`);
+      await api.post(`/testimonials/${id}/schedule`, { platform: platform[id] ?? "facebook" });
       load();
     } finally {
       setScheduling((s) => ({ ...s, [id]: false }));
@@ -153,10 +154,22 @@ export default function TestimonialsPage() {
                   </button>
                 )}
                 {t.formatted_post && t.status === "approved" && (
-                  <button onClick={() => schedule(t.id)} disabled={scheduling[t.id]}
-                    className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
-                    {scheduling[t.id] ? "Scheduling..." : "📅 Schedule Post"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={platform[t.id] ?? "facebook"}
+                      onChange={(e) => setPlatform((s) => ({ ...s, [t.id]: e.target.value }))}
+                      className="bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500">
+                      <option value="facebook">Facebook</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="twitter">Twitter/X</option>
+                      <option value="telegram">Telegram</option>
+                    </select>
+                    <button onClick={() => schedule(t.id)} disabled={scheduling[t.id]}
+                      className="px-3 py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition">
+                      {scheduling[t.id] ? "Scheduling..." : "📅 Schedule Post"}
+                    </button>
+                  </div>
                 )}
                 {t.formatted_post && (
                   <button onClick={() => navigator.clipboard.writeText(t.formatted_post!)}
