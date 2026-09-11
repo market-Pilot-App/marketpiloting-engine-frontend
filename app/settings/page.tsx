@@ -272,7 +272,7 @@ function SettingsPageInner() {
   const [arSaving, setArSaving] = useState(false);
   const [arSaved, setArSaved] = useState(false);
   const [kwInput, setKwInput] = useState("");
-  const canAutoReply = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
+  const canAutoReply = ["solo", "starter", "growth", "agency", "admin"].includes(plan);
   // WhatsApp state
   const [waEnabled, setWaEnabled] = useState(false);
   const [waConnected, setWaConnected] = useState(false);
@@ -284,7 +284,7 @@ function SettingsPageInner() {
   const [waEscSaving, setWaEscSaving] = useState(false);
   const [waEscSaved, setWaEscSaved] = useState(false);
   const [waEscError, setWaEscError] = useState("");
-  const canWhatsApp = ["starter", "growth", "pro", "agency", "admin"].includes(plan);
+  const canWhatsApp = ["solo", "starter", "growth", "agency", "admin"].includes(plan);
 
   // Delete account state
   const [deleteStep, setDeleteStep] = useState(0);
@@ -522,7 +522,7 @@ function SettingsPageInner() {
                   <p className="text-white text-sm">
                     {billing.subscription_expires_at
                       ? new Date(billing.subscription_expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                      : "—"}
+                      : billing.subscription_status === "active" ? "No expiry" : "—"}
                   </p>
                 </div>
               </div>
