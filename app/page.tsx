@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import Link from "next/link";
 import { useRef } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -115,6 +115,7 @@ export default function DashboardPage() {
 
   const [showIntro, setShowIntro] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [stats, setStats] = useState<DashStats | null>(null);
@@ -133,8 +134,10 @@ export default function DashboardPage() {
     if (!sessionStorage.getItem("mp_intro_seen")) setShowIntro(true);
   }, []);
 
-  useEffect(() => {
+  const loadDashboard = () => {
     if (isAgency && !client?.campaign_id) return;
+    setLoading(true);
+    setLoadError(false);
     const safe = (p: Promise<any>) => p.catch(() => null);
     Promise.all([
       safe(api.get("/analytics/dashboard")),
@@ -160,8 +163,11 @@ export default function DashboardPage() {
       if (rb) setRecentBoosts(rb as BoostedPost[]);
       if (rev) setRevenue(rev as RevenueData);
       if (roiData) setRoi(roiData as RoiData);
+      if (!s && !o && !d) setLoadError(true);
     }).finally(() => setLoading(false));
-  }, [isAgency, client?.campaign_id]);
+  };
+
+  useEffect(() => { loadDashboard(); }, [isAgency, client?.campaign_id]);
 
   const runAction = async (label: string, endpoint: string, msg: string, body?: object) => {
     setActionLoading(label);
@@ -233,6 +239,14 @@ export default function DashboardPage() {
 
       {loading ? (
         <p className="text-gray-400 text-sm">Loading...</p>
+      ) : loadError ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+          <p className="text-gray-400 mb-4">Failed to load dashboard. Check your connection.</p>
+          <button onClick={loadDashboard}
+            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition">
+            Retry
+          </button>
+        </div>
       ) : (
         <>
           {/* Onboarding Health Widget — hidden when fully complete */}
@@ -367,7 +381,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Status</span>
-                  <span className="text-green-400">● Live</span>
+                  <span className={(overview?.telegram_members ?? 0) > 0 ? "text-green-400" : "text-gray-500"}>
+                    {(overview?.telegram_members ?? 0) > 0 ? "● Live" : "● Not connected"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Brand DNA</span>
@@ -511,7 +527,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="py-2">
-                          <a href={`${process.env.NEXT_PUBLIC_API_URL}/r/${l.code}`} target="_blank"
+                          <a href={`${API_URL}/r/${l.code}`} target="_blank"
                             className="text-blue-400 hover:underline">Open →</a>
                         </td>
                       </tr>
