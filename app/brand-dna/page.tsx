@@ -27,16 +27,10 @@ interface BrandDNA {
 
 export default function BrandDNAPage() {
   const canAccess = useCanAccess("editor"); // viewer cannot access brand DNA
-  if (!canAccess) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <p className="text-4xl">🔒</p>
-      <p className="text-white font-semibold">Access Restricted</p>
-      <p className="text-gray-400 text-sm">Brand DNA is not available for your role.</p>
-    </div>
-  );
 
   const [dna, setDna] = useState<BrandDNA | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState("");
@@ -47,21 +41,34 @@ export default function BrandDNAPage() {
   const [manualForm, setManualForm] = useState({ business_name: "", description: "", tone_of_voice: "", target_audience: "", value_proposition: "", brand_keywords: "", avoid_words: "" });
   const [submittingManual, setSubmittingManual] = useState(false);
 
-
   const fetchDNA = async () => {
+    setLoadError("");
     try {
       const data = await api.get<BrandDNA>("/brand-dna/");
       setDna(data);
       setForm(data);
-
-    } catch {
-      setDna(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
+        setDna(null);
+      } else {
+        setLoadError(msg || "Failed to load Brand DNA");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchDNA(); }, []);
+
+  // Fix 3: access guard after all hooks
+  if (!canAccess) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-4xl">🔒</p>
+      <p className="text-white font-semibold">Access Restricted</p>
+      <p className="text-gray-400 text-sm">Brand DNA is not available for your role.</p>
+    </div>
+  );
 
   const save = async () => {
     setSaving(true);
@@ -117,6 +124,18 @@ export default function BrandDNAPage() {
   };
 
   if (loading) return <p className="text-gray-400">Loading Brand DNA...</p>;
+
+  if (loadError) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-red-400 text-sm">{loadError}</p>
+      <button
+        onClick={() => { setLoading(true); fetchDNA(); }}
+        className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition"
+      >
+        Retry
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl">
@@ -256,6 +275,9 @@ export default function BrandDNAPage() {
         </div>
       ) : (
         <>
+          {/* Fix 5: extraction error visible when DNA exists */}
+          {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+
           {/* Consistency Score */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-5 flex items-center justify-between">
             <div>
