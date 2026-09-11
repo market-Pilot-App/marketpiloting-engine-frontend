@@ -26,28 +26,44 @@ export default function ApprovalQueuePage() {
   const canAccess = useCanAccess("admin");
   const [posts, setPosts] = useState<PendingPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<Record<number, string>>({});
+  const [acting, setActing] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const plan = client?.plan || "";
     if (!canAccess || !["agency", "admin"].includes(plan)) { router.push("/"); return; }
-    api.get<PendingPost[]>("/agency/approval-queue").then((d) => {
-      setPosts(d);
-      setLoading(false);
-    });
+    api.get<PendingPost[]>("/agency/approval-queue")
+      .then((d) => { setPosts(d); setLoading(false); })
+      .catch(() => { setError("Failed to load approval queue."); setLoading(false); });
   }, [client, router]);
 
   const approve = async (id: number) => {
-    await api.post(`/agency/posts/${id}/approve`, {});
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setActing((s) => ({ ...s, [id]: true }));
+    try {
+      await api.post(`/agency/posts/${id}/approve`, {});
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      setError("Failed to approve post. Please try again.");
+    } finally {
+      setActing((s) => ({ ...s, [id]: false }));
+    }
   };
 
   const reject = async (id: number) => {
-    await api.post(`/agency/posts/${id}/reject`, { feedback: feedback[id] || "" });
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setActing((s) => ({ ...s, [id]: true }));
+    try {
+      await api.post(`/agency/posts/${id}/reject`, { feedback: feedback[id] || "" });
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      setError("Failed to reject post. Please try again.");
+    } finally {
+      setActing((s) => ({ ...s, [id]: false }));
+    }
   };
 
   if (loading) return <div className="p-6 text-gray-400 text-sm">Loading approval queue…</div>;
+  if (error && posts.length === 0) return <div className="p-6 text-red-400 text-sm">{error}</div>;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -86,18 +102,21 @@ export default function ApprovalQueuePage() {
                     onChange={(e) => setFeedback((f) => ({ ...f, [p.id]: e.target.value }))}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-indigo-500 mb-3"
                   />
+                  {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={() => approve(p.id)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
+                      disabled={acting[p.id]}
+                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
                     >
-                      ✓ Approve
+                      {acting[p.id] ? "…" : "✓ Approve"}
                     </button>
                     <button
                       onClick={() => reject(p.id)}
-                      className="bg-red-900/50 hover:bg-red-900 text-red-400 text-xs font-semibold px-4 py-2 rounded-lg transition"
+                      disabled={acting[p.id]}
+                      className="bg-red-900/50 hover:bg-red-900 disabled:opacity-50 text-red-400 text-xs font-semibold px-4 py-2 rounded-lg transition"
                     >
-                      ✗ Reject
+                      {acting[p.id] ? "…" : "✗ Reject"}
                     </button>
                   </div>
                 </div>

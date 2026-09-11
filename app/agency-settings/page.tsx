@@ -27,6 +27,7 @@ export default function AgencySettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approvalSaving, setApprovalSaving] = useState(false);
+  const [approvalError, setApprovalError] = useState("");
 
   useEffect(() => {
     const plan = client?.plan || "";
@@ -171,9 +172,12 @@ export default function AgencySettingsPage() {
             onClick={async () => {
               const next = !approvalRequired;
               setApprovalSaving(true);
+              setApprovalError("");
               try {
                 await api.patch("/agency/approval-required", { enabled: next });
                 setApprovalRequired(next);
+              } catch {
+                setApprovalError("Failed to save. Please try again.");
               } finally {
                 setApprovalSaving(false);
               }
@@ -188,6 +192,7 @@ export default function AgencySettingsPage() {
             }`} />
           </button>
         </div>
+        {approvalError && <p className="text-red-400 text-xs mt-2">{approvalError}</p>}
         {approvalRequired && (
           <p className="text-indigo-400 text-xs mt-3">
             ✅ Active — go to <a href="/approval-queue" className="underline hover:text-indigo-300">Approval Queue</a> to review pending posts.
