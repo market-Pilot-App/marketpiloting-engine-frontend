@@ -18,6 +18,7 @@ const PLATFORMS = ["facebook", "instagram", "linkedin", "twitter", "telegram", "
 
 const STATUS_COLORS: Record<string, string> = {
   generating: "bg-yellow-500/20 text-yellow-300",
+  failed: "bg-red-500/20 text-red-300",
   draft: "bg-gray-500/20 text-gray-300",
   active: "bg-green-500/20 text-green-300",
   paused: "bg-orange-500/20 text-orange-300",
@@ -47,6 +48,7 @@ const defaultForm = {
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [creating, setCreating] = useState(false);
@@ -55,10 +57,13 @@ export default function CampaignsPage() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const data = await api.get("/marketing-campaigns/") as Campaign[];
       setCampaigns(data);
-    } catch { /* empty */ }
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load campaigns");
+    }
     setLoading(false);
   };
 
@@ -98,9 +103,19 @@ export default function CampaignsPage() {
     setCreating(false);
   };
 
-  const handleAction = async (id: number, action: "pause" | "complete") => {
+  const handleAction = async (id: number, action: "pause" | "resume" | "complete") => {
+    if (action === "complete" && !confirm("Mark this campaign as complete? This cannot be undone.")) return;
     try {
       await api.post(`/marketing-campaigns/${id}/${action}`, {});
+      await load();
+    } catch { /* empty */ }
+  };
+
+  const handleRegenerate = async (id: number) => {
+    if (!confirm("Regenerate all assets for this campaign? Existing assets will be deleted.")) return;
+    try {
+      await api.post(`/marketing-campaigns/${id}/regenerate`, {});
+      setMsg("Regenerating campaign assets — check back in 60 seconds.");
       await load();
     } catch { /* empty */ }
   };
@@ -281,6 +296,11 @@ export default function CampaignsPage() {
       {/* Campaign List */}
       {loading ? (
         <div className="text-gray-400 text-sm">Loading campaigns...</div>
+      ) : loadError ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <p className="text-red-400 text-sm">{loadError}</p>
+          <button onClick={load} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition">Retry</button>
+        </div>
       ) : campaigns.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <div className="text-5xl mb-4">🎯</div>
@@ -337,6 +357,14 @@ export default function CampaignsPage() {
                   >
                     View
                   </button>
+                  {(c.status === "failed" || c.status === "generating") && (
+                    <button
+                      onClick={() => handleRegenerate(c.id)}
+                      className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-1.5 rounded-lg"
+                    >
+                      Regenerate
+                    </button>
+                  )}
                   {c.status === "active" && (
                     <button
                       onClick={() => handleAction(c.id, "pause")}
@@ -346,12 +374,20 @@ export default function CampaignsPage() {
                     </button>
                   )}
                   {c.status === "paused" && (
-                    <button
-                      onClick={() => handleAction(c.id, "complete")}
-                      className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg"
-                    >
-                      Complete
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleAction(c.id, "resume")}
+                        className="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg"
+                      >
+                        Resume
+                      </button>
+                      <button
+                        onClick={() => handleAction(c.id, "complete")}
+                        className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg"
+                      >
+                        Complete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -370,13 +406,43 @@ function CampaignDetail({ campaign, onBack }: { campaign: Campaign; onBack: () =
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
   const [tab, setTab] = useState<"posts" | "blog" | "email" | "faq" | "scripts" | "links" | "report">("posts");
   const [loading, setLoading] = useState(true);
+  const [resultsForm, setResultsForm] = useState({ reach: "", engagement: "", leads: "", conversions: "", revenue: "" });
+  const [resultsSaving, setResultsSaving] = useState(false);
+  const [resultsMsg, setResultsMsg] = useState("");
 
   useEffect(() => {
     api.get(`/marketing-campaigns/${campaign.id}`).then(d => {
-      setDetail(d as Record<string, unknown>);
+      const data = d as Record<string, unknown>;
+      setDetail(data);
+      const r = (data.results as Record<string, number>) || {};
+      setResultsForm({
+        reach: String(r.reach || ""),
+        engagement: String(r.engagement || ""),
+        leads: String(r.leads || ""),
+        conversions: String(r.conversions || ""),
+        revenue: String(r.revenue || ""),
+      });
       setLoading(false);
     });
   }, [campaign.id]);
+
+  const saveResults = async () => {
+    setResultsSaving(true);
+    setResultsMsg("");
+    try {
+      await api.post(`/marketing-campaigns/${campaign.id}/results`, {
+        reach: Number(resultsForm.reach) || 0,
+        engagement: Number(resultsForm.engagement) || 0,
+        leads: Number(resultsForm.leads) || 0,
+        conversions: Number(resultsForm.conversions) || 0,
+        revenue: Number(resultsForm.revenue) || 0,
+      });
+      setResultsMsg("Results saved ✓");
+    } catch {
+      setResultsMsg("Failed to save results");
+    }
+    setResultsSaving(false);
+  };
 
   const approveAsset = async (assetId: number) => {
     await api.post(`/marketing-campaigns/${campaign.id}/assets/${assetId}/approve`, {});
@@ -525,19 +591,47 @@ function CampaignDetail({ campaign, onBack }: { campaign: Campaign; onBack: () =
 
       {/* Report Tab */}
       {tab === "report" && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { label: "Reach", value: String(results.reach || 0) },
-            { label: "Engagement", value: String(results.engagement || 0) },
-            { label: "Leads", value: String(results.leads || 0) },
-            { label: "Conversions", value: String(results.conversions || 0) },
-            { label: "Revenue", value: `₦${(results.revenue || 0).toLocaleString()}` },
-          ].map(stat => (
-            <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              <p className="text-gray-400 text-xs mt-1">{stat.label}</p>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[
+              { label: "Reach", value: String(results.reach || 0) },
+              { label: "Engagement", value: String(results.engagement || 0) },
+              { label: "Leads", value: String(results.leads || 0) },
+              { label: "Conversions", value: String(results.conversions || 0) },
+              { label: "Revenue", value: `₦${(results.revenue || 0).toLocaleString()}` },
+            ].map(stat => (
+              <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-gray-400 text-xs mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 className="text-white font-semibold mb-3">Log Results</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {(["reach", "engagement", "leads", "conversions", "revenue"] as const).map(k => (
+                <div key={k}>
+                  <label className="text-xs text-gray-400 mb-1 block capitalize">{k}</label>
+                  <input
+                    type="number"
+                    value={resultsForm[k]}
+                    onChange={e => setResultsForm(f => ({ ...f, [k]: e.target.value }))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={saveResults}
+                disabled={resultsSaving}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                {resultsSaving ? "Saving..." : "Save Results"}
+              </button>
+              {resultsMsg && <span className="text-sm text-green-400">{resultsMsg}</span>}
+            </div>
+          </div>
         </div>
       )}
     </div>
