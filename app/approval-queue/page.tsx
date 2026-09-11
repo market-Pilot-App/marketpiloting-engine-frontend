@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { useCanAccess } from "@/lib/use-role-guard";
 
 interface PendingPost {
   id: number;
@@ -23,7 +22,6 @@ const PLATFORM_EMOJI: Record<string, string> = {
 export default function ApprovalQueuePage() {
   const { client } = useAuth();
   const router = useRouter();
-  const canAccess = useCanAccess("admin");
   const [posts, setPosts] = useState<PendingPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,7 +30,7 @@ export default function ApprovalQueuePage() {
 
   useEffect(() => {
     const plan = client?.plan || "";
-    if (!canAccess || !["agency", "admin"].includes(plan)) { router.push("/"); return; }
+    if (!["agency", "admin"].includes(plan)) { router.push("/"); return; }
     api.get<PendingPost[]>("/agency/approval-queue")
       .then((d) => { setPosts(d); setLoading(false); })
       .catch(() => { setError("Failed to load approval queue."); setLoading(false); });

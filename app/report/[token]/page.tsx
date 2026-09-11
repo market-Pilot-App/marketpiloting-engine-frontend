@@ -15,6 +15,8 @@ interface ReportData {
   referral_clicks: number;
   dna_score: number;
   narrative?: string;
+  agency_logo_url?: string;
+  custom_report_footer_text?: string;
 }
 
 export default function SharedReportPage() {
@@ -54,6 +56,9 @@ export default function SharedReportPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
+          {report.agency_logo_url && (
+            <img src={report.agency_logo_url} alt="Agency Logo" className="h-14 object-contain mx-auto mb-4" />
+          )}
           <p className="text-indigo-400 text-xs uppercase tracking-widest mb-2">Performance Report</p>
           <h1 className="text-3xl font-bold text-white">{report.business_name}</h1>
           <p className="text-gray-400 text-sm mt-1">{report.month}</p>
@@ -86,7 +91,9 @@ export default function SharedReportPage() {
         )}
 
         <p className="text-center text-gray-600 text-xs mt-8">
-          Powered by <span className="text-indigo-400">MarketPiloting Engine</span>
+          {report.custom_report_footer_text
+            ? report.custom_report_footer_text
+            : <>Powered by <span className="text-indigo-400">MarketPiloting Engine</span></>}
         </p>
       </div>
     </div>
