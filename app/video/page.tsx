@@ -6,6 +6,7 @@ import { API_URL } from "@/lib/api";
 
 const PLATFORMS = ["facebook", "instagram", "linkedin", "telegram", "youtube"];
 const CAPTION_ONLY_PLATFORMS = ["twitter", "tiktok"];
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 type PostResult = { platform: string; status: string; post_url?: string; error?: string };
 type VideoResult = { video_url: string; transcript_preview: string; results: PostResult[] };
@@ -39,7 +40,12 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function VideoPage() {
+  // ── All hooks must come before any conditional return ──
   const canAccess = useCanAccess("editor");
+  const { client } = useAuth();
+  const token = typeof window !== "undefined" ? localStorage.getItem("mp_token") : null;
+  const [tab, setTab] = useState<"now" | "schedule">("now");
+
   if (!canAccess) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <span className="text-4xl">🔒</span>
@@ -47,9 +53,6 @@ export default function VideoPage() {
       <p className="text-gray-400 text-sm">Viewers cannot access Video.</p>
     </div>
   );
-  const { client } = useAuth();
-  const token = typeof window !== "undefined" ? localStorage.getItem("mp_token") : "";
-  const [tab, setTab] = useState<"now" | "schedule">("now");
 
   const isPlanAllowed = ["solo", "starter", "growth", "pro", "agency", "admin"].includes(client?.plan ?? "");
   const isScheduleAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan ?? "");
@@ -129,7 +132,7 @@ function PostNowTab({ token }: { token: string | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [platforms, setPlatforms] = useState<string[]>(["facebook"]);
   const [dragging, setDragging] = useState(false);
-  const [stage, setStage] = useState<"idle" | "uploading" | "transcribing" | "posting" | "done" | "error">("idle");
+  const [stage, setStage] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [result, setResult] = useState<VideoResult | null>(null);
   const [error, setError] = useState("");
 
@@ -145,20 +148,23 @@ function PostNowTab({ token }: { token: string | null }) {
 
   const handleSubmit = async () => {
     if (!file || platforms.length === 0) return;
+    // Gap 3: client-side file size check
+    if (file.size > MAX_FILE_BYTES) {
+      setError("File too large. Maximum size is 50MB.");
+      return;
+    }
     setError("");
     setResult(null);
+    setStage("uploading");
     try {
-      setStage("uploading");
       const formData = new FormData();
       formData.append("file", file);
       formData.append("platforms", platforms.join(","));
-      setStage("transcribing");
       const res = await fetch(`${API_URL}/video/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      setStage("posting");
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || "Upload failed");
@@ -169,12 +175,6 @@ function PostNowTab({ token }: { token: string | null }) {
       setError(e.message);
       setStage("error");
     }
-  };
-
-  const stageLabel: Record<string, string> = {
-    uploading:   "Uploading to Cloudinary...",
-    transcribing: "AI is transcribing your audio...",
-    posting:     "Generating captions & posting to platforms...",
   };
 
   return (
@@ -201,7 +201,7 @@ function PostNowTab({ token }: { token: string | null }) {
         ) : (
           <div>
             <p className="text-4xl mb-2">📹</p>
-            <p className="text-gray-300">Drag & drop your video here or click to browse</p>
+            <p className="text-gray-300">Drag &amp; drop your video here or click to browse</p>
             <p className="text-gray-500 text-sm mt-1">MP4, MOV, AVI, MKV, WebM — max 50MB</p>
           </div>
         )}
@@ -226,17 +226,17 @@ function PostNowTab({ token }: { token: string | null }) {
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-600 mt-1">*X/Twitter & TikTok: caption generated for manual posting only</p>
+        <p className="text-xs text-gray-600 mt-1">*X/Twitter &amp; TikTok: caption generated for manual posting only</p>
       </div>
 
       {stage === "idle" || stage === "error" ? (
         <button onClick={handleSubmit} disabled={!file || platforms.length === 0}
           className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition">
-          Upload & Post Video
+          Upload &amp; Post Video
         </button>
-      ) : stage !== "done" ? (
+      ) : stage === "uploading" ? (
         <div className="w-full py-3 bg-gray-800 text-indigo-400 font-semibold rounded-xl text-center animate-pulse">
-          {stageLabel[stage] || "Processing..."}
+          Uploading &amp; processing — AI is transcribing and posting...
         </div>
       ) : null}
 
@@ -305,16 +305,22 @@ function ScheduleTab({ token }: { token: string | null }) {
   const [error, setError] = useState("");
   const [jobs, setJobs] = useState<VideoJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [cancelError, setCancelError] = useState("");
 
   const fetchJobs = useCallback(async () => {
     if (!token) return;
     setLoadingJobs(true);
+    setLoadError("");
     try {
       const res = await fetch(`${API_URL}/video-queue/jobs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setJobs(await res.json());
-    } catch {}
+      if (!res.ok) throw new Error("Failed to load scheduled jobs");
+      setJobs(await res.json());
+    } catch (e: any) {
+      setLoadError(e.message || "Failed to load scheduled jobs");
+    }
     setLoadingJobs(false);
   }, [token]);
 
@@ -339,14 +345,18 @@ function ScheduleTab({ token }: { token: string | null }) {
 
   const handleSubmit = async () => {
     if (!file || platforms.length === 0) return;
+    // Gap 3: client-side file size check
+    if (file.size > MAX_FILE_BYTES) {
+      setError("File too large. Maximum size is 50MB.");
+      return;
+    }
     setError("");
+    setStage("uploading");
     try {
-      setStage("uploading");
       const formData = new FormData();
       formData.append("file", file);
       formData.append("platforms", platforms.join(","));
       if (scheduledTime) {
-        // Convert local datetime to ISO string with timezone offset
         const localDate = new Date(scheduledTime);
         formData.append("scheduled_time", localDate.toISOString());
       }
@@ -374,13 +384,17 @@ function ScheduleTab({ token }: { token: string | null }) {
   };
 
   const handleCancel = async (jobId: number) => {
+    setCancelError("");
     try {
-      await fetch(`${API_URL}/video-queue/jobs/${jobId}`, {
+      const res = await fetch(`${API_URL}/video-queue/jobs/${jobId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) throw new Error("Failed to cancel job");
       await fetchJobs();
-    } catch {}
+    } catch (e: any) {
+      setCancelError(e.message || "Failed to cancel job");
+    }
   };
 
   return (
@@ -408,7 +422,7 @@ function ScheduleTab({ token }: { token: string | null }) {
           ) : (
             <div>
               <p className="text-3xl mb-2">📁</p>
-              <p className="text-gray-300">Drag & drop your video or click to browse</p>
+              <p className="text-gray-300">Drag &amp; drop your video or click to browse</p>
               <p className="text-gray-500 text-sm mt-1">MP4, MOV, AVI, MKV, WebM — max 50MB</p>
             </div>
           )}
@@ -449,7 +463,7 @@ function ScheduleTab({ token }: { token: string | null }) {
           <p className="text-xs text-gray-600 mt-1">Leave blank to post within ~2 minutes. Times are in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
         </div>
 
-        {stage === "uploading" && <p className="text-indigo-400 text-sm animate-pulse">Uploading & scheduling...</p>}
+        {stage === "uploading" && <p className="text-indigo-400 text-sm animate-pulse">Uploading &amp; scheduling...</p>}
         {stage === "done" && <p className="text-green-400 text-sm">✅ Video scheduled successfully!</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -467,7 +481,15 @@ function ScheduleTab({ token }: { token: string | null }) {
           <h2 className="text-lg font-semibold text-white">Scheduled Jobs</h2>
           <button onClick={fetchJobs} className="text-xs text-gray-500 hover:text-white transition">↻ Refresh</button>
         </div>
-        {loadingJobs && jobs.length === 0 ? (
+
+        {cancelError && <p className="text-red-400 text-sm mb-2">{cancelError}</p>}
+
+        {loadError ? (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+            <p className="text-red-400 text-sm">{loadError}</p>
+            <button onClick={fetchJobs} className="text-xs text-indigo-400 hover:text-white transition ml-4">Retry</button>
+          </div>
+        ) : loadingJobs && jobs.length === 0 ? (
           <p className="text-gray-500 text-sm">Loading...</p>
         ) : jobs.length === 0 ? (
           <p className="text-gray-600 text-sm">No scheduled jobs yet. Upload your first video above.</p>

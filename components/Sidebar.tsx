@@ -59,7 +59,7 @@ export default function Sidebar({ mobileOpen, onClose, agencyLogoUrl }: SidebarP
   const pathname = usePathname();
   const { client, isAdmin, logout, switchBrand, role } = useAuth();
   const isAgency = client?.plan === "agency" || isAdmin;
-  const isVideoAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
+  const isVideoAllowed = ["solo", "starter", "growth", "pro", "agency", "admin"].includes(client?.plan || "");
   const isLocationAllowed = ["growth", "pro", "agency", "admin"].includes(client?.plan || "");
   const showUpgrade = !isAdmin && client?.plan !== "agency" && client?.plan !== "pro";
 
