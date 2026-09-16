@@ -207,7 +207,7 @@ export default function MediaPage() {
             <div key={img.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group relative">
               <div className="aspect-square relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.public_url} alt={img.filename} className="w-full h-full object-cover" />
+                <img src={img.public_url} alt={img.filename} className="w-full h-full object-cover" crossOrigin="anonymous" />
                 {(role === null || role === "admin") && (
                   <button
                     onClick={() => deleteImage(img.id)}
