@@ -142,19 +142,32 @@ export default function MediaPage() {
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
-          onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-            dragOver ? "border-indigo-500 bg-indigo-500/10" : "border-gray-700 hover:border-gray-500"
+          className={`border-2 border-dashed rounded-xl p-8 text-center transition ${
+            dragOver ? "border-indigo-500 bg-indigo-500/10" : "border-gray-700"
           }`}
         >
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+          <input
+            ref={fileRef}
+            id="brand-image-upload"
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
           {uploading ? (
             <p className="text-gray-400 text-sm">Uploading...</p>
           ) : (
             <>
               <p className="text-3xl mb-2">📁</p>
-              <p className="text-gray-300 text-sm">Drag & drop or click to upload</p>
-              <p className="text-gray-500 text-xs mt-1">JPEG, PNG, WebP, GIF · Max 5MB</p>
+              <p className="text-gray-300 text-sm hidden sm:block">Drag & drop or tap the button below</p>
+              <p className="text-gray-300 text-sm sm:hidden">Tap the button below to upload</p>
+              <p className="text-gray-500 text-xs mt-1 mb-4">JPEG, PNG, WebP, GIF · Max 5MB</p>
+              <label
+                htmlFor="brand-image-upload"
+                className="inline-block cursor-pointer bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
+              >
+                Choose Image
+              </label>
             </>
           )}
         </div>
