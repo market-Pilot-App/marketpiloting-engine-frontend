@@ -9,6 +9,9 @@ function clearSessionAndRedirect() {
   if (typeof window === "undefined") return;
   localStorage.removeItem("mp_token");
   localStorage.removeItem("mp_client");
+  localStorage.removeItem("mp_admin_token");
+  localStorage.removeItem("mp_admin_client");
+  document.cookie = "mp_session=; path=/; max-age=0";
   window.location.href = "/login";
 }
 
