@@ -5,14 +5,17 @@ function getToken(): string | null {
   return localStorage.getItem("mp_token");
 }
 
+let _redirecting = false;
 function clearSessionAndRedirect() {
   if (typeof window === "undefined") return;
+  if (_redirecting) return;
+  _redirecting = true;
   localStorage.removeItem("mp_token");
   localStorage.removeItem("mp_client");
   localStorage.removeItem("mp_admin_token");
   localStorage.removeItem("mp_admin_client");
   document.cookie = "mp_session=; path=/; max-age=0";
-  window.location.href = "/login";
+  window.location.href = "/login?reason=expired";
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
