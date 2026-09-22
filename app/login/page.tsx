@@ -25,6 +25,9 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Show persistent message if redirected here due to session expiry
+  const sessionMsg = searchParams.get("reason") === "expired" ? "Your session has expired. Please sign in again." : "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -49,6 +52,12 @@ function LoginForm() {
       <div className="w-full max-w-md bg-gray-900 rounded-2xl p-8 shadow-xl">
         <h1 className="text-2xl font-bold text-white mb-2">MarketPiloting</h1>
         <p className="text-gray-400 mb-8 text-sm">Sign in to your dashboard</p>
+
+        {sessionMsg && (
+          <div className="mb-4 px-4 py-2.5 bg-yellow-900 border border-yellow-700 rounded-lg text-sm text-yellow-300">
+            {sessionMsg}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
