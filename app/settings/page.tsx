@@ -15,6 +15,9 @@ interface Connections {
   blog: boolean;
   youtube: boolean;
   website: boolean;
+  fb_page_name?: string;
+  instagram_username?: string;
+  instagram_account_id?: string;
 }
 
 interface AutoReplySettings {
@@ -593,6 +596,15 @@ function SettingsPageInner() {
                     <>
                       {p.key === "instagram" && !connections?.facebook && (
                         <p className="text-xs text-yellow-500 mb-3">⚠️ Connect Facebook first — Instagram links automatically via your Facebook Page.</p>
+                      )}
+                      {p.key === "instagram" && connections?.instagram && connections?.instagram_account_id && (
+                        <div className="mb-3 p-3 bg-green-950/40 border border-green-800/40 rounded-lg">
+                          <p className="text-green-400 text-xs font-semibold">✅ Instagram Business Account Connected</p>
+                          <p className="text-gray-400 text-xs mt-1">Account ID: <span className="text-white font-mono">{connections.instagram_account_id}</span></p>
+                          {connections.instagram_username && (
+                            <p className="text-gray-400 text-xs mt-0.5">Username: <span className="text-white font-mono">@{connections.instagram_username}</span></p>
+                          )}
+                        </div>
                       )}
                       {p.key === "facebook" && connected && (
                         <div className="mb-3 p-3 bg-amber-950/40 border border-amber-700/40 rounded-lg">
