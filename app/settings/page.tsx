@@ -15,6 +15,7 @@ interface Connections {
   blog: boolean;
   youtube: boolean;
   website: boolean;
+  fb_page_id?: string;
   fb_page_name?: string;
   instagram_username?: string;
   instagram_account_id?: string;
@@ -603,6 +604,17 @@ function SettingsPageInner() {
                           <p className="text-gray-400 text-xs mt-1">Account ID: <span className="text-white font-mono">{connections.instagram_account_id}</span></p>
                           {connections.instagram_username && (
                             <p className="text-gray-400 text-xs mt-0.5">Username: <span className="text-white font-mono">@{connections.instagram_username}</span></p>
+                          )}
+                        </div>
+                      )}
+                      {p.key === "facebook" && connected && (
+                        <div className="mb-3 p-3 bg-green-950/40 border border-green-800/40 rounded-lg">
+                          <p className="text-green-400 text-xs font-semibold">✅ Facebook Page Connected</p>
+                          {connections?.fb_page_name && (
+                            <p className="text-gray-400 text-xs mt-1">Page Name: <span className="text-white font-mono">{connections.fb_page_name}</span></p>
+                          )}
+                          {connections?.fb_page_id && (
+                            <p className="text-gray-400 text-xs mt-0.5">Page ID: <span className="text-white font-mono">{connections.fb_page_id}</span></p>
                           )}
                         </div>
                       )}
