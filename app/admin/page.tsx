@@ -156,6 +156,25 @@ export default function AdminPage() {
     setPromoCodes((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const [editDiscountModal, setEditDiscountModal] = useState<null | { id: number; code: string; discount_type: string; discount_value: number }>(null);
+  const [editDiscountForm, setEditDiscountForm] = useState({ discount_type: "fixed", discount_value: "" });
+  const [editDiscountSaving, setEditDiscountSaving] = useState(false);
+
+  const saveDiscount = async () => {
+    if (!editDiscountModal) return;
+    setEditDiscountSaving(true);
+    try {
+      await api.patch(`/admin/promo-codes/${editDiscountModal.id}`, {
+        discount_type: editDiscountForm.discount_type,
+        discount_value: parseFloat(editDiscountForm.discount_value),
+      });
+      setPromoCodes((prev) => prev.map((p) => p.id === editDiscountModal.id ? { ...p, discount_type: editDiscountForm.discount_type, discount_value: parseFloat(editDiscountForm.discount_value) } : p));
+      setEditDiscountModal(null);
+    } finally {
+      setEditDiscountSaving(false);
+    }
+  };
+
   const [promoUsageModal, setPromoUsageModal] = useState<null | {
     code: string; total_uses: number; confirmed_payments: number;
     total_revenue_ngn: number; total_discount_given_ngn: number;
@@ -1078,6 +1097,12 @@ const saveBudget = async (clientId: number) => {
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                         <button
+                          onClick={() => { setEditDiscountModal({ id: p.id, code: p.code, discount_type: p.discount_type, discount_value: p.discount_value }); setEditDiscountForm({ discount_type: p.discount_type, discount_value: String(p.discount_value) }); }}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-700 transition font-medium"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
                           onClick={() => togglePromo(p.id, p.active)}
                           className={`text-xs px-3 py-1.5 rounded-lg transition font-medium ${
                             p.active
@@ -1107,6 +1132,52 @@ const saveBudget = async (clientId: number) => {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Discount Modal */}
+      {editDiscountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setEditDiscountModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Edit Discount — {editDiscountModal.code}</h2>
+              <button onClick={() => setEditDiscountModal(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Discount Type</label>
+              <select
+                value={editDiscountForm.discount_type}
+                onChange={(e) => setEditDiscountForm((f) => ({ ...f, discount_type: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (kobo)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">
+                {editDiscountForm.discount_type === "percentage" ? "Discount % (e.g. 50 = 50% off)" : "Discount in kobo (e.g. 10000 = ₦100 off)"}
+              </label>
+              <input
+                type="number"
+                value={editDiscountForm.discount_value}
+                onChange={(e) => setEditDiscountForm((f) => ({ ...f, discount_value: e.target.value }))}
+                placeholder={editDiscountForm.discount_type === "percentage" ? "50" : "10000"}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
+              />
+            </div>
+            <p className="text-xs text-gray-400">Current: {editDiscountModal.discount_type === "percentage" ? `${editDiscountModal.discount_value}%` : `₦${(editDiscountModal.discount_value / 100).toLocaleString()}`} off</p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={saveDiscount}
+                disabled={editDiscountSaving || !editDiscountForm.discount_value}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold py-2 rounded-lg transition"
+              >
+                {editDiscountSaving ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditDiscountModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 rounded-lg transition">Cancel</button>
+            </div>
           </div>
         </div>
       )}
