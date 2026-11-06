@@ -35,8 +35,11 @@ interface AuditLog {
 }
 
 const PLAN_COLORS: Record<string, string> = {
+  micro: "bg-yellow-100 text-yellow-700",
+  solo: "bg-orange-100 text-orange-700",
   starter: "bg-gray-100 text-gray-600",
   growth: "bg-blue-100 text-blue-700",
+  pro: "bg-indigo-100 text-indigo-700",
   agency: "bg-purple-100 text-purple-700",
 };
 
@@ -1488,7 +1491,7 @@ const saveBudget = async (clientId: number) => {
                 onChange={(e) => setGrantPlan(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               >
-                {["solo", "starter", "growth", "agency"].map((p) => (
+                {["micro", "solo", "starter", "growth", "pro", "agency"].map((p) => (
                   <option key={p} value={p} className="capitalize">{p}</option>
                 ))}
               </select>
