@@ -17,8 +17,8 @@ function FacebookSuccess() {
       );
       setTimeout(() => window.close(), 500);
     } else {
-      // Mobile full-page redirect flow
-      setTimeout(() => router.push("/settings?fb=" + (error ? "error" : "connected")), 800);
+      // Mobile full-page redirect flow — go back to settings
+      router.replace("/settings?fb=" + (error ? "error" : "connected"));
     }
   }, [error, router]);
 

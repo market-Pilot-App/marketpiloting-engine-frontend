@@ -635,16 +635,17 @@ function SettingsPageInner() {
                           const msgKey = isTwitter ? "twitter_connected" : "facebook_connected";
                           const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
                           try {
-                            const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
+                            const { auth_url, proxy_url } = await api.get<{ auth_url: string; proxy_url: string }>(endpoint);
                             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            // Both mobile and desktop: open in a new tab/popup
-                            // On mobile, window.open(_blank) opens a new browser tab which prevents
-                            // the OS from intercepting the facebook.com URL and launching the native app
-                            const popup = window.open(
-                              auth_url,
-                              isMobile ? "_blank" : popupName,
-                              isMobile ? undefined : "width=600,height=700"
-                            );
+                            if (isMobile) {
+                              // Mobile: full-page redirect through our proxy endpoint.
+                              // Browser hits api.marketpiloting.com first, which then redirects to Facebook.
+                              // This prevents the mobile OS from triggering the Facebook Smart App Banner.
+                              window.location.href = proxy_url || auth_url;
+                              return;
+                            }
+                            // Desktop: popup
+                            const popup = window.open(auth_url, popupName, "width=600,height=700");
                             const handler = (e: MessageEvent) => {
                               if (e.data === msgKey) {
                                 window.removeEventListener("message", handler);
