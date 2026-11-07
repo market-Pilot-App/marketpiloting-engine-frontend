@@ -638,13 +638,8 @@ function SettingsPageInner() {
                             const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
                             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                             if (isMobile) {
-                              // Mobile: force web browser flow using m.facebook.com
-                              // to prevent the Facebook native app from intercepting the URL
-                              const mobileUrl = auth_url.replace(
-                                "https://www.facebook.com/",
-                                "https://m.facebook.com/"
-                              );
-                              window.location.href = mobileUrl;
+                              // Mobile: full-page redirect
+                              window.location.href = auth_url;
                               return;
                             }
                             // Desktop: popup
