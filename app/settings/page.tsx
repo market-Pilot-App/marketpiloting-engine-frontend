@@ -3,7 +3,6 @@ import { useState, useEffect, Suspense } from "react";
 import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
 
 interface Connections {
   facebook: boolean;
@@ -493,13 +492,6 @@ function SettingsPageInner() {
 
   return (
     <div className="max-w-2xl w-full">
-      <Script
-        src="https://connect.facebook.net/en_US/sdk.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          window.FB?.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
-        }}
-      />
       {/* ── Billing & Subscription ── */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold mb-2">💳 Billing & Subscription</h1>
@@ -639,42 +631,16 @@ function SettingsPageInner() {
                       <button
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
-                          const isFBBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(navigator.userAgent);
-                          if (isFBBrowser && !isTwitter) {
-                            setErrors((e) => ({ ...e, [p.key]: "⚠️ Please open dashboard.marketpiloting.com in Chrome or Safari to connect Facebook." }));
-                            return;
-                          }
                           if (!isTwitter) {
-                            // Load SDK on demand if not ready yet
-                            const initAndLogin = () => {
-                              window.FB.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
-                              window.FB.login(async (response: facebook.StatusResponse) => {
-                                if (response.authResponse?.accessToken) {
-                                  try {
-                                    await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
-                                    const updated = await api.get<Connections>("/campaigns/me/connections");
-                                    setConnections(updated);
-                                  } catch (err: unknown) {
-                                    setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
-                                  }
-                                } else {
-                                  setErrors((e) => ({ ...e, [p.key]: "Facebook authorization cancelled or failed." }));
-                                }
-                              }, { config_id: "1119156817439638" });
-                            };
-                            if (window.FB) {
-                              initAndLogin();
-                            } else {
-                              // SDK not loaded yet — load it now
-                              const script = document.createElement("script");
-                              script.src = "https://connect.facebook.net/en_US/sdk.js";
-                              script.onload = initAndLogin;
-                              script.onerror = () => setErrors((e) => ({ ...e, [p.key]: "Failed to load Facebook SDK. Check your internet connection." }));
-                              document.head.appendChild(script);
+                            try {
+                              const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
+                              window.location.href = launch_url;
+                            } catch (err: unknown) {
+                              setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
                             }
                             return;
                           }
-                          // Twitter: existing popup flow
+                          // Twitter: popup flow
                           try {
                             const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
                             const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
