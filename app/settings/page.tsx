@@ -640,8 +640,15 @@ function SettingsPageInner() {
                             setErrors((e) => ({ ...e, [p.key]: "⚠️ You're inside the Facebook app browser. Please open dashboard.marketpiloting.com in Safari or Chrome, then connect from there." }));
                             return;
                           }
+                          const isAndroid = /Android/i.test(navigator.userAgent);
                           try {
                             const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
+                            if (isAndroid) {
+                              // Android intercepts facebook.com URLs in window.open and deep-links
+                              // into the native Facebook app. Full-page redirect stays in Chrome.
+                              window.location.href = auth_url;
+                              return;
+                            }
                             const popup = window.open(auth_url, popupName, "width=600,height=700");
                             const handler = (e: MessageEvent) => {
                               if (e.data === msgKey) {
