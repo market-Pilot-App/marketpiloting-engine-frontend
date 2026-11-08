@@ -632,40 +632,19 @@ function SettingsPageInner() {
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
                           const endpoint = isTwitter ? "/auth/twitter/connect" : "/auth/facebook/connect";
-                          const msgKey = isTwitter ? "twitter_connected" : "facebook_connected";
-                          const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
-                          // Detect Facebook in-app browser
                           const isFBBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(navigator.userAgent);
                           if (isFBBrowser && !isTwitter) {
                             setErrors((e) => ({ ...e, [p.key]: "⚠️ Please open dashboard.marketpiloting.com in Chrome or Safari to connect Facebook." }));
                             return;
                           }
-                          // Open the popup SYNCHRONOUSLY inside the click handler so Android/iOS
-                          // browsers don't block it as a non-user-gesture popup.
-                          // Then navigate it to the real URL once the API responds.
-                          const popup = window.open("/connecting", popupName, "width=600,height=700");
                           try {
-                            const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
-                            if (!popup || popup.closed) {
-                              // Popup was blocked — fall back to full-page redirect
-                              window.location.href = auth_url;
-                              return;
-                            }
-                            popup.location.href = auth_url;
-                            const handler = (e: MessageEvent) => {
-                              if (e.data === msgKey) {
-                                window.removeEventListener("message", handler);
-                                popup?.close();
-                                api.get<Connections>("/campaigns/me/connections").then(setConnections);
-                              } else if (e.data?.type === "facebook_error") {
-                                window.removeEventListener("message", handler);
-                                popup?.close();
-                                setErrors((err) => ({ ...err, [p.key]: e.data.error }));
-                              }
-                            };
-                            window.addEventListener("message", handler);
+                            const data = await api.get<{ auth_url: string; launch_url?: string }>(endpoint);
+                            // Always use launch_url for Facebook — backend does the 302 to facebook.com
+                            // so Android's intent system never intercepts it as a Facebook deep-link.
+                            // For Twitter or if no launch_url, fall back to direct popup.
+                            const url = (!isTwitter && data.launch_url) ? data.launch_url : data.auth_url;
+                            window.location.href = url;
                           } catch (err: unknown) {
-                            popup?.close();
                             setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
                           }
                         }}
