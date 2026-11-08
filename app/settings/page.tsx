@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import Script from "next/script";
 
 interface Connections {
   facebook: boolean;
@@ -509,6 +510,18 @@ function SettingsPageInner() {
 
   return (
     <div className="max-w-2xl w-full">
+      <Script
+        src="https://connect.facebook.net/en_US/sdk.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          window.FB?.init({
+            appId: "1397101102341901",
+            version: "v21.0",
+            cookie: true,
+            xfbml: false,
+          });
+        }}
+      />
       {/* ── Billing & Subscription ── */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold mb-2">💳 Billing & Subscription</h1>
@@ -649,13 +662,55 @@ function SettingsPageInner() {
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
                           if (!isTwitter) {
-                            try {
-                              const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
-                              // Store a timestamp so we can detect if Android intercepted the navigation
-                              sessionStorage.setItem("fb_oauth_started", Date.now().toString());
-                              window.location.href = launch_url;
-                            } catch (err: unknown) {
-                              setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                            // Block Facebook in-app browser — OAuth cannot work there
+                            const ua = navigator.userAgent;
+                            if (/FBAN|FBAV|FB_IAB|FB4A|FBIOS|Instagram|TikTok/i.test(ua)) {
+                              setErrors((e) => ({ ...e, [p.key]: "⚠️ You\'re inside an in-app browser. Tap the menu (⋯) and select \'Open in Chrome\' or \'Open in Safari\', then connect from there." }));
+                              return;
+                            }
+                            // Use FB JS SDK with display:touch — triggers Fast App Switch on Android
+                            // (controlled switch to FB app and back) instead of uncontrolled intent interception
+                            const doFBLogin = () => {
+                              window.FB.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
+                              window.FB.login(
+                                async (response: { status: string; authResponse: { accessToken: string } | null }) => {
+                                  if (response.authResponse?.accessToken) {
+                                    try {
+                                      await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
+                                      const updated = await api.get<Connections>("/campaigns/me/connections");
+                                      setConnections(updated);
+                                      setErrors((e) => ({ ...e, [p.key]: "" }));
+                                    } catch (err: unknown) {
+                                      setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
+                                    }
+                                  } else if (response.status !== "connected") {
+                                    setErrors((e) => ({ ...e, [p.key]: "Facebook authorization was cancelled or failed. Please try again." }));
+                                  }
+                                },
+                                { config_id: "1119156817439638", display: "touch" }
+                              );
+                            };
+                            if (window.FB) {
+                              doFBLogin();
+                            } else {
+                              // SDK not yet loaded — inject it now then login
+                              const existing = document.getElementById("fb-sdk");
+                              if (existing) { existing.addEventListener("load", doFBLogin); return; }
+                              const s = document.createElement("script");
+                              s.id = "fb-sdk";
+                              s.src = "https://connect.facebook.net/en_US/sdk.js";
+                              s.onload = doFBLogin;
+                              s.onerror = async () => {
+                                // SDK blocked (network/CSP) — fall back to launch_url redirect
+                                try {
+                                  const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
+                                  sessionStorage.setItem("fb_oauth_started", Date.now().toString());
+                                  window.location.href = launch_url;
+                                } catch (err: unknown) {
+                                  setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                                }
+                              };
+                              document.head.appendChild(s);
                             }
                             return;
                           }
