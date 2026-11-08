@@ -495,7 +495,7 @@ function SettingsPageInner() {
     <div className="max-w-2xl w-full">
       <Script
         src="https://connect.facebook.net/en_US/sdk.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={() => {
           window.FB?.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
         }}
@@ -645,24 +645,33 @@ function SettingsPageInner() {
                             return;
                           }
                           if (!isTwitter) {
-                            // Use Facebook JS SDK — handles mobile web, desktop, all devices correctly
-                            if (!window.FB) {
-                              setErrors((e) => ({ ...e, [p.key]: "Facebook SDK not loaded yet. Please wait a moment and try again." }));
-                              return;
-                            }
-                            window.FB.login(async (response: facebook.StatusResponse) => {
-                              if (response.authResponse?.accessToken) {
-                                try {
-                                  await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
-                                  const updated = await api.get<Connections>("/campaigns/me/connections");
-                                  setConnections(updated);
-                                } catch (err: unknown) {
-                                  setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
+                            // Load SDK on demand if not ready yet
+                            const initAndLogin = () => {
+                              window.FB.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
+                              window.FB.login(async (response: facebook.StatusResponse) => {
+                                if (response.authResponse?.accessToken) {
+                                  try {
+                                    await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
+                                    const updated = await api.get<Connections>("/campaigns/me/connections");
+                                    setConnections(updated);
+                                  } catch (err: unknown) {
+                                    setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
+                                  }
+                                } else {
+                                  setErrors((e) => ({ ...e, [p.key]: "Facebook authorization cancelled or failed." }));
                                 }
-                              } else if (response.status === "not_authorized" || response.status === "unknown") {
-                                setErrors((e) => ({ ...e, [p.key]: "Facebook authorization cancelled or failed." }));
-                              }
-                            }, { config_id: "1119156817439638" });
+                              }, { config_id: "1119156817439638" });
+                            };
+                            if (window.FB) {
+                              initAndLogin();
+                            } else {
+                              // SDK not loaded yet — load it now
+                              const script = document.createElement("script");
+                              script.src = "https://connect.facebook.net/en_US/sdk.js";
+                              script.onload = initAndLogin;
+                              script.onerror = () => setErrors((e) => ({ ...e, [p.key]: "Failed to load Facebook SDK. Check your internet connection." }));
+                              document.head.appendChild(script);
+                            }
                             return;
                           }
                           // Twitter: existing popup flow
