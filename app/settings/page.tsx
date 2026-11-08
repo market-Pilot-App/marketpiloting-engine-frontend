@@ -348,6 +348,23 @@ function SettingsPageInner() {
       api.get<Connections>("/campaigns/me/connections").then(setConnections);
       window.history.replaceState({}, "", "/settings");
     }
+    // Detect Android Facebook app interception
+    const oauthStarted = sessionStorage.getItem("fb_oauth_started");
+    if (oauthStarted && fbParam !== "connected" && fbParam !== "error") {
+      const elapsed = Date.now() - parseInt(oauthStarted);
+      // If we're back on settings within 10s without completing OAuth, Android intercepted it
+      if (elapsed < 10000) {
+        sessionStorage.removeItem("fb_oauth_started");
+        setErrors((e) => ({
+          ...e,
+          facebook: "Your Facebook app is intercepting the login. Please open Firefox browser on your phone and connect from there — Firefox is not affected by this.",
+        }));
+        setShow((s) => ({ ...s, facebook: true }));
+      }
+    }
+    if (fbParam === "connected" || fbParam === "error") {
+      sessionStorage.removeItem("fb_oauth_started");
+    }
     api.get<BillingInfo>("/auth/billing").then(setBilling).catch(() => {});
     api.get<AutoReplySettings>("/auto-reply/settings").then(setArSettings).catch(() => {});
     api.get<{ whatsapp_phone_number_id: string; whatsapp_business_account_id: string; whatsapp_enabled: boolean; connected: boolean; whatsapp_escalation_number: string }>("/whatsapp/settings")
@@ -634,6 +651,8 @@ function SettingsPageInner() {
                           if (!isTwitter) {
                             try {
                               const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
+                              // Store a timestamp so we can detect if Android intercepted the navigation
+                              sessionStorage.setItem("fb_oauth_started", Date.now().toString());
                               window.location.href = launch_url;
                             } catch (err: unknown) {
                               setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
