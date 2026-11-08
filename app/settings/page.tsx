@@ -634,6 +634,12 @@ function SettingsPageInner() {
                           const endpoint = isTwitter ? "/auth/twitter/connect" : "/auth/facebook/connect";
                           const msgKey = isTwitter ? "twitter_connected" : "facebook_connected";
                           const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
+                          // Detect Facebook in-app browser — it intercepts facebook.com URLs
+                          const isFBBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(navigator.userAgent);
+                          if (isFBBrowser && !isTwitter) {
+                            setErrors((e) => ({ ...e, [p.key]: "⚠️ You're inside the Facebook app browser. Please open dashboard.marketpiloting.com in Safari or Chrome, then connect from there." }));
+                            return;
+                          }
                           try {
                             const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
                             const popup = window.open(auth_url, popupName, "width=600,height=700");
