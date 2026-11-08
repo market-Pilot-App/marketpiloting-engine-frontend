@@ -658,90 +658,108 @@ function SettingsPageInner() {
                           <p className="text-amber-400 text-xs font-medium">⚠️ If Twitter/X posting stops working or DM replies fail, your token may have expired. Click Reconnect to refresh it.</p>
                         </div>
                       )}
-                      <button
-                        onClick={async () => {
-                          const isTwitter = p.key === "twitter";
-                          if (!isTwitter) {
-                            // Block Facebook in-app browser — OAuth cannot work there
-                            const ua = navigator.userAgent;
-                            if (/FBAN|FBAV|FB_IAB|FB4A|FBIOS|Instagram|TikTok/i.test(ua)) {
-                              setErrors((e) => ({ ...e, [p.key]: "⚠️ You\'re inside an in-app browser. Tap the menu (⋯) and select \'Open in Chrome\' or \'Open in Safari\', then connect from there." }));
-                              return;
-                            }
-                            // Use FB JS SDK with display:touch — triggers Fast App Switch on Android
-                            // (controlled switch to FB app and back) instead of uncontrolled intent interception
-                            const doFBLogin = () => {
-                              window.FB.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
-                              window.FB.login(
-                                async (response: { status: string; authResponse: { accessToken: string } | null }) => {
-                                  if (response.authResponse?.accessToken) {
-                                    try {
-                                      await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
-                                      const updated = await api.get<Connections>("/campaigns/me/connections");
-                                      setConnections(updated);
-                                      setErrors((e) => ({ ...e, [p.key]: "" }));
-                                    } catch (err: unknown) {
-                                      setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
-                                    }
-                                  } else if (response.status !== "connected") {
-                                    setErrors((e) => ({ ...e, [p.key]: "Facebook authorization was cancelled or failed. Please try again." }));
-                                  }
-                                },
-                                { config_id: "1119156817439638", display: "touch" }
-                              );
-                            };
-                            if (window.FB) {
-                              doFBLogin();
-                            } else {
-                              // SDK not yet loaded — inject it now then login
-                              const existing = document.getElementById("fb-sdk");
-                              if (existing) { existing.addEventListener("load", doFBLogin); return; }
-                              const s = document.createElement("script");
-                              s.id = "fb-sdk";
-                              s.src = "https://connect.facebook.net/en_US/sdk.js";
-                              s.onload = doFBLogin;
-                              s.onerror = async () => {
-                                // SDK blocked (network/CSP) — fall back to launch_url redirect
-                                try {
-                                  const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
-                                  sessionStorage.setItem("fb_oauth_started", Date.now().toString());
-                                  window.location.href = launch_url;
-                                } catch (err: unknown) {
-                                  setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                      {p.key === "facebook" && /Android|iPhone|iPad|iPod|Mobile/i.test(typeof navigator !== "undefined" ? navigator.userAgent : "") ? (
+                        <div className="rounded-lg border border-blue-800/50 bg-blue-950/30 p-4 space-y-3">
+                          <p className="text-blue-300 text-sm font-semibold">🖥️ Connect Facebook on Desktop</p>
+                          <p className="text-gray-400 text-xs leading-relaxed">
+                            Facebook connection requires a desktop browser due to how Android handles Facebook links.
+                            Open <span className="text-white font-medium">dashboard.marketpiloting.com/settings</span> on
+                            your laptop or PC and click &quot;Connect Facebook Page&quot; there.
+                          </p>
+                          <p className="text-gray-500 text-xs">✅ Once connected on desktop, it will appear here automatically — just refresh this page.</p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard?.writeText("https://dashboard.marketpiloting.com/settings").catch(() => {});
+                              setErrors((e) => ({ ...e, [p.key]: "✓ Link copied!" }));
+                              setTimeout(() => setErrors((e) => ({ ...e, [p.key]: "" })), 2000);
+                            }}
+                            className="w-full py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition"
+                          >
+                            📋 Copy Settings Link
+                          </button>
+                          {errors[p.key] && <p className="text-green-400 text-xs">{errors[p.key]}</p>}
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={async () => {
+                              const isTwitter = p.key === "twitter";
+                              if (!isTwitter) {
+                                if (/FBAN|FBAV|FB_IAB|FB4A|FBIOS|Instagram|TikTok/i.test(navigator.userAgent)) {
+                                  setErrors((e) => ({ ...e, [p.key]: "⚠️ You're inside an in-app browser. Tap the menu (⋯) and select 'Open in Chrome' or 'Open in Safari', then connect from there." }));
+                                  return;
                                 }
-                              };
-                              document.head.appendChild(s);
-                            }
-                            return;
-                          }
-                          // Twitter: popup flow
-                          try {
-                            const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
-                            const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
-                            const handler = (e: MessageEvent) => {
-                              if (e.data === "twitter_connected") {
-                                window.removeEventListener("message", handler);
-                                popup?.close();
-                                api.get<Connections>("/campaigns/me/connections").then(setConnections);
-                              } else if (e.data?.type === "twitter_error") {
-                                window.removeEventListener("message", handler);
-                                popup?.close();
-                                setErrors((err) => ({ ...err, [p.key]: e.data.error }));
+                                const doFBLogin = () => {
+                                  window.FB.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
+                                  window.FB.login(
+                                    async (response: { status: string; authResponse: { accessToken: string } | null }) => {
+                                      if (response.authResponse?.accessToken) {
+                                        try {
+                                          await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
+                                          const updated = await api.get<Connections>("/campaigns/me/connections");
+                                          setConnections(updated);
+                                          setErrors((e) => ({ ...e, [p.key]: "" }));
+                                        } catch (err: unknown) {
+                                          setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
+                                        }
+                                      } else if (response.status !== "connected") {
+                                        setErrors((e) => ({ ...e, [p.key]: "Facebook authorization was cancelled or failed. Please try again." }));
+                                      }
+                                    },
+                                    { config_id: "1119156817439638", display: "touch" } as Parameters<typeof window.FB.login>[1]
+                                  );
+                                };
+                                if (window.FB) {
+                                  doFBLogin();
+                                } else {
+                                  const existing = document.getElementById("fb-sdk");
+                                  if (existing) { existing.addEventListener("load", doFBLogin); return; }
+                                  const s = document.createElement("script");
+                                  s.id = "fb-sdk";
+                                  s.src = "https://connect.facebook.net/en_US/sdk.js";
+                                  s.onload = doFBLogin;
+                                  s.onerror = async () => {
+                                    try {
+                                      const { launch_url } = await api.get<{ launch_url: string }>("/auth/facebook/connect");
+                                      sessionStorage.setItem("fb_oauth_started", Date.now().toString());
+                                      window.location.href = launch_url;
+                                    } catch (err: unknown) {
+                                      setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                                    }
+                                  };
+                                  document.head.appendChild(s);
+                                }
+                                return;
                               }
-                            };
-                            window.addEventListener("message", handler);
-                          } catch (err: unknown) {
-                            setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
-                          }
-                        }}
-                        disabled={p.key === "instagram" && !connections?.facebook}
-                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
-                      >
-                        {p.key === "twitter" && (connected ? "🔄 Reconnect X / Twitter" : "🐦 Connect X / Twitter Account")}
-                        {p.key === "facebook" && (connected ? "🔄 Reconnect Facebook Page" : "📘 Connect Facebook Page")}
-                        {p.key === "instagram" && "📸 Connect Instagram (via Facebook)"}
-                      </button>
-                      {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
+                              try {
+                                const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
+                                const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
+                                const handler = (e: MessageEvent) => {
+                                  if (e.data === "twitter_connected") {
+                                    window.removeEventListener("message", handler);
+                                    popup?.close();
+                                    api.get<Connections>("/campaigns/me/connections").then(setConnections);
+                                  } else if (e.data?.type === "twitter_error") {
+                                    window.removeEventListener("message", handler);
+                                    popup?.close();
+                                    setErrors((err) => ({ ...err, [p.key]: e.data.error }));
+                                  }
+                                };
+                                window.addEventListener("message", handler);
+                              } catch (err: unknown) {
+                                setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
+                              }
+                            }}
+                            disabled={p.key === "instagram" && !connections?.facebook}
+                            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition"
+                          >
+                            {p.key === "twitter" && (connected ? "🔄 Reconnect X / Twitter" : "🐦 Connect X / Twitter Account")}
+                            {p.key === "facebook" && (connected ? "🔄 Reconnect Facebook Page" : "📘 Connect Facebook Page")}
+                            {p.key === "instagram" && "📸 Connect Instagram (via Facebook)"}
+                          </button>
+                          {errors[p.key] && <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>}
+                        </>
+                      )}
                     </>
                   ) : (
                     <>
