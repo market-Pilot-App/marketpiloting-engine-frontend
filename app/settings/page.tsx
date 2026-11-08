@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useCanAccess } from "@/lib/use-role-guard";
 import { api } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import Script from "next/script";
 
 interface Connections {
   facebook: boolean;
@@ -492,6 +493,13 @@ function SettingsPageInner() {
 
   return (
     <div className="max-w-2xl w-full">
+      <Script
+        src="https://connect.facebook.net/en_US/sdk.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          window.FB?.init({ appId: "1397101102341901", version: "v21.0", cookie: true, xfbml: false });
+        }}
+      />
       {/* ── Billing & Subscription ── */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold mb-2">💳 Billing & Subscription</h1>
@@ -631,19 +639,48 @@ function SettingsPageInner() {
                       <button
                         onClick={async () => {
                           const isTwitter = p.key === "twitter";
-                          const endpoint = isTwitter ? "/auth/twitter/connect" : "/auth/facebook/connect";
                           const isFBBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(navigator.userAgent);
                           if (isFBBrowser && !isTwitter) {
                             setErrors((e) => ({ ...e, [p.key]: "⚠️ Please open dashboard.marketpiloting.com in Chrome or Safari to connect Facebook." }));
                             return;
                           }
+                          if (!isTwitter) {
+                            // Use Facebook JS SDK — handles mobile web, desktop, all devices correctly
+                            if (!window.FB) {
+                              setErrors((e) => ({ ...e, [p.key]: "Facebook SDK not loaded yet. Please wait a moment and try again." }));
+                              return;
+                            }
+                            window.FB.login(async (response: facebook.StatusResponse) => {
+                              if (response.authResponse?.accessToken) {
+                                try {
+                                  await api.post("/auth/facebook/token", { access_token: response.authResponse.accessToken });
+                                  const updated = await api.get<Connections>("/campaigns/me/connections");
+                                  setConnections(updated);
+                                } catch (err: unknown) {
+                                  setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to save connection" }));
+                                }
+                              } else if (response.status === "not_authorized" || response.status === "unknown") {
+                                setErrors((e) => ({ ...e, [p.key]: "Facebook authorization cancelled or failed." }));
+                              }
+                            }, { config_id: "1119156817439638" });
+                            return;
+                          }
+                          // Twitter: existing popup flow
                           try {
-                            const data = await api.get<{ auth_url: string; launch_url?: string }>(endpoint);
-                            // Always use launch_url for Facebook — backend does the 302 to facebook.com
-                            // so Android's intent system never intercepts it as a Facebook deep-link.
-                            // For Twitter or if no launch_url, fall back to direct popup.
-                            const url = (!isTwitter && data.launch_url) ? data.launch_url : data.auth_url;
-                            window.location.href = url;
+                            const { auth_url } = await api.get<{ auth_url: string }>("/auth/twitter/connect");
+                            const popup = window.open(auth_url, "twitter_oauth", "width=600,height=700");
+                            const handler = (e: MessageEvent) => {
+                              if (e.data === "twitter_connected") {
+                                window.removeEventListener("message", handler);
+                                popup?.close();
+                                api.get<Connections>("/campaigns/me/connections").then(setConnections);
+                              } else if (e.data?.type === "twitter_error") {
+                                window.removeEventListener("message", handler);
+                                popup?.close();
+                                setErrors((err) => ({ ...err, [p.key]: e.data.error }));
+                              }
+                            };
+                            window.addEventListener("message", handler);
                           } catch (err: unknown) {
                             setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
                           }
