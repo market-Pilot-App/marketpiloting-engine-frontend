@@ -634,22 +634,24 @@ function SettingsPageInner() {
                           const endpoint = isTwitter ? "/auth/twitter/connect" : "/auth/facebook/connect";
                           const msgKey = isTwitter ? "twitter_connected" : "facebook_connected";
                           const popupName = isTwitter ? "twitter_oauth" : "facebook_oauth";
-                          // Detect Facebook in-app browser — it intercepts facebook.com URLs
+                          // Detect Facebook in-app browser
                           const isFBBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(navigator.userAgent);
                           if (isFBBrowser && !isTwitter) {
-                            setErrors((e) => ({ ...e, [p.key]: "⚠️ You're inside the Facebook app browser. Please open dashboard.marketpiloting.com in Safari or Chrome, then connect from there." }));
+                            setErrors((e) => ({ ...e, [p.key]: "⚠️ Please open dashboard.marketpiloting.com in Chrome or Safari to connect Facebook." }));
                             return;
                           }
-                          const isAndroid = /Android/i.test(navigator.userAgent);
+                          // Open the popup SYNCHRONOUSLY inside the click handler so Android/iOS
+                          // browsers don't block it as a non-user-gesture popup.
+                          // Then navigate it to the real URL once the API responds.
+                          const popup = window.open("/connecting", popupName, "width=600,height=700");
                           try {
                             const { auth_url } = await api.get<{ auth_url: string }>(endpoint);
-                            if (isAndroid) {
-                              // Android intercepts facebook.com URLs in window.open and deep-links
-                              // into the native Facebook app. Full-page redirect stays in Chrome.
+                            if (!popup || popup.closed) {
+                              // Popup was blocked — fall back to full-page redirect
                               window.location.href = auth_url;
                               return;
                             }
-                            const popup = window.open(auth_url, popupName, "width=600,height=700");
+                            popup.location.href = auth_url;
                             const handler = (e: MessageEvent) => {
                               if (e.data === msgKey) {
                                 window.removeEventListener("message", handler);
@@ -663,6 +665,7 @@ function SettingsPageInner() {
                             };
                             window.addEventListener("message", handler);
                           } catch (err: unknown) {
+                            popup?.close();
                             setErrors((e) => ({ ...e, [p.key]: err instanceof Error ? err.message : "Failed to start OAuth" }));
                           }
                         }}
