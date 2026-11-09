@@ -659,6 +659,11 @@ function SettingsPageInner() {
                             setErrors((e) => ({ ...e, [p.key]: "⚠️ You're inside an in-app browser. Tap ⋯ and select 'Open in Chrome' or 'Open in Safari', then connect from there." }));
                             return;
                           }
+                          // Firefox on Android opens facebook.com in the FB app via Android intents
+                          if (/Firefox/i.test(navigator.userAgent) && /Android/i.test(navigator.userAgent)) {
+                            setErrors((e) => ({ ...e, [p.key]: "⚠️ Firefox on Android redirects Facebook links to the Facebook app. Please use Chrome on your phone instead — it works correctly." }));
+                            return;
+                          }
                           // Industry standard: full-page redirect to Facebook OAuth
                           // Same approach used by Buffer, Hootsuite, Later
                           try {
