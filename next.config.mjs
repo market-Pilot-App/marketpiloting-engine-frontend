@@ -1,13 +1,4 @@
 import { withSentryConfig } from "@sentry/nextjs";
-import withPWA from "@ducanh2912/next-pwa";
-
-const pwaConfig = withPWA({
-  dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: false,
-  reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
-});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -44,7 +35,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(pwaConfig(nextConfig), {
+export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
