@@ -25,7 +25,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://api.marketpiloting.com https://dashboard.marketpiloting.com https://o4511864857952256.ingest.de.sentry.io https://graph.facebook.com https://www.facebook.com",
+              "connect-src 'self' https://api.marketpiloting.com https://dashboard.marketpiloting.com https://o4511864857952256.ingest.de.sentry.io https://graph.facebook.com https://www.facebook.com https://static.cloudflareinsights.com",
               "frame-src 'self' https://www.facebook.com https://staticxx.facebook.com",
             ].join("; "),
           },
