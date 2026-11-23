@@ -345,7 +345,7 @@ function SettingsPageInner() {
     // Handle Facebook OAuth redirect return
     const fbParam = searchParams.get("fb");
     if (fbParam === "connected") {
-      api.get<Connections>("/campaigns/me/connections").then(setConnections);
+      api.get<Connections>("/campaigns/me/connections?bust=1").then(setConnections);
       window.history.replaceState({}, "", "/settings");
     }
     if (fbParam === "connected" || fbParam === "error") {
