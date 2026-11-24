@@ -19,7 +19,11 @@ function FacebookSuccess() {
     } else {
       // Mobile full-page redirect flow — wait 1.5s for DB commit to complete before redirecting
       setTimeout(() => {
-        router.replace("/settings?fb=" + (error ? "error" : "connected"));
+        if (error) {
+          router.replace("/settings?fb=error&reason=" + encodeURIComponent(error));
+        } else {
+          router.replace("/settings?fb=connected");
+        }
       }, 1500);
     }
   }, [error, router]);

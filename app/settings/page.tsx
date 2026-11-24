@@ -265,6 +265,8 @@ function SettingsPageInner() {
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [show, setShow] = useState<Record<string, boolean>>({});
+  const [fbError, setFbError] = useState("");
+  const [disconnecting, setDisconnecting] = useState(false);
 
   // Auto-reply state
   const [arSettings, setArSettings] = useState<AutoReplySettings>({
@@ -346,6 +348,12 @@ function SettingsPageInner() {
     const fbParam = searchParams.get("fb");
     if (fbParam === "connected") {
       api.get<Connections>("/campaigns/me/connections?bust=1").then(setConnections);
+      window.history.replaceState({}, "", "/settings");
+    }
+    if (fbParam === "error") {
+      const reason = searchParams.get("reason") || "";
+      setFbError(reason || "Facebook connection failed. Please try again.");
+      setShow((s) => ({ ...s, facebook: true }));
       window.history.replaceState({}, "", "/settings");
     }
     if (fbParam === "connected" || fbParam === "error") {
@@ -612,13 +620,36 @@ function SettingsPageInner() {
                       )}
                       {p.key === "facebook" && connected && (
                         <div className="mb-3 p-3 bg-green-950/40 border border-green-800/40 rounded-lg">
-                          <p className="text-green-400 text-xs font-semibold">✅ Facebook Page Connected</p>
-                          {connections?.fb_page_name && (
-                            <p className="text-gray-400 text-xs mt-1">Page Name: <span className="text-white font-mono">{connections.fb_page_name}</span></p>
-                          )}
-                          {connections?.fb_page_id && (
-                            <p className="text-gray-400 text-xs mt-0.5">Page ID: <span className="text-white font-mono">{connections.fb_page_id}</span></p>
-                          )}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-green-400 text-xs font-semibold">✅ Facebook Page Connected</p>
+                              {connections?.fb_page_name && (
+                                <p className="text-gray-400 text-xs mt-1">Page Name: <span className="text-white font-mono">{connections.fb_page_name}</span></p>
+                              )}
+                              {connections?.fb_page_id && (
+                                <p className="text-gray-400 text-xs mt-0.5">Page ID: <span className="text-white font-mono">{connections.fb_page_id}</span></p>
+                              )}
+                            </div>
+                            <button
+                              onClick={async () => {
+                                if (!confirm("Disconnect Facebook and Instagram? You can reconnect a different page afterwards.")) return;
+                                setDisconnecting(true);
+                                try {
+                                  await api.del("/auth/facebook/disconnect");
+                                  const updated = await api.get<Connections>("/campaigns/me/connections?bust=1");
+                                  setConnections(updated);
+                                } catch (e: unknown) {
+                                  setErrors((err) => ({ ...err, facebook: e instanceof Error ? e.message : "Disconnect failed" }));
+                                } finally {
+                                  setDisconnecting(false);
+                                }
+                              }}
+                              disabled={disconnecting}
+                              className="shrink-0 px-2.5 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-700/50 text-red-400 text-xs font-medium rounded-lg transition disabled:opacity-50"
+                            >
+                              {disconnecting ? "..." : "Disconnect"}
+                            </button>
+                          </div>
                         </div>
                       )}
                       {p.key === "facebook" && connected && (
@@ -681,10 +712,10 @@ function SettingsPageInner() {
                         {p.key === "facebook" && (connected ? "🔄 Reconnect Facebook Page" : "📘 Connect Facebook Page")}
                         {p.key === "instagram" && "📸 Connect Instagram (via Facebook)"}
                       </button>
-                      {errors[p.key] && (
-                        <p className="text-red-400 text-xs mt-3">{errors[p.key]}</p>
+                      {(errors[p.key] || (p.key === "facebook" && fbError)) && (
+                        <p className="text-red-400 text-xs mt-3">{errors[p.key] || fbError}</p>
                       )}
-                      {p.key === "facebook" && errors[p.key] === "" && (
+                      {p.key === "facebook" && !errors[p.key] && !fbError && (
                         <details className="mt-3">
                           <summary className="text-gray-500 text-xs cursor-pointer hover:text-gray-400">
                             Facebook didn&apos;t open? Tap here
