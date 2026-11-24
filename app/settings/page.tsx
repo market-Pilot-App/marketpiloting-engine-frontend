@@ -90,7 +90,7 @@ const PLATFORMS = [
     key: "facebook",
     label: "Facebook",
     icon: "📘",
-    hint: "Click the button below to connect your Facebook Page. A popup will open — log in and authorize MarketPilot. Your Page Access Token is fetched automatically.",
+    hint: "Click the button below to connect your Facebook Page. When Facebook asks which pages to give access to, make sure to select your Page — do not skip that step. Your Page Access Token is fetched automatically.",
     fields: [],
   },
   {
