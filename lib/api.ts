@@ -41,8 +41,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (res.status === 401) {
-    clearSessionAndRedirect();
-    throw new Error("Session expired. Please log in again.");
+    const errBody = await res.json().catch(() => ({ detail: "" }));
+    const detail = errBody.detail || "";
+    // Only auto-redirect on actual token expiry/invalidity, not other 401s (e.g. suspended)
+    if (!detail || detail === "Token expired" || detail === "Invalid token" || detail === "Session expired. Please log in again.") {
+      clearSessionAndRedirect();
+      throw new Error("Session expired. Please log in again.");
+    }
+    throw new Error(detail || "Unauthorized");
   }
 
   if (!res.ok) {

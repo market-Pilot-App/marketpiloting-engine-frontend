@@ -36,7 +36,7 @@ function LoginForm() {
       const data = await api.post<AuthClient>("/auth/login", { email, password });
       localStorage.setItem("mp_token", data.access_token);
       localStorage.setItem("mp_client", JSON.stringify(data));
-      document.cookie = "mp_session=1; path=/; SameSite=Lax; max-age=2592000";
+      document.cookie = "mp_session=1; path=/; SameSite=Lax; max-age=604800";
       setSession(data as Parameters<typeof setSession>[0]);
       router.push(nextUrl);
     } catch (err: unknown) {
